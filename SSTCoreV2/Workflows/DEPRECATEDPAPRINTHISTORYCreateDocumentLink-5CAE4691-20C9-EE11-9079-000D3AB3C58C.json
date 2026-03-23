@@ -1,0 +1,377 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "EnvVar | Blob Storage AF (sst_EnvVarBlobStorageAF)": {
+          "defaultValue": "https://saschulzafdevce.blob.core.windows.net/scschulzafdevce/",
+          "type": "String",
+          "metadata": {
+            "schemaName": "sst_EnvVarBlobStorageAF"
+          }
+        }
+      },
+      "triggers": {
+        "When_a_print_log_has_been_created": {
+          "metadata": {
+            "operationMetadataId": "22e81984-8ec8-4cba-97e4-e43a6635fbcb"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "sst_printhistory",
+              "subscriptionRequest/scope": 4
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Init_Printtype": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "96521138-1867-4870-a1eb-3abc31593b3a"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Printtype Text",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Is_Quote": {
+          "actions": {
+            "Get_the_related_quote": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "30c00c69-53ba-444b-8416-6a1980f17509"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "quotes",
+                  "recordId": "@triggerOutputs()?['body/_sst_quote_id_value']",
+                  "$select": "sst_schulzid_str"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Switch_print_type_quote": {
+              "runAfter": {
+                "Get_the_related_quote": [
+                  "Succeeded"
+                ]
+              },
+              "cases": {
+                "Angebot_(Vorschau)": {
+                  "case": 100000000,
+                  "actions": {
+                    "Set_Printtype_Angebot_Vorschau": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "f62a1fac-cb7b-4f74-9534-fedd477f5d68"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "Printtype Text",
+                        "value": "Angebot (Vorschau)"
+                      }
+                    }
+                  }
+                },
+                "Angebot": {
+                  "case": 100000001,
+                  "actions": {
+                    "Set_Printtype_Angebot": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "f207ae3f-4c4f-43da-a4d2-1591bea72f3f"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "Printtype Text",
+                        "value": "Angebot"
+                      }
+                    }
+                  }
+                },
+                "Auftragsbestätigung_(Vorschau)": {
+                  "case": 100000002,
+                  "actions": {
+                    "Set_Printtype_AB_Vorschau": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "f27ae537-e4e5-4bbd-907d-6b929304d4c2"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "Printtype Text",
+                        "value": "Auftragsbestätigung (Vorschau)"
+                      }
+                    }
+                  }
+                },
+                "Auftragsbestätigung": {
+                  "case": 100000003,
+                  "actions": {
+                    "Set_Printtype_AB": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "2951e0dd-fc78-4151-a1c4-ed18019afe22"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "Printtype Text",
+                        "value": "Auftragsbestätigung"
+                      }
+                    }
+                  }
+                },
+                "Leistungsverzeichnis": {
+                  "case": 100000004,
+                  "actions": {
+                    "Set_Printtype_LV": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "2be9aec4-3bdf-44af-b342-92d10b282921"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "Printtype Text",
+                        "value": "Leistungsverzeichnis"
+                      }
+                    }
+                  }
+                },
+                "Unverbindliche_Kostenschätzung": {
+                  "case": 100000005,
+                  "actions": {
+                    "Set_Printtype_UK": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "c60a8b93-29ca-42ba-9d1c-b3ec035ae0db"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "Printtype Text",
+                        "value": "Unverbindliche Kostenschätzung"
+                      }
+                    }
+                  }
+                }
+              },
+              "default": {
+                "actions": {}
+              },
+              "expression": "@triggerOutputs()?['body/sst_printtype_opt']",
+              "metadata": {
+                "operationMetadataId": "87d4781e-c83b-4666-9123-72c3476d3542"
+              },
+              "type": "Switch"
+            },
+            "Set_document_link": {
+              "runAfter": {
+                "Switch_print_type_quote": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "55971847-30e3-4dd3-b04c-b048628cb34e"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "UpdateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "sst_printhistories",
+                  "recordId": "@triggerOutputs()?['body/sst_printhistoryid']",
+                  "item/sst_downloadlink_txt": "@{parameters('EnvVar | Blob Storage AF (sst_EnvVarBlobStorageAF)')}@{variables('Printtype Text')}_@{outputs('Get_the_related_quote')?['body/sst_schulzid_str']}.pdf?v=@{utcNow()}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "runAfter": {
+            "Init_Printtype": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {
+              "Is_Order": {
+                "actions": {
+                  "Get_the_related_order": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "10b9446d-073c-4b05-a0da-5e6a1af3a1d0"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_commondataserviceforapps",
+                        "operationId": "GetItem",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                      },
+                      "parameters": {
+                        "entityName": "salesorders",
+                        "recordId": "@triggerBody()?['_sst_salesorder_id_value']",
+                        "$select": "sst_schulzid_str,sst_printtype_opt"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  },
+                  "Switch_print_type_order": {
+                    "runAfter": {
+                      "Get_the_related_order": [
+                        "Succeeded"
+                      ]
+                    },
+                    "cases": {
+                      "Order": {
+                        "case": 867520000,
+                        "actions": {
+                          "Set_to_order": {
+                            "runAfter": {},
+                            "metadata": {
+                              "operationMetadataId": "148e32e3-fb05-431e-ba54-e4f694a6a9b1"
+                            },
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "Printtype Text",
+                              "value": "Auftrag"
+                            }
+                          }
+                        }
+                      },
+                      "Preview": {
+                        "case": 867520001,
+                        "actions": {
+                          "Set_to_order_preview": {
+                            "runAfter": {},
+                            "metadata": {
+                              "operationMetadataId": "b08f1fa6-1a81-42ce-8a48-0df0475a1d4f"
+                            },
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "Printtype Text",
+                              "value": "Auftrag (Vorschau)"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "default": {
+                      "actions": {}
+                    },
+                    "expression": "@body('Get_the_related_order')?['sst_printtype_opt']",
+                    "metadata": {
+                      "operationMetadataId": "ce9364a8-3b11-4e1b-bef1-1e6ef00930c1"
+                    },
+                    "type": "Switch"
+                  },
+                  "Set_document_link_order": {
+                    "runAfter": {
+                      "Switch_print_type_order": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "55971847-30e3-4dd3-b04c-b048628cb34e"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_commondataserviceforapps",
+                        "operationId": "UpdateRecord",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                      },
+                      "parameters": {
+                        "entityName": "sst_printhistories",
+                        "recordId": "@triggerOutputs()?['body/sst_printhistoryid']",
+                        "item/sst_downloadlink_txt": "@{parameters('EnvVar | Blob Storage AF (sst_EnvVarBlobStorageAF)')}@{variables('Printtype Text')}_@{body('Get_the_related_order')?['sst_schulzid_str']}.pdf?v=@{utcNow()}"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  }
+                },
+                "runAfter": {},
+                "expression": {
+                  "and": [
+                    {
+                      "not": {
+                        "equals": [
+                          "@triggerBody()?['_sst_salesorder_id_value']",
+                          "@null"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "metadata": {
+                  "operationMetadataId": "83fcf1d3-e1fa-4dbe-a646-9435cdcafef5"
+                },
+                "type": "If"
+              }
+            }
+          },
+          "expression": {
+            "and": [
+              {
+                "not": {
+                  "equals": [
+                    "@triggerBody()?['_sst_quote_id_value']",
+                    "@null"
+                  ]
+                }
+              }
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2c5c8baf-36f0-4b63-9134-dce40a56a94c"
+          },
+          "type": "If"
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,81 @@
+if (typeof (Schulz) === "undefined") { Schulz = {}; };
+
+Schulz.BookingCommands = {
+    
+    printReport: function(formContext) {
+
+        var ExecuteWorkflowRequest = function(entityId, workflowId) {
+            this.EntityId = { "guid" : entityId };
+            this.entity = {
+                id: workflowId,
+                entityType: "workflow"
+            };
+            this.getMetadata = function() {
+                return {
+                    boundParameter: "entity",
+                    parameterTypes: {
+                        "entity": {
+                            "typeName": "Microsoft.Dynamics.CRM.workflow",
+                            "structuralProperty": 5
+                        },
+                        "EntityId": {
+                            "typeName": "Edm.Guid",
+                            "structuralProperty": 1
+                        }
+                    },
+                    operationType: 0,
+                    operationName: "ExecuteWorkflow"
+                };
+            };
+        };
+
+        var workflowId = "40ae912e-8c56-407f-908c-95dabc199506";
+        var wfRequest = new ExecuteWorkflowRequest(Xrm.Page.data.entity.getId(), workflowId);
+        var uniqueMessageId = "serviceprintmessage";
+
+        var confirmStrings = { text:"Soll der Servicebericht gedruckt werden?", title:"Druck Servicebericht" };
+        var confirmOptions = { height: 200, width: 250 };
+        Xrm.Navigation.openConfirmDialog(confirmStrings, confirmOptions).then(
+        function (success) {    
+            if (success.confirmed)
+            {
+                Xrm.WebApi.execute(wfRequest).then(
+                    function successCallback(result) {
+                        if (result.ok) {
+                            result.json().then(function(respo) {
+                                formContext.ui.setFormNotification("Der Servicebericht wird gedruckt.", "INFO", uniqueMessageId);
+                            });
+                        };
+                    },
+                    function errorCallback(error) {
+                        Xrm.Navigation.openErrorDialog({ message:error.message });
+                    }
+                )
+            }
+        });  
+    },
+
+    printReportAction: function(formContext, sendEmail) {
+        var uniqueMessageId = "bookingprintmessage";
+
+        var confirmStrings = { text:"Soll der Servicebericht gedruckt werden?", title:"Servicebericht" };
+        var confirmOptions = { height: 200, width: 250 };
+        Xrm.Navigation.openConfirmDialog(confirmStrings, confirmOptions).then(
+        function (success) {    
+            if (success.confirmed)
+            {
+                formContext.getAttribute("sst_lastprintdate_dat").setValue(new Date());
+                formContext.getAttribute("sst_af_sendemail_bol").setValue(sendEmail);
+                formContext.data.save();
+                
+                var notification = 
+                {
+                    type: 1,
+                    level: 4, // information
+                    message: "Druck wurde gestartet."
+                }
+                Xrm.App.addGlobalNotification(notification);
+            }
+        });  
+    }
+};

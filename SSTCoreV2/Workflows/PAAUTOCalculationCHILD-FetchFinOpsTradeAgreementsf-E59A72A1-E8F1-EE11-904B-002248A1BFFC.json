@@ -1,0 +1,1284 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_webcontents": {
+        "api": {
+          "name": "shared_webcontents"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverseHTTPwithAzureAD"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_webcontents_1": {
+        "api": {
+          "name": "shared_webcontents"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationHTTPwithAzureAD"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)": {
+          "defaultValue": "operations-d365-schulz-int-11.crm4.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarDataverseInstance",
+            "description": "The Dataverse Instance to connect to within a Flow when using Web API Calls"
+          }
+        },
+        "EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)": {
+          "defaultValue": "d365-schulz-int-11b9dbaf056743afd3devaos.axcloud.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarUnifiedOperationsInstance",
+            "description": "The Unified Operations Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "The GUID of the Calculation that has been created",
+                  "title": "Calculation",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "The GUID of the Processing Log for the Parent Flow",
+                  "title": "Processing Log",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "The GUID of the Quote of the Calculation",
+                  "title": "Quote",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_3": {
+                  "description": "The Name of the Calculation",
+                  "title": "Calculation Name",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_4": {
+                  "description": "The User that initiated the process",
+                  "title": "Process Owner",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_5": {
+                  "description": "The GUID of the Customer set for the Quote",
+                  "title": "Customer",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_6": {
+                  "description": "The Code of the Company set for the Quote",
+                  "title": "Company Code",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_7": {
+                  "description": "The Name of the Customer set for the Quote",
+                  "title": "Customer Name",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_8": {
+                  "description": "The Accountnumber of the Customer set for the Quote",
+                  "title": "Customer Accountnumber",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "text_3",
+                "text_4",
+                "text_5",
+                "text_6",
+                "text_7",
+                "text_8"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "1b393759-1372-4bcf-a714-daa7db9d3e69"
+          }
+        }
+      },
+      "actions": {
+        "Initialize_varNumberOfCalculationSalesPrice_Processed": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfCalculationSalesPrice_Processed",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varNumberOfCalculationSalesPrice_ToProcess": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "658ed88f-d779-4efa-839f-73c4a5a98782"
+          }
+        },
+        "Initialize_varNumberOfCalculationSalesPrice_ToProcess": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfCalculationSalesPrice_ToProcess",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varError": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "99dd8e6c-e9f0-49b7-a0f4-f76515b6ff6d"
+          }
+        },
+        "Create_Calculation_Sales_Price": {
+          "type": "Scope",
+          "actions": {
+            "Calculation_Sales_Prices_to_process": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@length(variables('varCreateMultiple_Targets'))",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Create_Calculation_Sales_Prices": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "request/method": "POST",
+                      "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_calculationsalesprices/Microsoft.Dynamics.CRM.CreateMultiple",
+                      "request/headers": {
+                        "OData-MaxVersion": "4.0",
+                        "OData-Version": "4.0",
+                        "If-None-Match": "null",
+                        "Accept": "application/json",
+                        "Content-Type": "application/json; charset=utf-8"
+                      },
+                      "request/body": "{\n \"Targets\": @{union(\r\n  variables('varCreateMultiple_Targets'),\r\n  variables('varCreateMultiple_Targets')\r\n)}\n}"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                      "operationId": "InvokeHttp",
+                      "connectionName": "shared_webcontents"
+                    }
+                  },
+                  "runAfter": {
+                    "Remove_Duplicates_from_Payload": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "58e02269-d3e5-40cb-9cca-e1d404a583b4"
+                  }
+                },
+                "Set_varNumberOfCalculationSalesPrice_Processed_[Success]": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "varNumberOfCalculationSalesPrice_Processed",
+                    "value": "@length(body('Create_Calculation_Sales_Prices')?['Ids'])"
+                  },
+                  "runAfter": {
+                    "Create_Calculation_Sales_Prices": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "6b92894d-dec1-4355-b9c5-6991769a2097"
+                  }
+                },
+                "Remove_Duplicates_from_Payload": {
+                  "type": "Compose",
+                  "description": "Remove Duplicates from Payload (if an item has the exact same price in different Trade Agreement positions)",
+                  "inputs": "@union(\r\n  variables('varCreateMultiple_Targets'),\r\n  variables('varCreateMultiple_Targets')\r\n)"
+                },
+                "Append_Create_Calculation_Sales_Prices_to_varLog_[Success]": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[INF] - [@{utcNow()}] - @{length(body('Create_Calculation_Sales_Prices')?['Ids'])} Sales Prices successfully added to Calculation @{decodeUriComponent('%0A')}"
+                  },
+                  "runAfter": {
+                    "Create_Calculation_Sales_Prices": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "metadata": {
+                "operationMetadataId": "0be1e529-86fc-4cdb-bfa0-40d51340bb47"
+              }
+            }
+          },
+          "runAfter": {
+            "Fetch_Information": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "eb4ae6c1-9b7f-4378-afdf-800d56a4bfed"
+          }
+        },
+        "Initialize_varProcessingStatus": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varProcessingStatus",
+                "type": "string",
+                "value": "Pending"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varErrorMessage": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d9778e51-3398-4861-8a53-96a310365863"
+          }
+        },
+        "Initialize_varErrorMessage": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorMessage",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varError": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b4ebf231-4b62-467b-9a38-a2e6c3aabb02"
+          }
+        },
+        "Initialize_varCreateMultiple_Targets": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varCreateMultiple_Targets",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varProcessingStatus": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "505ac577-c643-4143-bdbc-ebcd2aebcee9"
+          }
+        },
+        "Initialize_varOdataType": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varOdataType",
+                "type": "string",
+                "value": "@{string('@')}odata.type"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varNumberOfCalculationSalesPrice_Processed": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b55f9086-5bc2-42d3-b045-19fb1ca43941"
+          }
+        },
+        "Processing_Log": {
+          "type": "Scope",
+          "actions": {
+            "Convert_time_zone": {
+              "type": "Expression",
+              "kind": "ConvertTimeZone",
+              "inputs": {
+                "baseTime": "@{utcNow()}",
+                "sourceTimeZone": "UTC",
+                "destinationTimeZone": "W. Europe Standard Time",
+                "formatString": "u"
+              },
+              "metadata": {
+                "operationMetadataId": "1d7e37f7-559a-4f50-bc57-01f763122a7d"
+              }
+            },
+            "Create_ProcessingLog": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "item/hso_name": "Kalkulations-Verkaufspreise (Artikel) erstellen - @{body('Convert_time_zone')}",
+                  "item/hso_processingtask": 100000010,
+                  "item/ownerid@odata.bind": "systemusers(@{triggerBody()?['text_4']})",
+                  "item/hso_flowrunurl": "@concat('https://emea.flow.microsoft.com/manage/environments/', workflow()?['tags']['environmentName'], '/flows/', workflow()?['name'], '/runs/', workflow()?['run']['name'])\n",
+                  "item/hso_start_datetime": "@utcNow()",
+                  "item/hso_parentprocessinglogid@odata.bind": "hso_processinglogs(@{triggerBody()?['text_1']})",
+                  "item/hso_processingstatus": 100000001
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "Convert_time_zone": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "17d88ad1-149d-4fb5-b9f9-91c0110446b5"
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varCreateMultiple_Targets": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c1c34a95-e28f-4df5-9f0d-7e6aa582f8ce"
+          }
+        },
+        "Fetch_Information": {
+          "type": "Scope",
+          "actions": {
+            "Get_Quote": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "quotes",
+                  "recordId": "@triggerBody()?['text_2']",
+                  "$select": "name,sst_schulzid_str,_msdyn_company_value,_customerid_value",
+                  "$expand": "msdyn_Company($select=cdm_companycode),\ncustomerid_account($select=name,accountnumber)"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "fe9ecece-4dbb-4927-bf99-4b730b391a0e"
+              }
+            },
+            "Get_FinOps_Trade_Agreements": {
+              "type": "OpenApiConnection",
+              "description": "Fetch all Trade Agreement Positions where either a specific date is set or no date is set for FromDate and/or ToDate",
+              "inputs": {
+                "parameters": {
+                  "request/method": "GET",
+                  "request/url": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/data/SalesPriceAgreements?$filter=dataAreaId eq '@{triggerBody()?['text_6']}' and CustomerAccountNumber eq '@{triggerBody()?['text_8']}' and ((PriceApplicableFromDate le @{utcNow()} and PriceApplicableToDate ge @{utcNow()}) or (PriceApplicableFromDate le @{utcNow()} and PriceApplicableToDate eq 1900-01-01T12:00:00Z))&cross-company=true",
+                  "request/headers": {
+                    "Accept": "application/json"
+                  }
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                  "operationId": "InvokeHttp",
+                  "connectionName": "shared_webcontents_1"
+                }
+              },
+              "runAfter": {
+                "Append_Fetch_FinOps_Trade_Agreements_to_varLog": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ccd02800-0df6-4ba3-ab8d-a679b8e2d536"
+              }
+            },
+            "Parse_JSON": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@body('Get_FinOps_Trade_Agreements')",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "@@odata.context": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "@@odata.etag": {
+                            "type": "string"
+                          },
+                          "dataAreaId": {
+                            "type": "string"
+                          },
+                          "RecordId": {
+                            "type": "integer"
+                          },
+                          "PriceApplicableFromDate": {
+                            "type": "string"
+                          },
+                          "WillSearchContinue": {
+                            "type": "string"
+                          },
+                          "SalesPriceQuantity": {
+                            "type": "integer"
+                          },
+                          "QuantityUnitySymbol": {
+                            "type": "string"
+                          },
+                          "ProductNumber": {
+                            "type": "string"
+                          },
+                          "AttributeBasedPricingId": {
+                            "type": "string"
+                          },
+                          "ProductSizeId": {
+                            "type": "string"
+                          },
+                          "ItemNumber": {
+                            "type": "string"
+                          },
+                          "ProductVersionId": {
+                            "type": "string"
+                          },
+                          "PriceCurrencyCode": {
+                            "type": "string"
+                          },
+                          "ToQuantity": {
+                            "type": "integer"
+                          },
+                          "FixedPriceCharges": {
+                            "type": "integer"
+                          },
+                          "WillDeliveryDateControlDisregardLeadTime": {
+                            "type": "string"
+                          },
+                          "PriceApplicableToDate": {
+                            "type": "string"
+                          },
+                          "PriceWarehouseId": {
+                            "type": "string"
+                          },
+                          "SalesLeadTimeDays": {
+                            "type": "integer"
+                          },
+                          "FromQuantity": {
+                            "type": "integer"
+                          },
+                          "CustomerAccountNumber": {
+                            "type": "string"
+                          },
+                          "PriceCustomerGroupCode": {
+                            "type": "string"
+                          },
+                          "Price": {
+                            "type": "number"
+                          },
+                          "PriceSiteId": {
+                            "type": "string"
+                          },
+                          "IsGenericCurrencySearchEnabled": {
+                            "type": "string"
+                          },
+                          "ProductColorId": {
+                            "type": "string"
+                          },
+                          "ProductconfigurationId": {
+                            "type": "string"
+                          },
+                          "ProductStyleId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "@@odata.etag",
+                          "dataAreaId",
+                          "RecordId",
+                          "PriceApplicableFromDate",
+                          "WillSearchContinue",
+                          "SalesPriceQuantity",
+                          "QuantityUnitySymbol",
+                          "ProductNumber",
+                          "AttributeBasedPricingId",
+                          "ProductSizeId",
+                          "ItemNumber",
+                          "ProductVersionId",
+                          "PriceCurrencyCode",
+                          "ToQuantity",
+                          "FixedPriceCharges",
+                          "WillDeliveryDateControlDisregardLeadTime",
+                          "PriceApplicableToDate",
+                          "PriceWarehouseId",
+                          "SalesLeadTimeDays",
+                          "FromQuantity",
+                          "CustomerAccountNumber",
+                          "PriceCustomerGroupCode",
+                          "Price",
+                          "PriceSiteId",
+                          "IsGenericCurrencySearchEnabled",
+                          "ProductColorId",
+                          "ProductconfigurationId",
+                          "ProductStyleId"
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Get_FinOps_Trade_Agreements": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c41525b4-5a04-4f32-96fe-da601be98bcb"
+              }
+            },
+            "Apply_to_each_Trade_Agreement": {
+              "type": "Foreach",
+              "foreach": "@body('Remove_records_without_ProductNumber')",
+              "actions": {
+                "Filter_Trade_Agreements_by_ProductNumber": {
+                  "type": "Query",
+                  "inputs": {
+                    "from": "@body('Remove_records_without_ProductNumber')",
+                    "where": "@and(\r\n    equals(\r\n        item()?['ProductNumber'], \r\n        items('Apply_to_each_Trade_Agreement')?['ProductNumber']\r\n    ), \r\n    greater(\r\n        item()?['Price'], \r\n        items('Apply_to_each_Trade_Agreement')?['Price']\r\n    )\r\n)"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "9fdb93f9-df7a-4e1c-81f6-f5ce631efb4f"
+                  }
+                },
+                "Trade_Agreement_with_higher_Price_for_same_ProductNumber_found": {
+                  "type": "If",
+                  "expression": {
+                    "greater": [
+                      "@length(body('Filter_Trade_Agreements_by_ProductNumber'))",
+                      0
+                    ]
+                  },
+                  "actions": {},
+                  "else": {
+                    "actions": {
+                      "Dataverse_Product_Reference": {
+                        "type": "Compose",
+                        "inputs": "/products(msdyn_productnumber='@{items('Apply_to_each_Trade_Agreement')['ProductNumber']}',_msdyn_companyid_value=@{outputs('Get_Quote')?['body/_msdyn_company_value']})",
+                        "metadata": {
+                          "operationMetadataId": "5c86048a-d383-4661-b5a7-7080c1bc1c19"
+                        }
+                      },
+                      "Append_Trade_Agreement_to_varCreateMultiple_Targets": {
+                        "type": "AppendToArrayVariable",
+                        "inputs": {
+                          "name": "varCreateMultiple_Targets",
+                          "value": {
+                            "@{variables('varOdataType')}": "Microsoft.Dynamics.CRM.hso_calculationsalesprice",
+                            "hso_name": "@concat(triggerBody()?['text_3'], ' - ', items('Apply_to_each_Trade_Agreement')?['ItemNumber'])",
+                            "hso_calculationid@odata.bind": "@concat('/hso_calculations(', triggerBody()?['text'], ')')",
+                            "hso_priceorigin": 100000000,
+                            "hso_pricetype": 100000000,
+                            "hso_salesprice": "@items('Apply_to_each_Trade_Agreement')?['Price']",
+                            "hso_productid@odata.bind": "@outputs('Dataverse_Product_Reference')"
+                          }
+                        },
+                        "runAfter": {
+                          "Dataverse_Product_Reference": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "2cd9db26-6178-4b16-8794-4ca1ba332eb4"
+                        }
+                      },
+                      "Increment_varNumberOfCalculationSalesPrice_ToProcess": {
+                        "type": "IncrementVariable",
+                        "inputs": {
+                          "name": "varNumberOfCalculationSalesPrice_ToProcess",
+                          "value": 1
+                        },
+                        "runAfter": {
+                          "Append_Trade_Agreement_to_varCreateMultiple_Targets": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "bf359764-d4ca-4155-9316-acabc099f0c0"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Filter_Trade_Agreements_by_ProductNumber": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "51fe29ba-c9ee-44dd-9901-9d1f374668ed"
+                  }
+                }
+              },
+              "runAfter": {
+                "Append_retrieved_FinOps_Trade_Agreements_to_varLog": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 50
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "23465a66-47e5-4d45-8b70-3f925e40fbe6"
+              }
+            },
+            "Remove_records_without_ProductNumber": {
+              "type": "Query",
+              "inputs": {
+                "from": "@body('Parse_JSON')?['value']",
+                "where": "@not(equals(item()?['ProductNumber'],''))"
+              },
+              "runAfter": {
+                "Parse_JSON": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "b43bf3b2-b82b-4be3-8936-f1a09d221c84"
+              }
+            },
+            "Append_Fetch_FinOps_Trade_Agreements_to_varLog": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - Fetch currently valid FinOps Trade Agreements for selected Customer \"@{triggerBody()?['text_7']}\" (@{triggerBody()?['text_8']}) @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "Get_Quote": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Append_retrieved_FinOps_Trade_Agreements_to_varLog": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - @{length(body('Remove_records_without_ProductNumber'))} FinOps Trade Agreements retrieved. \n[INF] - [@{utcNow()}] -  Start cleaning of duplicate Trade Agreements to proceed only with highest Price for same Product Number. @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "Remove_records_without_ProductNumber": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Append_cleaned_FinOps_Trade_Agreements_to_varLog": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - Cleaning of duplicate FinOps Trade Agreements finished. \n[INF] - [@{utcNow()}] - Start adding the Sales Prices to Calculation @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "Apply_to_each_Trade_Agreement": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varOdataType": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "578f22f8-e819-4e48-96e0-2e11f538a9d1"
+          }
+        },
+        "Create_Sales_Price_-_Error": {
+          "type": "Scope",
+          "actions": {
+            "Filter_Results_for_failed_actions": {
+              "type": "Query",
+              "inputs": {
+                "from": "@result('Create_Calculation_Sales_Price')",
+                "where": "@equals(item()['status'], 'Failed')"
+              },
+              "metadata": {
+                "operationMetadataId": "0ab2afbf-64ea-418d-bd9d-65a6863a7bc8"
+              }
+            },
+            "Select_Error_Summary": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Filter_Results_for_failed_actions')",
+                "select": {
+                  "Action": "@item()?['name']",
+                  "Code": "@item()?['code']",
+                  "Status": "@item()?['status']",
+                  "StatusCode": "@item()?['outputs']?['statusCode']",
+                  "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                }
+              },
+              "runAfter": {
+                "Filter_Results_for_failed_actions": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "2822f992-45ab-4420-9e3d-d0fa0fd973eb"
+              }
+            },
+            "Apply_to_each_Error_Summary_[Create_Sales_Price]": {
+              "type": "Foreach",
+              "foreach": "@body('Select_Error_Summary')",
+              "actions": {
+                "Append_Error_Summary": {
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "varError",
+                    "value": "@items('Apply_to_each_Error_Summary_[Create_Sales_Price]')"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "3469f5c1-3721-49c6-9282-101e18f85d47"
+                  }
+                }
+              },
+              "runAfter": {
+                "Select_Error_Summary": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "11651d04-deed-4450-9f4d-c1cc2e8adda5"
+              }
+            },
+            "Set_varNumberOfProjectCategorySalesPrice_Processed_[Error]": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varNumberOfCalculationSalesPrice_Processed",
+                "value": "@length(outputs('List_Created_Calculation_Sales_Price')?['body/value'])"
+              },
+              "runAfter": {
+                "List_Created_Calculation_Sales_Price": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "6661bcfe-590a-40c6-869f-461541b60aad"
+              }
+            },
+            "List_Created_Calculation_Sales_Price": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_calculationsalesprices",
+                  "$filter": "_hso_calculationid_value eq @{triggerBody()?['text']} and hso_pricetype eq 100000000"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "Apply_to_each_Error_Summary_[Create_Sales_Price]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "07b0aa44-5f09-42a2-b6ac-ecd1089a9389"
+              }
+            },
+            "Append_Create_Calculation_Sales_Prices_to_varLog_[Error]": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - Error when creating the Calculation Sales Prices. @{length(outputs('List_Created_Calculation_Sales_Price')?['body/value'])} of @{variables('varNumberOfCalculationSalesPrice_ToProcess')} Sales Prices created. \n[ERR] - [@{utcNow()}] - Error: @{variables('varError')} @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "List_Created_Calculation_Sales_Price": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Create_Calculation_Sales_Price": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "98bd011c-c174-4fa8-87c3-b7edaecadcae"
+          }
+        },
+        "Summary": {
+          "type": "Scope",
+          "actions": {
+            "Parse_JSON_[URL_NEU]": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": {
+                  "link": {
+                    "actions": [
+                      {
+                        "title": "Kalkulationsversion anzeigen",
+                        "data": {
+                          "url": "?pagetype=entityrecord&etn=hso_calculation&id=@{triggerBody()?['text']}",
+                          "navigationTarget": "inline"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "link": {
+                      "type": "object",
+                      "properties": {
+                        "actions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "title": {
+                                "type": "string"
+                              },
+                              "data": {
+                                "type": "object",
+                                "properties": {
+                                  "url": {
+                                    "type": "string"
+                                  },
+                                  "navigationTarget": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            },
+                            "required": [
+                              "title",
+                              "data"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "b769deed-a8c4-494a-a92f-2be1a1eb92c7"
+              }
+            },
+            "All_Project_Category_Sales_Price_created_for_Calculation": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@variables('varNumberOfCalculationSalesPrice_ToProcess')",
+                  "@variables('varNumberOfCalculationSalesPrice_Processed')"
+                ]
+              },
+              "actions": {
+                "Update_Processing_Log_[Success]": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_processinglogs",
+                      "recordId": "@outputs('Create_ProcessingLog')?['body/hso_processinglogid']",
+                      "item/hso_end_datetime": "@utcNow()",
+                      "item/hso_calculationsalesprice_product_actual": "@variables('varNumberOfCalculationSalesPrice_Processed')",
+                      "item/hso_calculationsalesprice_product_target": "@variables('varNumberOfCalculationSalesPrice_ToProcess')",
+                      "item/hso_log": "@variables('varLog')",
+                      "item/hso_processingstatus": 100000002
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "runAfter": {
+                    "Finish_varLog_with_Success": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "dfa8137d-a012-4ba8-97ee-11968a11a8be"
+                  }
+                },
+                "Respond_to_Parent_Flow_[Success]": {
+                  "type": "Response",
+                  "kind": "PowerApp",
+                  "inputs": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "outcome": {
+                          "title": "Outcome",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        },
+                        "trade_agreements_to_process": {
+                          "title": "Trade Agreements To Process",
+                          "x-ms-dynamically-added": true,
+                          "type": "number"
+                        },
+                        "trade_agreements_processed": {
+                          "title": "Trade Agreements Processed",
+                          "x-ms-dynamically-added": true,
+                          "type": "number"
+                        },
+                        "error_message": {
+                          "title": "Error Message",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": {}
+                    },
+                    "statusCode": 200,
+                    "body": {
+                      "outcome": "Success",
+                      "trade_agreements_to_process": "@variables('varNumberOfCalculationSalesPrice_ToProcess')",
+                      "trade_agreements_processed": "@variables('varNumberOfCalculationSalesPrice_Processed')",
+                      "error_message": "@null"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "4ee1c224-a20a-4df2-80d6-4df1b5962956"
+                  }
+                },
+                "Send_inApp_Notification_[Success]": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          1,
+                          2
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Create_inApp_Notification_[Succes]": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "appnotifications",
+                          "item/title": "Artikelverkaufspreise erstellt",
+                          "item/ttlinseconds": 200,
+                          "item/ownerid@odata.bind": "systemusers(@{triggerBody()?['text_4']})",
+                          "item/data": "@body('Parse_JSON_[URL_NEU]')?['link']",
+                          "item/icontype": 100000001,
+                          "item/priority": 200000000,
+                          "item/body": "Die kundenspezifischen Verkaufspreise für Artikel wurden erfolgreich aus den FinOps Handelsvereinbarungen für die Kalkulationsversion \"@{triggerBody()?['text_3']}\" erstellt."
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "CreateRecord",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "d3c66f90-c2c7-4215-9a89-1c1f6cb872c5"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Update_Processing_Log_[Success]": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Finish_varLog_with_Success": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[SUC] - [@{utcNow()}] - Flow run was successful. All required FinOps Trade Agreement Sales Prices have been added to the Calculation."
+                  },
+                  "runAfter": {
+                    "Respond_to_Parent_Flow_[Success]": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Create_inApp_Notification_[Error]": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "appnotifications",
+                        "item/title": "Artikelverkaufspreise-Fehler",
+                        "item/ttlinseconds": 200,
+                        "item/ownerid@odata.bind": "systemusers(@{triggerBody()?['text_4']})",
+                        "item/data": "@body('Parse_JSON_[URL_NEU]')?['link']",
+                        "item/icontype": 100000002,
+                        "item/priority": 200000001,
+                        "item/body": "Beim Erstellen der Kalkulations-Verkaufspreise (Kategorie) für die Kalkulationsversion \"@{triggerBody()?['text_3']}\" ist ein Fehler aufgetreten."
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "CreateRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    },
+                    "runAfter": {
+                      "Update_Processing_Log_[Error]": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "a019b54a-34ea-48d7-9064-9eb2f842948a"
+                    }
+                  },
+                  "Apply_to_each_Error_Summary": {
+                    "type": "Foreach",
+                    "foreach": "@variables('varError')",
+                    "actions": {
+                      "Append_Error_Message": {
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varErrorMessage",
+                          "value": "[ERROR] - Action '@{items('Apply_to_each_Error_Summary')?['Action']}' failed with error message: @{items('Apply_to_each_Error_Summary')?['Message']} (Status: @{items('Apply_to_each_Error_Summary')?['Status']} / Status Code: @{items('Apply_to_each_Error_Summary')?['StatusCode']})"
+                        },
+                        "metadata": {
+                          "operationMetadataId": "a7a17c59-dd66-4433-8461-2e1dca2400c9"
+                        }
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "6a29090f-1834-448f-826f-f33d425b3dcf"
+                    }
+                  },
+                  "Update_Processing_Log_[Error]": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_processinglogs",
+                        "recordId": "@outputs('Create_ProcessingLog')?['body/hso_processinglogid']",
+                        "item/hso_end_datetime": "@utcNow()",
+                        "item/hso_flowerror": "@variables('varErrorMessage')",
+                        "item/hso_calculationsalesprice_product_actual": "@variables('varNumberOfCalculationSalesPrice_Processed')",
+                        "item/hso_calculationsalesprice_product_target": "@variables('varNumberOfCalculationSalesPrice_ToProcess')",
+                        "item/hso_log": "@variables('varLog')",
+                        "item/hso_processingstatus": 100000003
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    },
+                    "runAfter": {
+                      "Finish_varLog_with_Error": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "dfa8137d-a012-4ba8-97ee-11968a11a8be"
+                    }
+                  },
+                  "Respond_to_Parent_Flow_[Error]": {
+                    "type": "Response",
+                    "kind": "PowerApp",
+                    "inputs": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "outcome": {
+                            "title": "Outcome",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          },
+                          "trade_agreements_to_process": {
+                            "title": "Trade Agreements To Process",
+                            "x-ms-dynamically-added": true,
+                            "type": "number"
+                          },
+                          "trade_agreements_processed": {
+                            "title": "Trade Agreements Processed",
+                            "x-ms-dynamically-added": true,
+                            "type": "number"
+                          },
+                          "error_message": {
+                            "title": "Error Message",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": {}
+                      },
+                      "statusCode": 200,
+                      "body": {
+                        "outcome": "Error",
+                        "trade_agreements_to_process": "@variables('varNumberOfCalculationSalesPrice_ToProcess')",
+                        "trade_agreements_processed": "@variables('varNumberOfCalculationSalesPrice_Processed')",
+                        "error_message": "@variables('varErrorMessage')"
+                      }
+                    },
+                    "runAfter": {
+                      "Apply_to_each_Error_Summary": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "fbfe68b5-3929-4a10-854c-f07cb337c05c"
+                    }
+                  },
+                  "Finish_varLog_with_Error": {
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "varLog",
+                      "value": "[ERR] - [@{utcNow()}] - Flow run has failed. Trade Agreement Sales Prices may have been partially added to Calculation. Check Log for further details."
+                    },
+                    "runAfter": {
+                      "Respond_to_Parent_Flow_[Error]": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Parse_JSON_[URL_NEU]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ce0402a1-4829-434a-b967-5d65ac4b45ee"
+              }
+            }
+          },
+          "runAfter": {
+            "Create_Sales_Price_-_Error": [
+              "Failed",
+              "Succeeded",
+              "Skipped",
+              "TimedOut"
+            ],
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1ab9f814-65ef-443c-872e-fa4dee2572a5"
+          }
+        },
+        "Initialize_varError": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varError",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "eed278cb-0b03-4e74-a461-5346e9267c39"
+          }
+        },
+        "Initialize_varLog": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varLog",
+                "type": "string",
+                "value": "[INF] - [@{utcNow()}] - Initializing Flow Run @{decodeUriComponent('%0A')}"
+              }
+            ]
+          },
+          "runAfter": {}
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,120 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps-1": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataverse"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_row_in_bookable_resourcebooking_is_created": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "bookableresourcebooking",
+              "subscriptionRequest/scope": 4
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          },
+          "conditions": [],
+          "metadata": {
+            "operationMetadataId": "77f3f691-0b9e-4b80-9374-e83c1e51fb2a"
+          }
+        }
+      },
+      "actions": {
+        "If_Projekt_Montage_not_empty": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "not": {
+                  "equals": [
+                    "@triggerOutputs()?['body/_sst_projectassembly_id_value']",
+                    "@null"
+                  ]
+                }
+              }
+            ]
+          },
+          "actions": {
+            "Update_a_row": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "bookableresourcebookings",
+                  "recordId": "@triggerOutputs()?['body/bookableresourcebookingid']",
+                  "item/sst_deliveryaddress": "@outputs('Get_address_from_related_project_assembly')?['body/value'][0]['sst_address']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateOnlyRecord",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              },
+              "runAfter": {
+                "Get_address_from_related_project_assembly": [
+                  "SUCCEEDED"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "e907f16f-acb0-44f0-92b6-b5c30e69a7a4"
+              }
+            },
+            "Get_address_from_related_project_assembly": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "msdyn_projects",
+                  "$select": "sst_address,msdyn_projectid",
+                  "$filter": "msdyn_projectid eq '@{triggerOutputs()?['body/_sst_projectassembly_id_value']}' and sst_address ne null",
+                  "$top": 1
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "02c151b1-f04e-4faa-a0a7-057711973bbc"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "28205a2e-9c36-4ba0-8e7a-ce75c3f39029"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

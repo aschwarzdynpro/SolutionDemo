@@ -1,0 +1,43 @@
+<appaction uniquename="sst__Artikelsucheffnen!c5455d337b0f416cb8000b28e97b971e!msdynce_saleshub!hso_calculationdetail!2">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Artikelsuche öffnen">
+    <label description="Artikelsuche öffnen" languagecode="1031" />
+  </buttonlabeltext>
+  <buttontooltipdescription default="Öffnet die Artikelsuch-App, welche Zugriff auf die Artikel der verschiedenen Lieferantenkataloge gewährt">
+    <label description="Öffnet die Artikelsuch-App, welche Zugriff auf die Artikel der verschiedenen Lieferantenkataloge gewährt" languagecode="1031" />
+  </buttontooltipdescription>
+  <buttontooltiptitle default="Artikelsuche öffnen">
+    <label description="Artikelsuche öffnen" languagecode="1031" />
+  </buttontooltiptitle>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculationdetail</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculationdetail</contextvalue>
+  <fonticon>SearchCampaigns</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>2</location>
+  <name>Artikelsucheffnen!c5455d337b0f416cb8000b28e97b971e</name>
+  <onclickeventjavascriptfunctionname>Schulz.CalculationPositionRibbon.openItemSearchApp</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":5}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>36ff4f4d-c662-ee11-8df0-000d3ab3405b</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100100045.0000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>sst_saleshubdefaultcommandlibrary_a87a9</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>5934cd2f89984837b28aeee9f47be4bb</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

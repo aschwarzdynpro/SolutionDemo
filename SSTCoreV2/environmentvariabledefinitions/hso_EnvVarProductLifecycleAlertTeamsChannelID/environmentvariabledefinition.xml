@@ -1,0 +1,14 @@
+<environmentvariabledefinition schemaname="hso_EnvVarProductLifecycleAlertTeamsChannelID">
+  <defaultvalue>19:RnSRUBeRXR8nr7pSq5XFPOzZRWAjPuexuRRl_qiqlI41@thread.tacv2</defaultvalue>
+  <description default="Die Channel ID für Kanal &quot;Alert Artikel-Produkte-Vorlagen&quot;">
+    <label description="Die Channel ID für Kanal &quot;Alert Artikel-Produkte-Vorlagen&quot;" languagecode="1031" />
+  </description>
+  <displayname default="EnvVar | Product Lifecycle Alert | Teams Channel ID">
+    <label description="EnvVar | Product Lifecycle Alert | Teams Channel ID" languagecode="1031" />
+  </displayname>
+  <introducedversion>1.0.0.0</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000000</type>
+</environmentvariabledefinition>

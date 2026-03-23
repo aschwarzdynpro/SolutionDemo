@@ -1,0 +1,43 @@
+<appaction uniquename="sst__DeleteBulk!1cfa16bc1858460699e5b739420a3bec!msdynce_saleshub!hso_calculationdetail!2">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Position(en) löschen">
+    <label description="Position(en) löschen" languagecode="1031" />
+  </buttonlabeltext>
+  <buttontooltipdescription default="Alle ausgewählten Positionen werden gelöscht und eine Neu-Nummerierung der verbleibenden Positionen wird durchgeführt. Dieser Vorgang kann nicht rückgängig gemacht werden.">
+    <label description="Alle ausgewählten Positionen werden gelöscht und eine Neu-Nummerierung der verbleibenden Positionen wird durchgeführt. Dieser Vorgang kann nicht rückgängig gemacht werden." languagecode="1031" />
+  </buttontooltipdescription>
+  <buttontooltiptitle default="Kalkulationsposition(en) löschen">
+    <label description="Kalkulationsposition(en) löschen" languagecode="1031" />
+  </buttontooltiptitle>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculationdetail</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculationdetail</contextvalue>
+  <fonticon>$clientsvg:Delete</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>2</location>
+  <name>DeleteBulk!1cfa16bc1858460699e5b739420a3bec</name>
+  <onclickeventjavascriptfunctionname>Schulz.CalculationPositionRibbon.callCustomAPIExecuteOperation_BulkDelete</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":5},{"type":23},{"type":21,"value":"BulkDelete"},{"type":19,"value":3}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>36ff4f4d-c662-ee11-8df0-000d3ab3405b</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100100005.5000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>sst_saleshubdefaultcommandlibrary_a87a9</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>72931385764148e888499b7f75674a1e</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

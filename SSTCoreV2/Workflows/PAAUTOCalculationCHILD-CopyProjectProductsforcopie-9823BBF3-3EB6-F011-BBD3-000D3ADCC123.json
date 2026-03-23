@@ -1,0 +1,862 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_webcontents": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverseHTTPwithAzureAD"
+        },
+        "api": {
+          "name": "shared_webcontents"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)": {
+          "defaultValue": "operations-d365-schulz-int-11.crm4.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarDataverseInstance",
+            "description": "The Dataverse Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "09e0ac8c-7230-48dc-853d-b89e974af067"
+          },
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "NewCalculationGUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GUID of the Calculation that has been created",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "title": "SourceCalculationGUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GUID of the source Calculation that has been copied",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_2": {
+                  "title": "ProcessingLogGUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GUID of the Processing Log for the Parent Flow",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_3": {
+                  "title": "ProcessOwnerGUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GUID of the User that initiated the process",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_4": {
+                  "title": "NewCalculationName",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The Name of the Calculation that has been created",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "text_3",
+                "text_4"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Summary": {
+          "actions": {
+            "All_Project_Products_successfully_copied": {
+              "actions": {
+                "Respond_to_Parent_Flow_[Success]": {
+                  "metadata": {
+                    "operationMetadataId": "5c5469f2-f32e-4b20-95cc-5c489f135c0c"
+                  },
+                  "type": "Response",
+                  "kind": "PowerApp",
+                  "inputs": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "outcome": {
+                          "title": "Outcome",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        },
+                        "errormessage": {
+                          "title": "ErrorMessage",
+                          "type": "string",
+                          "x-ms-content-hint": "TEXT",
+                          "x-ms-dynamically-added": true
+                        },
+                        "projectproductguidmapping": {
+                          "title": "ProjectProductGUIDMapping",
+                          "type": "string",
+                          "x-ms-content-hint": "TEXT",
+                          "x-ms-dynamically-added": true
+                        },
+                        "numberofprojectproducts": {
+                          "title": "NumberOfProjectProducts",
+                          "type": "number",
+                          "x-ms-content-hint": "NUMBER",
+                          "x-ms-dynamically-added": true
+                        }
+                      },
+                      "additionalProperties": {}
+                    },
+                    "statusCode": 200,
+                    "body": {
+                      "outcome": "Success",
+                      "errormessage": "@{null}",
+                      "projectproductguidmapping": "@{string(body('Select_Project_Product_GUID_Mapping'))}",
+                      "numberofprojectproducts": "@variables('varProjectProduct_Parameters')?['ProjectProductsProcessed']"
+                    }
+                  }
+                },
+                "Finish_varLog_with_Success": {
+                  "runAfter": {
+                    "Respond_to_Parent_Flow_[Success]": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[SUC] - [@{utcNow()}] - Flow run was successful. All required Project Products have been added to the Calculation."
+                  }
+                },
+                "Update_Processing_Log_[Success]": {
+                  "runAfter": {
+                    "Finish_varLog_with_Success": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_processinglogs",
+                      "recordId": "@outputs('Create_ProcessingLog')?['body/hso_processinglogid']",
+                      "item/hso_end_datetime": "@utcNow()",
+                      "item/hso_log": "@variables('varLog')",
+                      "item/hso_processingstatus": 100000002
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Apply_to_each_Error_Summary": {
+                    "foreach": "@variables('varError')",
+                    "actions": {
+                      "Append_Error_Message": {
+                        "metadata": {
+                          "operationMetadataId": "a7a17c59-dd66-4433-8461-2e1dca2400c9"
+                        },
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varErrorMessage",
+                          "value": "[ERROR] - Action '@{items('Apply_to_each_Error_Summary')?['Action']}' failed with error message: @{items('Apply_to_each_Error_Summary')?['Message']} (Status: @{items('Apply_to_each_Error_Summary')?['Status']} / Status Code: @{items('Apply_to_each_Error_Summary')?['StatusCode']})"
+                        }
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "6a29090f-1834-448f-826f-f33d425b3dcf"
+                    },
+                    "type": "Foreach"
+                  },
+                  "Respond_to_Parent_Flow_[Error]": {
+                    "runAfter": {
+                      "Apply_to_each_Error_Summary": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "5c5469f2-f32e-4b20-95cc-5c489f135c0c"
+                    },
+                    "type": "Response",
+                    "kind": "PowerApp",
+                    "inputs": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "outcome": {
+                            "title": "Outcome",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          },
+                          "errormessage": {
+                            "title": "ErrorMessage",
+                            "type": "string",
+                            "x-ms-content-hint": "TEXT",
+                            "x-ms-dynamically-added": true
+                          },
+                          "projectproductguidmapping": {
+                            "title": "ProjectProductGUIDMapping",
+                            "type": "string",
+                            "x-ms-content-hint": "TEXT",
+                            "x-ms-dynamically-added": true
+                          },
+                          "numberofprojectproducts": {
+                            "title": "NumberOfProjectProducts",
+                            "type": "number",
+                            "x-ms-content-hint": "NUMBER",
+                            "x-ms-dynamically-added": true
+                          }
+                        },
+                        "additionalProperties": {}
+                      },
+                      "statusCode": 200,
+                      "body": {
+                        "outcome": "Success",
+                        "errormessage": "@{variables('varErrorMessage')}",
+                        "projectproductguidmapping": "@{string(body('Select_Project_Product_GUID_Mapping'))}",
+                        "numberofprojectproducts": "@variables('varProjectProduct_Parameters')?['ProjectProductsProcessed']"
+                      }
+                    }
+                  },
+                  "Finish_varLog_with_Error": {
+                    "runAfter": {
+                      "Respond_to_Parent_Flow_[Error]": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "varLog",
+                      "value": "[ERR] - [@{utcNow()}] - Flow run has failed. Project Products may have been partially added to Calculation. Check Log for further details."
+                    }
+                  },
+                  "Update_Processing_Log_[Error]": {
+                    "runAfter": {
+                      "Finish_varLog_with_Error": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_processinglogs",
+                        "recordId": "@outputs('Create_ProcessingLog')?['body/hso_processinglogid']",
+                        "item/hso_end_datetime": "@utcNow()",
+                        "item/hso_flowerror": "@variables('varErrorMessage')",
+                        "item/hso_log": "@variables('varLog')",
+                        "item/hso_processingstatus": 100000003
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateOnlyRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@variables('varProjectProduct_Parameters')?['ProjectProductsProcessingStatus']",
+                      "OK"
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Calculation_Project_Products": [
+              "Succeeded",
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "0a9b3f91-6238-4e65-a715-3e5243311550"
+          },
+          "type": "Scope"
+        },
+        "Initialize_varLog": {
+          "runAfter": {},
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varLog",
+                "type": "string",
+                "value": "[INF] - [@{utcNow()}] - Initializing Flow Run @{decodeUriComponent('%0A')}"
+              }
+            ]
+          }
+        },
+        "Initialize_varOdataType": {
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b55f9086-5bc2-42d3-b045-19fb1ca43941"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varOdataType",
+                "type": "string",
+                "value": "@{string('@')}odata.type"
+              }
+            ]
+          }
+        },
+        "Initialize_varError": {
+          "runAfter": {
+            "Initialize_varOdataType": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "eed278cb-0b03-4e74-a461-5346e9267c39"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varError",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "Initialize_varErrorMessage": {
+          "runAfter": {
+            "Initialize_varError": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b4ebf231-4b62-467b-9a38-a2e6c3aabb02"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorMessage",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Processing_Log": {
+          "actions": {
+            "Create_ProcessingLog": {
+              "metadata": {
+                "operationMetadataId": "f54699b3-6e85-4a9c-913e-b65223597f55"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "item/hso_name": "Kalkulations-Projektartikel für \"@{triggerBody()?['text_4']}\" kopieren ",
+                  "item/hso_processingtask": 100000010,
+                  "item/ownerid@odata.bind": "systemusers(@{triggerBody()?['text_3']})",
+                  "item/hso_flowrunurl": "@concat('https://emea.flow.microsoft.com/manage/environments/', workflow()?['tags']['environmentName'], '/flows/', workflow()?['name'], '/runs/', workflow()?['run']['name'])\n",
+                  "item/hso_start_datetime": "@utcNow()",
+                  "item/hso_parentprocessinglogid@odata.bind": "hso_processinglogs(@{triggerBody()?['text_2']})",
+                  "item/hso_processingstatus": 100000001
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varErrorMessage": [
+              "Succeeded"
+            ],
+            "Initialize_varProjectProductPayload": [
+              "Succeeded"
+            ]
+          },
+          "type": "Scope"
+        },
+        "Calculation_Project_Products": {
+          "actions": {
+            "Get_Calculation_Project_Products": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_projectproducts",
+                  "$select": "hso_name,hso_description,hso_costprice,_hso_uomid_value,_hso_metallabelid_value,hso_metalbase,hso_metalnumber,_hso_metallabelid_2_value,hso_metalbase_2,hso_metalnumber_2,_hso_metallabelid_3_value,hso_metalbase_3,hso_metalnumber_3,hso_basepricewithoutmetalsurcharge,_hso_surchargegroup_baseid_value,_hso_manufacturer_id_value,hso_productnumber_manufacturer,hso_typenumber_manufacturer,hso_suppliercatalogreference,hso_productnumber_supplier,hso_manufacturer_name,hso_europeanarticlenumber,hso_isbillofmaterials,hso_projecttype",
+                  "$filter": "_hso_calculationid_value eq '@{triggerBody()?['text_1']}'",
+                  "$expand": "hso_textblock_hso_projectproduct($select=hso_name, hso_description, hso_language)"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "Project_Products_to_process": {
+              "runAfter": {
+                "Get_Calculation_Project_Products": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "@setProperty(\r\n  variables('varProjectProduct_Parameters'),\r\n  'ProjectProductsToProcess',\r\n  length(outputs('Get_Calculation_Project_Products')?['body/value'])\r\n)"
+            },
+            "Project_Products_to_copy": {
+              "actions": {
+                "Copy_Calculation_Project_Products": {
+                  "actions": {
+                    "Create_Calculation_Project_Products": {
+                      "runAfter": {
+                        "Remove_NumberOfTextBlocks_from_Payload": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "e97a7bc8-3487-48b1-b52c-4e7862965a44"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "request/method": "POST",
+                          "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_projectproducts/Microsoft.Dynamics.CRM.CreateMultiple",
+                          "request/headers": {
+                            "OData-MaxVersion": "4.0",
+                            "OData-Version": "4.0",
+                            "If-None-Match": "null",
+                            "Accept": "application/json",
+                            "Content-Type": "application/json; charset=utf-8"
+                          },
+                          "request/body": "{\n \"Targets\": @{body('Remove_NumberOfTextBlocks_from_Payload')}\n}"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                          "operationId": "InvokeHttp",
+                          "connectionName": "shared_webcontents"
+                        }
+                      }
+                    },
+                    "Project_Products_processed": {
+                      "runAfter": {
+                        "Create_Calculation_Project_Products": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "Compose",
+                      "inputs": "@setProperty(\r\n  variables('varProjectProduct_Parameters'),\r\n  'ProjectProductsProcessed',\r\n  length(body('Create_Calculation_Project_Products')?['Ids'])\r\n)"
+                    },
+                    "Update_Project_Products_processed": {
+                      "runAfter": {
+                        "Project_Products_processed": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varProjectProduct_Parameters",
+                        "value": "@outputs('Project_Products_processed')"
+                      }
+                    },
+                    "Append_Calculation_Project_Products_to_Log_[Success]": {
+                      "runAfter": {
+                        "Update_Project_Products_processed": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "varLog",
+                        "value": "[INF] - [@{utcNow()}] - @{length(body('Create_Calculation_Project_Products')?['Ids'])} of @{length(outputs('Get_Calculation_Project_Products')?['body/value'])} Project Products successfully added to Calculation. @{decodeUriComponent('%0A')}"
+                      }
+                    },
+                    "Apply_to_each_selected_Calculation_Project_Product": {
+                      "foreach": "@body('Select_Calculation_Project_Products')",
+                      "actions": {
+                        "No_Text_Blocks_found": {
+                          "actions": {
+                            "Append_Project_Product_without_Text_Block_to_Payload": {
+                              "type": "AppendToArrayVariable",
+                              "inputs": {
+                                "name": "varProjectProductPayload",
+                                "value": "@items('Apply_to_each_selected_Calculation_Project_Product')"
+                              }
+                            }
+                          },
+                          "else": {
+                            "actions": {
+                              "Remove_empty_attribute": {
+                                "type": "Select",
+                                "inputs": {
+                                  "from": "@items('Apply_to_each_selected_Calculation_Project_Product')?['hso_textblock_hso_projectproduct']",
+                                  "select": "@removeProperty(\r\n item(),\r\n ''\r\n)"
+                                }
+                              },
+                              "Remove_Text_Blocks": {
+                                "runAfter": {
+                                  "Remove_empty_attribute": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@removeProperty(\r\n  items('Apply_to_each_selected_Calculation_Project_Product'),\r\n  'hso_textblock_hso_projectproduct'\r\n)"
+                              },
+                              "Add_formatted_Text_Blocks": {
+                                "runAfter": {
+                                  "Remove_Text_Blocks": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@addProperty(\r\n  outputs('Remove_Text_Blocks'),\r\n  'hso_textblock_hso_projectproduct',\r\n  body('Remove_empty_attribute')\r\n)"
+                              },
+                              "Append_Project_Product_with_Text_Blocks_to_Payload": {
+                                "runAfter": {
+                                  "Add_formatted_Text_Blocks": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "type": "AppendToArrayVariable",
+                                "inputs": {
+                                  "name": "varProjectProductPayload",
+                                  "value": "@outputs('Add_formatted_Text_Blocks')"
+                                }
+                              }
+                            }
+                          },
+                          "expression": {
+                            "and": [
+                              {
+                                "equals": [
+                                  "@items('Apply_to_each_selected_Calculation_Project_Product')?['NumberOfTextBlocks']",
+                                  0
+                                ]
+                              }
+                            ]
+                          },
+                          "type": "If"
+                        }
+                      },
+                      "runAfter": {
+                        "Select_Calculation_Project_Products": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "Foreach",
+                      "runtimeConfiguration": {
+                        "concurrency": {
+                          "repetitions": 50
+                        }
+                      }
+                    },
+                    "Select_Calculation_Project_Products": {
+                      "metadata": {
+                        "operationMetadataId": "301d0a3f-86ea-479e-80dc-cb5e436066b0"
+                      },
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@outputs('Get_Calculation_Project_Products')?['body/value']",
+                        "select": {
+                          "hso_name": "@replace(\r\n replace(\r\n  item()?['hso_name'], \r\n  '/', \r\n  ' '\r\n ), \r\n '\\', \r\n ' '\r\n)",
+                          "hso_calculationid@odata.bind": "/hso_calculations(@{triggerBody()?['text']})",
+                          "hso_description": "@item()?['hso_description']",
+                          "hso_costprice": "@item()?['hso_costprice']",
+                          "hso_uomid@odata.bind": "/uoms(@{item()?['_hso_uomid_value']})",
+                          "hso_metallabelid@odata.bind": "@If(empty(item()?['_hso_metallabelid_value']), '', concat('hso_metallabels(', item()?['_hso_metallabelid_value'], ')'))",
+                          "hso_metalbase": "@item()?['hso_metalbase']",
+                          "hso_metalnumber": "@item()?['hso_metalnumber']",
+                          "hso_metallabelid_2@odata.bind": "@If(empty(item()?['_hso_metallabelid_2_value']), '', concat('hso_metallabels(', item()?['_hso_metallabelid_2_value'], ')'))",
+                          "hso_metalbase_2": "@item()?['hso_metalbase_2']",
+                          "hso_metalnumber_2": "@item()?['hso_metalnumber_2']",
+                          "hso_metallabelid_3@odata.bind": "@If(empty(item()?['_hso_metallabelid_3_value']), '', concat('hso_metallabels(', item()?['_hso_metallabelid_3_value'], ')'))",
+                          "hso_metalbase_3": "@item()?['hso_metalbase_3']",
+                          "hso_metalnumber_3": "@item()?['hso_metalnumber_3']",
+                          "hso_basepricewithoutmetalsurcharge": "@item()?['hso_basepricewithoutmetalsurcharge']",
+                          "hso_surchargegroup_baseid@odata.bind": "@If(empty(item()?['_hso_surchargegroup_baseid_value']), '', concat('hso_surchargegroup_bases(', item()?['_hso_surchargegroup_baseid_value'], ')'))",
+                          "hso_manufacturer_id@odata.bind": "@If(empty(item()?['_hso_manufacturer_id_value']), '', concat('hso_manufacturers(', item()?['_hso_manufacturer_id_value'], ')'))",
+                          "hso_productnumber_manufacturer": "@item()?['hso_productnumber_manufacturer']",
+                          "hso_typenumber_manufacturer": "@item()?['hso_typenumber_manufacturer']",
+                          "hso_suppliercatalogreference": "@item()?['hso_suppliercatalogreference']",
+                          "hso_productnumber_supplier": "@item()?['hso_productnumber_supplier']",
+                          "hso_isfromtemplate": "@false",
+                          "hso_manufacturer_name": "@item()?['hso_manufacturer_name']",
+                          "hso_europeanarticlenumber": "@item()?['hso_europeanarticlenumber']",
+                          "@{variables('varOdataType')}": "#Microsoft.Dynamics.CRM.hso_projectproduct",
+                          "hso_isbillofmaterials": "@item()?['hso_isbillofmaterials']",
+                          "hso_projecttype": "@item()?['hso_projecttype']",
+                          "hso_projectproductid": "@guid()",
+                          "hso_projectproductid_old": "@item()?['hso_projectproductid']",
+                          "hso_textblock_hso_projectproduct": "@coalesce(\r\n  json(\r\n    replace(\r\n      replace(\r\n        replace(\r\n          replace(\r\n            replace(\r\n              replace(\r\n                replace(\r\n                  replace(\r\n                    replace(\r\n                      replace(\r\n                        replace(\r\n                          replace(\r\n                            replace(\r\n                              replace(\r\n                                replace(\r\n                                  replace(\r\n                                    string(item()?['hso_textblock_hso_projectproduct']),\r\n                                    '_hso_projectproductid_value@OData.Community.Display.V1.FormattedValue',''\r\n                                  ),\r\n                                  '_hso_projectproductid_value@Microsoft.Dynamics.CRM.associatednavigationproperty',''\r\n                                ),\r\n                                '_hso_projectproductid_value@Microsoft.Dynamics.CRM.lookuplogicalname',''\r\n                              ),\r\n                              '_hso_projectproductid_value@odata.type',''\r\n                            ),\r\n                            '_hso_projectproductid_value',''\r\n                          ),\r\n                          'hso_projectproductid@odata.associationLink',''\r\n                        ),\r\n                        'hso_projectproductid@odata.navigationLink',''\r\n                      ),\r\n                      'hso_language@OData.Community.Display.V1.FormattedValue',''\r\n                    ),\r\n                    '@OData.Community.Display.V1.FormattedValue',''\r\n                  ),\r\n                  '@Microsoft.Dynamics.CRM.associatednavigationproperty',''\r\n                ),\r\n                '@Microsoft.Dynamics.CRM.lookuplogicalname',''\r\n              ),\r\n              '@odata.type',''\r\n            ),\r\n            '@odata.id',''\r\n          ),\r\n          '@odata.etag',''\r\n        ),\r\n        '@odata.editLink',''\r\n      ),\r\n      'hso_textblockid',''\r\n    )\r\n  ), \r\n  json('[]')\r\n)",
+                          "NumberOfTextBlocks": "@length(item()?['hso_textblock_hso_projectproduct'])",
+                          "hso_iscopy": "@true"
+                        }
+                      }
+                    },
+                    "Remove_NumberOfTextBlocks_from_Payload": {
+                      "runAfter": {
+                        "Remove_ProjectProductID_OLD": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Remove_ProjectProductID_OLD')",
+                        "select": "@removeProperty(\r\n  item(),\r\n  'NumberOfTextBlocks'\r\n)"
+                      }
+                    },
+                    "Select_Project_Product_GUID_Mapping": {
+                      "runAfter": {
+                        "Select_Calculation_Project_Products": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "0d423e9b-8c60-4c4e-bae7-2a9e8610b86c"
+                      },
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Select_Calculation_Project_Products')",
+                        "select": {
+                          "GUIDold": "@item()?['hso_projectproductid_old']",
+                          "GUIDnew": "@item()?['hso_projectproductid']"
+                        }
+                      }
+                    },
+                    "Remove_ProjectProductID_OLD": {
+                      "runAfter": {
+                        "Apply_to_each_selected_Calculation_Project_Product": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@variables('varProjectProductPayload')",
+                        "select": "@removeProperty(\r\n item(),\r\n 'hso_projectproductid_old'\r\n)"
+                      }
+                    }
+                  },
+                  "type": "Scope"
+                },
+                "Copy_Calculation_Project_Products_-_Error": {
+                  "actions": {
+                    "Filter_Results_for_failed_actions_[Calculation_Project_Products]": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@result('Copy_Calculation_Project_Products')",
+                        "where": "@equals(item()?['status'],'Failed')"
+                      }
+                    },
+                    "Select_Error_Summary_[Calculation_Project_Products]": {
+                      "runAfter": {
+                        "Filter_Results_for_failed_actions_[Calculation_Project_Products]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Filter_Results_for_failed_actions_[Calculation_Project_Products]')",
+                        "select": {
+                          "Action": "@item()?['name']",
+                          "Code": "@item()?['code']",
+                          "Status": "@item()?['status']",
+                          "StatusCode": "@item()?['outputs']?['statusCode']",
+                          "Message": "@coalesce(\r\n  item()?['outputs']?['body']?['error']?['message'],\r\n  item()?['outputs']?['body']?['message'],\r\n  item()?['error']?['message'],\r\n  'No Message found. Please check Flow-Run.'\r\n)"
+                        }
+                      }
+                    },
+                    "Apply_to_each_Error_Summary_[Calculation_Project_Products]": {
+                      "foreach": "@body('Select_Error_Summary_[Calculation_Project_Products]')",
+                      "actions": {
+                        "Append_Error_Summary_[Calculation_Project_Products]": {
+                          "metadata": {
+                            "operationMetadataId": "4b039901-646a-4536-a505-d283f06c1c6d"
+                          },
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "varError",
+                            "value": "@items('Apply_to_each_Error_Summary_[Calculation_Project_Products]')"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Select_Error_Summary_[Calculation_Project_Products]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "Foreach"
+                    },
+                    "Get_created_Calculation_Project_Products": {
+                      "runAfter": {
+                        "Apply_to_each_Error_Summary_[Calculation_Project_Products]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "hso_projectproducts",
+                          "$select": "hso_name",
+                          "$filter": "_hso_calculationid_value eq '@{triggerBody()?['text']}'"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "ListRecords",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      }
+                    },
+                    "Append_Calculation_Project_Products_to_Log_[Error]": {
+                      "runAfter": {
+                        "Get_created_Calculation_Project_Products": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "varLog",
+                        "value": "[ERR] - [@{utcNow()}] - Error when adding Calculation Project Products! @{length(outputs('Get_created_Calculation_Project_Products')?['body/value'])} of @{length(outputs('Get_Calculation_Project_Products')?['body/value'])} Project Products added to Calculation. @{decodeUriComponent('%0A')}"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Copy_Calculation_Project_Products": [
+                      "TimedOut",
+                      "Failed"
+                    ]
+                  },
+                  "type": "Scope"
+                }
+              },
+              "runAfter": {
+                "Get_Calculation_Project_Products": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {}
+              },
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@length(outputs('Get_Calculation_Project_Products')?['body/value'])",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            },
+            "Update_Project_Products_to_process": {
+              "runAfter": {
+                "Project_Products_to_process": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varProjectProduct_Parameters",
+                "value": "@outputs('Project_Products_to_process')"
+              }
+            }
+          },
+          "runAfter": {
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "type": "Scope"
+        },
+        "Initialize_varProjectProduct_Parameters": {
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varProjectProduct_Parameters",
+                "type": "object",
+                "value": {
+                  "ProjectProductsToProcess": 0,
+                  "ProjectProductsProcessed": 0,
+                  "ProjectProductsProcessingStatus": "OK"
+                }
+              }
+            ]
+          }
+        },
+        "Initialize_varProjectProductPayload": {
+          "runAfter": {
+            "Initialize_varProjectProduct_Parameters": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varProjectProductPayload",
+                "type": "array"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

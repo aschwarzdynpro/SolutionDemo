@@ -1,0 +1,73 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_servicebus": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationGAEBServiceBus"
+        },
+        "api": {
+          "name": "shared_servicebus"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "ae059093-33aa-4719-a932-ee156f84a355"
+          },
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          }
+        }
+      },
+      "actions": {
+        "Send_message": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "25025fd9-2228-44fe-a3ee-b4ca71d1c907"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_servicebus",
+              "operationId": "SendMessage",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_servicebus"
+            },
+            "parameters": {
+              "entityName": "i810-gaeb-fileconvert",
+              "message/ContentData": "{\n   \"FileName\": \"Test\"\n}",
+              "message/ContentType": "application/json",
+              "systemProperties": "None"
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

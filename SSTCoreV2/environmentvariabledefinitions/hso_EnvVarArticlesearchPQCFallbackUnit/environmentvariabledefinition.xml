@@ -1,0 +1,14 @@
+<environmentvariabledefinition schemaname="hso_EnvVarArticlesearchPQCFallbackUnit">
+  <defaultvalue>STK</defaultvalue>
+  <description default="Will be used within PA Flow. Defines default unit for project product if no unit was found.">
+    <label description="Will be used within PA Flow. Defines default unit for project product if no unit was found." languagecode="1031" />
+  </description>
+  <displayname default="EnvVar | Articlesearch | PQC Fallback Unit">
+    <label description="EnvVar | Articlesearch | PQC Fallback Unit" languagecode="1031" />
+  </displayname>
+  <introducedversion>1.2023.1011.14</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000000</type>
+</environmentvariabledefinition>

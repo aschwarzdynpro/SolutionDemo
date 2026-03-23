@@ -1,0 +1,277 @@
+if (typeof (Schulz) === "undefined") { Schulz = {}; };
+if (typeof (Schulz.TemplatePositionForm) === "undefined") { Schulz.TemplatePositionForm = {}; };
+
+console.log("Script Template Position: " + true);
+Schulz.TemplatePositionForm.formOnLoad = (executionContext) => {
+    // initially all Fields that are visible or hidden for Form
+    Schulz.TemplatePositionForm.setFieldVisibility(executionContext);
+
+    // initially Sections that are visible or hidden for Form
+    Schulz.TemplatePositionForm.displayPositionDetailsSection(executionContext);
+
+    // Restrict options to set Template Position Element Type
+    Schulz.TemplatePositionForm.filterElementTypeOptions(executionContext);
+};
+
+// initially all Fields that are visible or hidden for Form
+// Function called by other function 'formOnLoad' from within this library
+Schulz.TemplatePositionForm.setFieldVisibility = (executionContext) => {
+    // get the form context
+    var formContext = executionContext.getFormContext();
+    let ElementType = formContext.getAttribute("hso_positionelementtype").getValue();
+    let TemplatePositionType = formContext.getAttribute("hso_isbillofmaterial").getValue();
+    // Show  Projectproduct for BOM
+    if (TemplatePositionType == true && (ElementType == 100000000 || ElementType == 100000002)) {
+        showField(formContext, 'hso_billofmaterial_projectproductid');
+        formContext.getControl("hso_billofmaterial_projectproductid").addPreSearch(filterProjectProduct);
+    } else { hideField(formContext, 'hso_billofmaterial_projectproductid') };
+    hideTab(formContext, 'metalprice_tab');
+    if (ElementType == null || ElementType == 100000005 || ElementType == 100000001) {
+        // Position Element Type empty or 'Others'
+        hideField(formContext, 'hso_productid');
+        hideMultipleFields(formContext, 'hso_projectproductid');
+        hideField(formContext, 'hso_projecthourid');
+        hideField(formContext, 'hso_projectexpenseid');
+        hideField(formContext, 'hso_productionhourid');
+        hideField(formContext, 'hso_externalserviceid');
+        hideField(formContext, 'hso_uomid');
+        hideField(formContext, 'hso_surchargegroup_baseid');
+        hideField(formContext, 'header_hso_isbillofmaterial');
+    } else if (ElementType == 100000006) {
+        // Position Element Type 'Node'
+        hideField(formContext, 'hso_productid');
+        hideMultipleFields(formContext, 'hso_projectproductid');
+        hideField(formContext, 'hso_projecthourid');
+        hideField(formContext, 'hso_projectexpenseid');
+        hideField(formContext, 'hso_productionhourid');
+        hideField(formContext, 'hso_externalserviceid');
+        hideField(formContext, 'hso_uomid');
+        hideField(formContext, 'hso_surchargegroup_baseid');
+        hideField(formContext, 'header_hso_isbillofmaterial');
+    }
+    /*else if (ElementType == 100000009) { // Old Logik
+        // Position Element Type 'BOM'
+        hideField(formContext, 'hso_productid');
+        showMultipleFields(formContext, 'hso_projectproductid');
+        hideField(formContext, 'hso_projecthourid');
+        hideField(formContext, 'hso_projectexpenseid');
+        hideField(formContext, 'hso_productionhourid');
+        hideField(formContext, 'hso_externalserviceid');
+        hideField(formContext, 'hso_uomid');
+        hideField(formContext, 'hso_surchargegroup_baseid');
+    }*/ else if (ElementType == 100000000) {
+        // Position Element Type 'Product'
+        showField(formContext, 'hso_productid');
+        hideMultipleFields(formContext, 'hso_projectproductid');
+        hideField(formContext, 'hso_projecthourid');
+        hideField(formContext, 'hso_projectexpenseid');
+        hideField(formContext, 'hso_productionhourid');
+        hideField(formContext, 'hso_externalserviceid');
+        showField(formContext, 'hso_uomid');
+        showField(formContext, 'header_hso_isbillofmaterial');
+        showField(formContext, 'hso_surchargegroup_baseid');
+        if (formContext.getAttribute("hso_metalpriceid").getValue() != null || formContext.getAttribute("hso_metalpriceid_2").getValue() != null || formContext.getAttribute("hso_metalpriceid_3").getValue() != null) {
+            showTab(formContext, 'metalprice_tab');
+            if (formContext.getAttribute("hso_metalpriceid").getValue() != null) {
+                showField(formContext, 'hso_metalpriceid');
+            } else { hideField(formContext, 'hso_metalpriceid'); };
+            if (formContext.getAttribute("hso_metalpriceid_2").getValue() != null) {
+                showField(formContext, 'hso_metalpriceid_2');
+            } else { hideField(formContext, 'hso_metalpriceid_2'); };
+            if (formContext.getAttribute("hso_metalpriceid_3").getValue() != null) {
+                showField(formContext, 'hso_metalpriceid_3');
+            } else { hideField(formContext, 'hso_metalpriceid_3'); };
+        };
+    } else if (ElementType == 100000002) {
+        // Position Element Type 'Project Product'
+        hideField(formContext, 'hso_productid');
+        showMultipleFields(formContext, 'hso_projectproductid');
+        hideField(formContext, 'hso_projecthourid');
+        hideField(formContext, 'hso_projectexpenseid');
+        hideField(formContext, 'hso_productionhourid');
+        hideField(formContext, 'hso_externalserviceid');
+        showField(formContext, 'hso_uomid');
+        showField(formContext, 'hso_surchargegroup_baseid');
+        showField(formContext, 'header_hso_isbillofmaterial');
+        if (formContext.getAttribute("hso_metalpriceid").getValue() != null || formContext.getAttribute("hso_metalpriceid_2").getValue() != null || formContext.getAttribute("hso_metalpriceid_3").getValue() != null) {
+            showTab(formContext, 'metalprice_tab');
+            if (formContext.getAttribute("hso_metalpriceid").getValue() != null) {
+                showField(formContext, 'hso_metalpriceid');
+            } else { hideField(formContext, 'hso_metalpriceid'); };
+            if (formContext.getAttribute("hso_metalpriceid_2").getValue() != null) {
+                showField(formContext, 'hso_metalpriceid_2');
+            } else { hideField(formContext, 'hso_metalpriceid_2'); };
+            if (formContext.getAttribute("hso_metalpriceid_3").getValue() != null) {
+                showField(formContext, 'hso_metalpriceid_3');
+            } else { hideField(formContext, 'hso_metalpriceid_3'); };
+        };
+    } else if (ElementType == 100000003) {
+        // Position Element Type 'Production Hour'
+        formContext.getControl("hso_billofmaterial_projectproductid").addPreSearch(filterProjectProduct);
+        hideField(formContext, 'hso_productid');
+        hideMultipleFields(formContext, 'hso_projectproductid');
+        hideField(formContext, 'hso_projecthourid');
+        hideField(formContext, 'hso_projectexpenseid');
+        showField(formContext, 'hso_productionhourid');
+        hideField(formContext, 'hso_externalserviceid');
+        showField(formContext, 'hso_uomid');
+        showField(formContext, 'hso_surchargegroup_baseid');
+        showField(formContext, 'hso_billofmaterial_projectproductid');
+        showField(formContext, 'header_hso_isbillofmaterial');
+        requiredField(formContext, 'hso_billofmaterial_projectproductid');
+    } else if (ElementType == 100000004) {
+        // Position Element Type 'Project Hour'
+        hideField(formContext, 'hso_productid');
+        hideMultipleFields(formContext, 'hso_projectproductid');
+        showField(formContext, 'hso_projecthourid');
+        hideField(formContext, 'hso_projectexpenseid');
+        hideField(formContext, 'hso_productionhourid');
+        hideField(formContext, 'hso_externalserviceid');
+        showField(formContext, 'hso_uomid');
+        showField(formContext, 'hso_surchargegroup_baseid');
+        hideField(formContext, 'header_hso_isbillofmaterial');
+    } else if (ElementType == 100000007) {
+        // Position Element Type 'Project Expense'
+        hideField(formContext, 'hso_productid');
+        hideMultipleFields(formContext, 'hso_projectproductid');
+        hideField(formContext, 'hso_projecthourid');
+        showField(formContext, 'hso_projectexpenseid');
+        hideField(formContext, 'hso_productionhourid');
+        hideField(formContext, 'hso_externalserviceid');
+        showField(formContext, 'hso_uomid');
+        showField(formContext, 'hso_surchargegroup_baseid');
+        hideField(formContext, 'header_hso_isbillofmaterial');
+    } else if (ElementType == 100000008) {
+        // Position Element Type 'External Expense'
+        hideField(formContext, 'hso_productid');
+        hideMultipleFields(formContext, 'hso_projectproductid');
+        hideField(formContext, 'hso_projecthourid');
+        hideField(formContext, 'hso_projectexpenseid');
+        hideField(formContext, 'hso_productionhourid');
+        showField(formContext, 'hso_externalserviceid');
+        showField(formContext, 'hso_uomid');
+        showField(formContext, 'hso_surchargegroup_baseid');
+        hideField(formContext, 'header_hso_isbillofmaterial');
+    }
+};
+
+// initially a section that are visible or hidden for Form
+// Function called by other function 'formOnLoad' from within this library
+Schulz.TemplatePositionForm.displayPositionDetailsSection = (executionContext) => {
+    // get the form context
+    var formContext = executionContext.getFormContext();
+    let ElementType = formContext.getAttribute("hso_positionelementtype").getValue();
+    // If Element Type is "Title" display Node-section else display Positiondetails-section
+    if (ElementType == 100000006 ) {
+        Xrm.Page.ui.tabs.get("general_tab").sections.get("positionnode_section").setVisible(true);
+        Xrm.Page.ui.tabs.get("general_tab").sections.get("positiondetails_section").setVisible(false);
+    } else {
+        Xrm.Page.ui.tabs.get("general_tab").sections.get("positionnode_section").setVisible(false);
+        Xrm.Page.ui.tabs.get("general_tab").sections.get("positiondetails_section").setVisible(true);
+    };
+};
+
+// Filter available Element Type options
+// Function called by other function 'formOnLoad' from within this library 
+Schulz.TemplatePositionForm.filterElementTypeOptions = (executionContext) => {
+    // get the form context
+    var formContext = executionContext.getFormContext();
+    // Clear choices for Position Element Type
+    formContext.getControl("hso_positionelementtype").clearOptions();
+    //Add choices that should be available for selection
+    formContext.getControl("hso_positionelementtype").addOption({ text: "Titel", value: 100000006 });
+    formContext.getControl("hso_positionelementtype").addOption({ text: "Projektstunde", value: 100000004 });
+    formContext.getControl("hso_positionelementtype").addOption({ text: "Artikelstamm", value: 100000000 });
+    formContext.getControl("hso_positionelementtype").addOption({ text: "Projektartikel", value: 100000002 });
+    formContext.getControl("hso_positionelementtype").addOption({ text: "(Projekt-) Ausgabe", value: 100000007 });
+    formContext.getControl("hso_positionelementtype").addOption({ text: "Produktionsstunde", value: 100000003 });
+    formContext.getControl("hso_positionelementtype").addOption({ text: "Fremdleistung", value: 100000008 });
+    //formContext.getControl("hso_positionelementtype").addOption({ text: "Stückliste", value: 100000009 });
+    //formContext.getControl("hso_positionelementtype").addOption({ text: "Hinweistext", value: 100000010 });
+};
+
+//Filter LookUp Field Projectproduct for BOM
+function filterProjectProduct(executionContext) {
+    // 'JSFilterBlankProjectProductFilterTESTJS'- not Exist name, BOM need neu Project Product 
+    var formContext = executionContext.getFormContext();
+    let ProjectType = formContext.getAttribute("hso_projecttype").getValue();
+    if (ProjectType != null) {
+        switch (ProjectType) {
+            case 100000000: // Project Type 'Aufwand'
+                var ProjectProductFilter = "<filter type='and'><condition attribute='hso_isbillofmaterials' operator='eq' value='1'/><condition attribute='hso_projecttype' operator='eq' value='100000000'/></filter>";
+                formContext.getControl("hso_billofmaterial_projectproductid").addCustomFilter(ProjectProductFilter);
+                break;
+            case 100000001: // Project Type 'Aufmaß'
+                var ProjectProductFilter = "<filter type='and'><condition attribute='hso_isbillofmaterials' operator='eq' value='1'/><condition attribute='hso_projecttype' operator='eq' value='100000001'/></filter>";
+                formContext.getControl("hso_billofmaterial_projectproductid").addCustomFilter(ProjectProductFilter);
+                break;
+            case 100000002: // Project Type 'Festpreis'
+                var ProjectProductFilter = "<filter type='and'><condition attribute='hso_isbillofmaterials' operator='eq' value='1'/><condition attribute='hso_projecttype' operator='eq' value='100000002'/></filter>";
+                formContext.getControl("hso_billofmaterial_projectproductid").addCustomFilter(ProjectProductFilter);
+                break;
+        }
+    } else { var ProjectProductFilter = "<filter type='and'><condition attribute='hso_name' operator='eq' value='JSFilterBlankProjectProductFilterTESTJS'/></filter>"; };
+    formContext.getControl("hso_billofmaterial_projectproductid").addCustomFilter(ProjectProductFilter);
+};
+
+// Generic function to show a specific field
+// Function called by other functions from within this library
+function showField(formContext, fieldName) {
+    formContext.getControl(fieldName).setVisible(true);
+};
+
+// Generic function to hide a specific field
+// Function called by other functions from within this library
+function hideField(formContext, fieldName) {
+    formContext.getControl(fieldName).setVisible(false);
+};
+
+// Generic function to enable a specific field
+// Function called by other functions from within this library
+function enableField(formContext, fieldName) {
+    formContext.getControl(fieldName).setDisabled(false);
+};
+
+// Generic function to disable a specific field
+// Function called by other functions from within this library
+function disableField(formContext, fieldName) {
+    formContext.getControl(fieldName).setDisabled(true);
+};
+
+// Generic function to make a field required
+// Function called by other functions from within this library
+function requiredField(formContext, fieldName) {
+    formContext.getAttribute(fieldName).setRequiredLevel('required');
+};
+
+// Generic function to hide a specific field 
+//(for multiple Fields, e.g. 2 Fields for 'hso_productid')
+// Function called by other functions from within this library
+function hideMultipleFields(formContext, fieldName) {
+    formContext.getAttribute(fieldName).controls.forEach(
+        function (control, i) {
+            control.setVisible(false);;
+        });
+};
+
+// Generic function to show a specific field 
+//(for multiple Fields, e.g. 2 Fields for 'hso_productid')
+// Function called by other functions from within this library
+function showMultipleFields(formContext, fieldName) {
+    formContext.getAttribute(fieldName).controls.forEach(
+        function (control, i) {
+            control.setVisible(true);;
+        });
+};
+
+// Generic function to show a specific Tab
+// Function called by other functions from within this library
+function showTab(formContext, tabName) {
+    formContext.ui.tabs.get(tabName).setVisible(true);
+};
+
+// Generic function to hide a specific Tab
+// Function called by other functions from within this library
+function hideTab(formContext, tabName) {
+    formContext.ui.tabs.get(tabName).setVisible(false);
+};

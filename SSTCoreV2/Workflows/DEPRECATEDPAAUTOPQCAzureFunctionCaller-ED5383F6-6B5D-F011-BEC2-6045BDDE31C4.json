@@ -1,0 +1,1166 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps-1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_servicebus-1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationServiceBus"
+        },
+        "api": {
+          "name": "shared_servicebus"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_the_azure_function_invoker_action_is_called": {
+          "metadata": {
+            "operationMetadataId": "d7766d9d-d04f-42ed-bbcb-1e5eab08bed0"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "catalog": "allcatalog",
+              "category": "allcategory",
+              "subscriptionRequest/entityname": "none",
+              "subscriptionRequest/sdkmessagename": "sst_ActionPQCAzureFunctionInvokerTrigger",
+              "subscriptionRequest/name": "ed5383f6-6b5d-f011-bec2-6045bdde31c4"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "BusinessEventsTrigger",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          }
+        }
+      },
+      "actions": {
+        "Initialize_varEnvironmentVariableName": {
+          "runAfter": {
+            "Parse_Plugin_Payload": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6d5db39a-c640-48a1-817e-ae2a925031ec"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varEnvironmentVariableName",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Processing_Log": {
+          "actions": {
+            "Switch_on_Payload_Message": {
+              "cases": {
+                "Calculationdetail_SingleRecalculate": {
+                  "case": "Calculationdetail_SingleRecalculate",
+                  "actions": {
+                    "Set_varOperation_for_SingleRecalculate": {
+                      "metadata": {
+                        "operationMetadataId": "ab24a38b-46b3-44f1-816b-c85541d3161c"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varOperation",
+                        "value": 100000019
+                      }
+                    }
+                  }
+                },
+                "Calculationdetail_SingleSetDefaultValues": {
+                  "case": "Calculationdetail_SingleSetDefaultValues",
+                  "actions": {
+                    "Set_varOperation_for_SingleSetDefaultValues": {
+                      "metadata": {
+                        "operationMetadataId": "198b5098-24c5-4850-a996-9a2c83cbd812"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varOperation",
+                        "value": 100000018
+                      }
+                    }
+                  }
+                },
+                "Calculationdetail_SingleDelete": {
+                  "case": "Calculationdetail_SingleDelete",
+                  "actions": {
+                    "Set_varOperation_for_SingleDelete": {
+                      "metadata": {
+                        "operationMetadataId": "25d186b8-2b3b-43aa-a12c-619caeed2caf"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varOperation",
+                        "value": 100000021
+                      }
+                    }
+                  }
+                },
+                "Calculationdetail_BulkRecalculate": {
+                  "case": "Calculationdetail_BulkRecalculate",
+                  "actions": {
+                    "Set_varOperation_for_BulkRecalculate": {
+                      "metadata": {
+                        "operationMetadataId": "c55b25a4-a7d8-4004-b88d-f3cf15e6009d"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varOperation",
+                        "value": 100000019
+                      }
+                    }
+                  }
+                },
+                "Calculationdetail_BulkSetDefaultValues": {
+                  "case": "Calculationdetail_BulkSetDefaultValues",
+                  "actions": {
+                    "Set_varOperation_for_BulkSetDefaultValues": {
+                      "metadata": {
+                        "operationMetadataId": "c0bfa095-6297-485e-9e8c-340e804b590f"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varOperation",
+                        "value": 100000018
+                      }
+                    }
+                  }
+                },
+                "Calculationdetail_BulkDelete": {
+                  "case": "Calculationdetail_BulkDelete",
+                  "actions": {
+                    "Set_varOperation_for_BulkDelete": {
+                      "metadata": {
+                        "operationMetadataId": "7d17fbd2-bd31-4895-9b4e-be997b438795"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varOperation",
+                        "value": 100000021
+                      }
+                    }
+                  }
+                },
+                "Calculation_Recalculate": {
+                  "case": "Calculation_Recalculate",
+                  "actions": {
+                    "Set_varOperation_for_Recalculate": {
+                      "metadata": {
+                        "operationMetadataId": "f02e3552-5867-44b6-9bcf-79abc0110798"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varOperation",
+                        "value": 100000019
+                      }
+                    }
+                  }
+                },
+                "Calculation_SetDefaultValues": {
+                  "case": "Calculation_SetDefaultValues",
+                  "actions": {
+                    "Set_varOperation_for_SetDefaultValues": {
+                      "metadata": {
+                        "operationMetadataId": "0f623537-611a-419f-af55-1153556de6dc"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varOperation",
+                        "value": 100000018
+                      }
+                    }
+                  }
+                },
+                "Calculation_Renumber": {
+                  "case": "Calculation_Renumber",
+                  "actions": {
+                    "Set_varOperation_for_Renumber": {
+                      "metadata": {
+                        "operationMetadataId": "38f5b7e4-7526-4858-bd81-f5ac3d177f71"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varOperation",
+                        "value": 100000022
+                      }
+                    }
+                  }
+                },
+                "Calculation_UnitPriceRatio": {
+                  "case": "Calculation_UnitPriceRatio",
+                  "actions": {
+                    "Set_varOperation_for_UnitPriceRatio": {
+                      "metadata": {
+                        "operationMetadataId": "8617b1ab-b4db-4971-a47b-a6c673b712d6"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varOperation",
+                        "value": 100000023
+                      }
+                    }
+                  }
+                },
+                "Update_Top-Down": {
+                  "case": "Update_TopDown",
+                  "actions": {
+                    "Set_varOperation_for_TopDown": {
+                      "metadata": {
+                        "operationMetadataId": "e4f1c0a6-aeaa-4b0d-a069-98bd4ab7d7da"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varOperation",
+                        "value": 100000020
+                      }
+                    }
+                  }
+                }
+              },
+              "default": {
+                "actions": {
+                  "Set_varOperation_to_re-calculate_positions": {
+                    "metadata": {
+                      "operationMetadataId": "e728dfc1-598c-43e6-a621-a9250c3421bc"
+                    },
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "varOperation",
+                      "value": 100000019
+                    }
+                  }
+                }
+              },
+              "expression": "@body('Parse_Plugin_Payload')['Message']",
+              "metadata": {
+                "operationMetadataId": "6cecb0c5-db1b-4ece-aed6-5b6348dc3c3d"
+              },
+              "type": "Switch"
+            },
+            "Update_Processing_Log": {
+              "runAfter": {
+                "Switch_on_Payload_Message": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "128dc991-ad53-461e-b6e0-5c394047135b"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "recordId": "@triggerOutputs()?['body/InputParameters/ProcessingLogId']",
+                  "item/hso_flowrunurl": "@concat(\r\n  'https://emea.flow.microsoft.com/manage/environments/',\r\n  workflow()?['tags']['environmentName'],\r\n  '/flows/',\r\n  workflow()?['name'],\r\n  '/runs/',\r\n  workflow()?['run']['name']\r\n)\r\n"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateOnlyRecord",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              },
+              "description": "Initial Processing Log created by Plug-In "
+            }
+          },
+          "runAfter": {
+            "Initialize_varFunctionPayload": [
+              "Succeeded"
+            ],
+            "Initialize_varSuccess_with_true": [
+              "Succeeded"
+            ],
+            "Initialize_varEnvironmentVariableName": [
+              "Succeeded"
+            ],
+            "Initialize_varError": [
+              "Succeeded"
+            ],
+            "Initialize_varErrorMessage": [
+              "Succeeded"
+            ],
+            "Initialize_varOperation": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a965b9af-c40d-4f27-a84d-a65945a26901"
+          },
+          "type": "Scope"
+        },
+        "Prepare_Payload": {
+          "actions": {
+            "Switch_on_source": {
+              "cases": {
+                "Case_Plugin": {
+                  "case": 0,
+                  "actions": {
+                    "Switch_on_Plugin_Target_Type": {
+                      "runAfter": {
+                        "Construct_azure_function_plugin_payload": [
+                          "Succeeded"
+                        ]
+                      },
+                      "cases": {
+                        "Plugin_Target_Type_Calculation": {
+                          "case": 0,
+                          "actions": {
+                            "Set_varEnvironmentVariableName_to_CalculationPluginUrl": {
+                              "metadata": {
+                                "operationMetadataId": "752b59ca-e760-4475-ac87-5914c3f9077e"
+                              },
+                              "type": "SetVariable",
+                              "inputs": {
+                                "name": "varEnvironmentVariableName",
+                                "value": "hso_EnvVarCalculationversionPluginSubscriptionKey"
+                              }
+                            }
+                          }
+                        },
+                        "Plugin_Target_Type_Calculationdetail": {
+                          "case": 1,
+                          "actions": {
+                            "Set_varEnvironmentVariableName_to_CalculationdetailPluginUrl": {
+                              "metadata": {
+                                "operationMetadataId": "b757a356-a985-48ec-ad1f-11ebc7ed01e5"
+                              },
+                              "type": "SetVariable",
+                              "inputs": {
+                                "name": "varEnvironmentVariableName",
+                                "value": "hso_EnvVarCalculationdetailPluginSubscriptionKey"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "default": {
+                        "actions": {
+                          "Terminate_on_false_Plugin_Target_Type": {
+                            "metadata": {
+                              "operationMetadataId": "8905e516-2a5d-44c9-a0be-86bd2616ffa9"
+                            },
+                            "type": "Terminate",
+                            "inputs": {
+                              "runStatus": "Failed",
+                              "runError": {
+                                "code": "500",
+                                "message": "Target Type not supported"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "expression": "@body('Parse_Plugin_Payload')['TargetType']",
+                      "metadata": {
+                        "operationMetadataId": "53e7d6a6-13f1-4727-ac7c-5540d24fa80b"
+                      },
+                      "type": "Switch"
+                    },
+                    "Set_varFunctionPayload_from_Plugin_payload_compose": {
+                      "runAfter": {
+                        "Switch_on_Plugin_Target_Type": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3e484ef9-c506-43fe-8e63-37febab90570"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varFunctionPayload",
+                        "value": "@outputs('Construct_azure_function_plugin_payload')"
+                      }
+                    },
+                    "Construct_azure_function_plugin_payload": {
+                      "metadata": {
+                        "operationMetadataId": "2a65ea47-a292-4899-8c83-f859b33c3012"
+                      },
+                      "type": "Compose",
+                      "inputs": {
+                        "Targets": "@body('Parse_Plugin_Payload')?['Records']",
+                        "Message": "@{body('Parse_Plugin_Payload')['Message']}",
+                        "Depth": "@body('Parse_Plugin_Payload')?['Depth']",
+                        "ProcessingLogId": "@triggerOutputs()?['body/InputParameters/ProcessingLogId']",
+                        "ProcessingLogTaskValue": "@variables('varOperation')",
+                        "NumberOfRecordsToProcess": "@body('Parse_Plugin_Payload')?['NumberOfRecordsToProcess']"
+                      }
+                    }
+                  }
+                },
+                "Case_CustomApi": {
+                  "case": 1,
+                  "actions": {
+                    "Switch_on_Custom_Api_Target_Type": {
+                      "runAfter": {
+                        "Construct_azure_function_custom_api_payload": [
+                          "Succeeded"
+                        ]
+                      },
+                      "cases": {
+                        "Custom_Api_Target_Type_Calculation": {
+                          "case": 0,
+                          "actions": {
+                            "Set_varEnvironmentVariableName_to_CalculationCustomApiUrl": {
+                              "metadata": {
+                                "operationMetadataId": "17008c19-e98a-46da-b499-6dd973d08b74"
+                              },
+                              "type": "SetVariable",
+                              "inputs": {
+                                "name": "varEnvironmentVariableName",
+                                "value": "hso_EnvVarCalculationversionCustomAPISubscriptionKey"
+                              }
+                            }
+                          }
+                        },
+                        "Custom_Api_Target_Type_Calculationdetail": {
+                          "case": 1,
+                          "actions": {
+                            "Set_varEnvironmentVariableName_to_CalculationdetailCustomApiUrl": {
+                              "metadata": {
+                                "operationMetadataId": "78506822-90ed-4b2d-8fc1-e33049b56753"
+                              },
+                              "type": "SetVariable",
+                              "inputs": {
+                                "name": "varEnvironmentVariableName",
+                                "value": "hso_EnvVarCalculationdetailCustomAPISubscriptionKey"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "default": {
+                        "actions": {
+                          "Terminate_on_false_Custom_Api_Target_Type": {
+                            "metadata": {
+                              "operationMetadataId": "8905e516-2a5d-44c9-a0be-86bd2616ffa9"
+                            },
+                            "type": "Terminate",
+                            "inputs": {
+                              "runStatus": "Failed",
+                              "runError": {
+                                "code": "500",
+                                "message": "Target Type not supported"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "expression": "@body('Parse_Plugin_Payload')['TargetType']",
+                      "metadata": {
+                        "operationMetadataId": "be53f4db-1271-4180-b004-8fd524ba6a7e"
+                      },
+                      "type": "Switch"
+                    },
+                    "Set_varFunctionPayload_from_Custom_Api_Calculationdetail_payload_compose": {
+                      "runAfter": {
+                        "Switch_on_Custom_Api_Target_Type": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "817839b0-eb00-4567-9526-8cab7bc52e5c"
+                      },
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varFunctionPayload",
+                        "value": "@outputs('Construct_azure_function_custom_api_payload')"
+                      }
+                    },
+                    "Construct_azure_function_custom_api_payload": {
+                      "metadata": {
+                        "operationMetadataId": "5d3c791b-560b-4a80-b3d5-ebe64ffb6efe"
+                      },
+                      "type": "Compose",
+                      "inputs": {
+                        "TargetIds": "@body('Parse_Plugin_Payload')?['RecordIds']",
+                        "Message": "@{body('Parse_Plugin_Payload')['Message']}",
+                        "ProcessingLogId": "@triggerOutputs()?['body/InputParameters/ProcessingLogId']",
+                        "ProcessingLogTaskValue": "@variables('varOperation')",
+                        "NumberOfRecordsToProcess": "@body('Parse_Plugin_Payload')?['NumberOfRecordsToProcess']"
+                      }
+                    }
+                  }
+                }
+              },
+              "default": {
+                "actions": {
+                  "Terminate_on_false_source": {
+                    "metadata": {
+                      "operationMetadataId": "51175e3d-6cd7-46ba-b544-ccc43a3cc703"
+                    },
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Failed",
+                      "runError": {
+                        "code": "500",
+                        "message": "Source not supported"
+                      }
+                    }
+                  }
+                }
+              },
+              "expression": "@body('Parse_Plugin_Payload')['Source']",
+              "metadata": {
+                "operationMetadataId": "703b1fd0-8e82-414b-b6eb-c08b24857d77"
+              },
+              "type": "Switch"
+            }
+          },
+          "runAfter": {
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9332e735-cd96-42de-81c0-b293f028f07e"
+          },
+          "type": "Scope"
+        },
+        "Call_Azure_Function": {
+          "actions": {
+            "Switch_on_source_[Service_Bus]": {
+              "cases": {
+                "Case_Plugin_[Service_Bus]": {
+                  "case": 0,
+                  "actions": {
+                    "Switch_on_Plugin_Target_Type_[Service_Bus]": {
+                      "cases": {
+                        "Plugin_Target_Type_Calculation_[Service_Bus]": {
+                          "case": 0,
+                          "actions": {
+                            "Send_message_to_Calculation_Plug-In_queue": {
+                              "metadata": {
+                                "operationMetadataId": "7bbbb3a1-467c-4055-b327-50893d0d46b3"
+                              },
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "calculationversionplugin",
+                                  "systemProperties": "None",
+                                  "message/ContentData": "@outputs('Construct_azure_function_plugin_payload')"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_servicebus",
+                                  "operationId": "SendMessage",
+                                  "connectionName": "shared_servicebus-1"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Plugin_Target_Type_Calculationdetail_[Service_Bus]": {
+                          "case": 1,
+                          "actions": {
+                            "Send_message_to_Calculation_Detail_Plug-In_queue": {
+                              "metadata": {
+                                "operationMetadataId": "2d99b1ca-2fa8-4631-904d-448465eab641"
+                              },
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "calculationdetailplugin",
+                                  "systemProperties": "None",
+                                  "message/ContentData": "@outputs('Construct_azure_function_plugin_payload')"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_servicebus",
+                                  "operationId": "SendMessage",
+                                  "connectionName": "shared_servicebus-1"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "default": {
+                        "actions": {
+                          "Terminate_on_false_Plugin_Target_Type_[Service_Bus]": {
+                            "metadata": {
+                              "operationMetadataId": "8905e516-2a5d-44c9-a0be-86bd2616ffa9"
+                            },
+                            "type": "Terminate",
+                            "inputs": {
+                              "runStatus": "Failed",
+                              "runError": {
+                                "code": "500",
+                                "message": "Target Type not supported"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "expression": "@body('Parse_Plugin_Payload')['TargetType']",
+                      "metadata": {
+                        "operationMetadataId": "53e7d6a6-13f1-4727-ac7c-5540d24fa80b"
+                      },
+                      "type": "Switch"
+                    }
+                  }
+                },
+                "Case_CustomApi_[Service_Bus]": {
+                  "case": 1,
+                  "actions": {
+                    "Switch_on_Custom_Api_Target_Type_[Service_Bus]": {
+                      "cases": {
+                        "Custom_Api_Target_Type_Calculation_[Service_Bus]": {
+                          "case": 0,
+                          "actions": {
+                            "Send_message_to_Calculation_Custom_API_queue": {
+                              "metadata": {
+                                "operationMetadataId": "bdbc4d53-023f-4973-873f-9415aca25fb3"
+                              },
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "calculationversioncustomapi",
+                                  "systemProperties": "None",
+                                  "message/ContentData": "@outputs('Construct_azure_function_custom_api_payload')"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_servicebus",
+                                  "operationId": "SendMessage",
+                                  "connectionName": "shared_servicebus-1"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Custom_Api_Target_Type_Calculationdetail_[Service_Bus]": {
+                          "case": 1,
+                          "actions": {
+                            "Send_message_to_Calculation_Detail_Custom_API_queue": {
+                              "metadata": {
+                                "operationMetadataId": "0a97bb19-d674-4a2b-9b01-b74949357dde"
+                              },
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "calculationdetailcustomapi",
+                                  "systemProperties": "None",
+                                  "message/ContentData": "@outputs('Construct_azure_function_custom_api_payload')"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_servicebus",
+                                  "operationId": "SendMessage",
+                                  "connectionName": "shared_servicebus-1"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "default": {
+                        "actions": {
+                          "Terminate_on_false_Custom_Api_Target_Type_1": {
+                            "metadata": {
+                              "operationMetadataId": "8905e516-2a5d-44c9-a0be-86bd2616ffa9"
+                            },
+                            "type": "Terminate",
+                            "inputs": {
+                              "runStatus": "Failed",
+                              "runError": {
+                                "code": "500",
+                                "message": "Target Type not supported"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "expression": "@body('Parse_Plugin_Payload')['TargetType']",
+                      "metadata": {
+                        "operationMetadataId": "be53f4db-1271-4180-b004-8fd524ba6a7e"
+                      },
+                      "type": "Switch"
+                    }
+                  }
+                }
+              },
+              "default": {
+                "actions": {
+                  "Terminate_on_false_source_1": {
+                    "metadata": {
+                      "operationMetadataId": "51175e3d-6cd7-46ba-b544-ccc43a3cc703"
+                    },
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Failed",
+                      "runError": {
+                        "code": "500",
+                        "message": "Source not supported"
+                      }
+                    }
+                  }
+                }
+              },
+              "expression": "@body('Parse_Plugin_Payload')['Source']",
+              "metadata": {
+                "operationMetadataId": "f8f1c17b-aa9d-43d0-bd98-09a8dff367f4"
+              },
+              "type": "Switch"
+            }
+          },
+          "runAfter": {
+            "Prepare_Payload": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "96fd5d16-3524-4f11-8408-d1d98926ca5a"
+          },
+          "type": "Scope"
+        },
+        "Call_Azure_Function_-_Error": {
+          "actions": {
+            "Set_varSuccess_to_false_when_Call_Azure_Function_failed": {
+              "metadata": {
+                "operationMetadataId": "6ddce190-524e-45f2-b380-1f16481a881b"
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varSuccess",
+                "value": false
+              }
+            },
+            "Filter_Results_for_failed_actions_[Call_Azure_Function]": {
+              "runAfter": {
+                "Set_varSuccess_to_false_when_Call_Azure_Function_failed": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "6235bdf8-8c4a-4f12-9790-3a3e5d363527"
+              },
+              "type": "Query",
+              "inputs": {
+                "from": "@result('Call_Azure_Function')",
+                "where": "@equals(item()?['status'],'Failed')"
+              }
+            },
+            "Select_Error_Summary_[Call_Azure_Function]": {
+              "runAfter": {
+                "Filter_Results_for_failed_actions_[Call_Azure_Function]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "3e6171f8-7d97-46df-a473-a1daadb3e136"
+              },
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Filter_Results_for_failed_actions_[Call_Azure_Function]')",
+                "select": {
+                  "Action": "@item()?['name']",
+                  "Code": "@item()?['code']",
+                  "Status": "@item()?['status']",
+                  "StatusCode": "@item()?['outputs']?['statusCode']",
+                  "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                }
+              }
+            },
+            "Apply_to_each_Error_Summary_[Call_Azure_Function]": {
+              "foreach": "@body('Select_Error_Summary_[Call_Azure_Function]')",
+              "actions": {
+                "Append_Error_Summary_[Call_Azure_Function]": {
+                  "metadata": {
+                    "operationMetadataId": "ef216f80-48aa-466f-8cce-679235b78937"
+                  },
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "varError",
+                    "value": "@items('Apply_to_each_Error_Summary_[Call_Azure_Function]')"
+                  }
+                }
+              },
+              "runAfter": {
+                "Select_Error_Summary_[Call_Azure_Function]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "e24d316e-16fe-4014-be8b-4a2d3a07d85a"
+              },
+              "type": "Foreach"
+            }
+          },
+          "runAfter": {
+            "Call_Azure_Function": [
+              "TimedOut",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "32d28509-0e2f-45a6-b5c1-2117edc59bc3"
+          },
+          "type": "Scope"
+        },
+        "Prepare_Payload_-_Error": {
+          "actions": {
+            "Set_varSuccess_to_false_when_Prepare_Payload_failed": {
+              "metadata": {
+                "operationMetadataId": "e1294b18-159b-4486-ae22-c90de6c195bc"
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varSuccess",
+                "value": false
+              }
+            },
+            "Filter_Results_for_failed_actions_[Prepare_Payload]": {
+              "runAfter": {
+                "Set_varSuccess_to_false_when_Prepare_Payload_failed": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "a7966648-dbe4-421a-bf0b-f0d9fda35e89"
+              },
+              "type": "Query",
+              "inputs": {
+                "from": "@result('Prepare_Payload')",
+                "where": "@equals(item()?['status'],'Failed')"
+              }
+            },
+            "Select_Error_Summary_[Prepare_Payload]": {
+              "runAfter": {
+                "Filter_Results_for_failed_actions_[Prepare_Payload]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "5f6adf09-86ea-4a3f-95b1-f690d579e199"
+              },
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Filter_Results_for_failed_actions_[Prepare_Payload]')",
+                "select": {
+                  "Action": "@item()?['name']",
+                  "Code": "@item()?['code']",
+                  "Status": "@item()?['status']",
+                  "StatusCode": "@item()?['outputs']?['statusCode']",
+                  "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                }
+              }
+            },
+            "Apply_to_each_Error_Summary_[Prepare_Payload]": {
+              "foreach": "@body('Select_Error_Summary_[Prepare_Payload]')",
+              "actions": {
+                "Append_Error_Summary_[Prepare_Payload]": {
+                  "metadata": {
+                    "operationMetadataId": "eb7fc194-895d-4231-a35b-410a0be95d33"
+                  },
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "varError",
+                    "value": "@items('Apply_to_each_Error_Summary_[Prepare_Payload]')"
+                  }
+                }
+              },
+              "runAfter": {
+                "Select_Error_Summary_[Prepare_Payload]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "d3ad1a8b-c18c-4110-9b99-5935843ffb73"
+              },
+              "type": "Foreach"
+            }
+          },
+          "runAfter": {
+            "Prepare_Payload": [
+              "TimedOut",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3682ffe7-8465-4c59-93e7-1f9271361738"
+          },
+          "type": "Scope"
+        },
+        "Summary": {
+          "actions": {
+            "Proccessing_successful": {
+              "actions": {},
+              "else": {
+                "actions": {
+                  "Apply_to_each_Error_Summary": {
+                    "foreach": "@variables('varError')",
+                    "actions": {
+                      "Append_Error_Message": {
+                        "metadata": {
+                          "operationMetadataId": "a29205c4-e0a2-47bc-bd14-fef5af8fbe9d"
+                        },
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varErrorMessage",
+                          "value": "[ERROR] - Action '@{items('Apply_to_each_Error_Summary')?['Action']}' failed with error message: @{items('Apply_to_each_Error_Summary')?['Message']} (Status: @{items('Apply_to_each_Error_Summary')?['Status']} / Status Code: @{items('Apply_to_each_Error_Summary')?['StatusCode']})"
+                        }
+                      }
+                    },
+                    "runAfter": {
+                      "Update_Calculation": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "d3660361-8dc4-4f78-9ca1-bd539cdfbbb1"
+                    },
+                    "type": "Foreach"
+                  },
+                  "Update_Processing_Log_[Error]": {
+                    "runAfter": {
+                      "Apply_to_each_Error_Summary": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "0c1d8234-f125-40a9-9a8e-14dd4a7878cf"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_processinglogs",
+                        "recordId": "@triggerOutputs()?['body/InputParameters/ProcessingLogId']",
+                        "item/hso_end_datetime": "@utcNow()",
+                        "item/hso_flowerror": "@variables('varErrorMessage')",
+                        "item/hso_processingstatus": 100000003
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateOnlyRecord",
+                        "connectionName": "shared_commondataserviceforapps-1"
+                      }
+                    }
+                  },
+                  "Update_Calculation": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_calculations",
+                        "recordId": "@triggerOutputs()?['body/InputParameters/CalculationId']",
+                        "item/hso_processingrunning": false
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateOnlyRecord",
+                        "connectionName": "shared_commondataserviceforapps-1"
+                      }
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@variables('varSuccess')",
+                      "@true"
+                    ]
+                  }
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "50f73bbd-fe38-47cd-bca3-4c01667f9b27"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Prepare_Payload_-_Error": [
+              "Succeeded",
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ],
+            "Call_Azure_Function_-_Error": [
+              "Succeeded",
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "8f626b78-586a-4557-84aa-5994402d7d1c"
+          },
+          "type": "Scope"
+        },
+        "Initialize_varFunctionPayload": {
+          "runAfter": {
+            "Parse_Plugin_Payload": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "20802ec9-c288-41f9-abc0-78331ccb6c15"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varFunctionPayload",
+                "type": "object",
+                "value": {}
+              }
+            ]
+          }
+        },
+        "Initialize_varSuccess_with_true": {
+          "runAfter": {
+            "Parse_Plugin_Payload": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "88fb07ce-19f6-4aaa-9b73-e669a9c1866e"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varSuccess",
+                "type": "boolean",
+                "value": true
+              }
+            ]
+          }
+        },
+        "Parse_Plugin_Payload": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "83220ecc-de6e-4546-9e9e-d2767fef2721"
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@triggerOutputs()?['body/InputParameters/Payload']",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "RecordIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "Records": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
+                "Source": {
+                  "type": "number"
+                },
+                "TargetType": {
+                  "type": "number"
+                },
+                "Message": {
+                  "type": "string"
+                },
+                "Depth": {
+                  "type": "number"
+                },
+                "NumberOfRecordsToProcess": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "RecordIds",
+                "Records",
+                "Source",
+                "TargetType",
+                "Message"
+              ]
+            }
+          }
+        },
+        "Initialize_varError": {
+          "runAfter": {
+            "Parse_Plugin_Payload": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c2801967-aafb-422d-acc3-4c9f492b207e"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varError",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "Initialize_varErrorMessage": {
+          "runAfter": {
+            "Parse_Plugin_Payload": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b85c3358-0156-4da1-9a57-ffdd7395499c"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorMessage",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Initialize_varOperation": {
+          "runAfter": {
+            "Parse_Plugin_Payload": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a43b1658-08db-47ee-9287-e77d1cd69492"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varOperation",
+                "type": "integer"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

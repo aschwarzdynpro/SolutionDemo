@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model-driven Fluent UI Icons with Helper</title>
+    <style>
+        .ribbon-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+            border: none;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 14px;
+            color: #323130;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 3px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .ribbon-button:hover {
+            background-color: #f3f2f1;
+            color: #0078d4;
+        }
+
+        .ribbon-button img {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="button-container">
+        <button class="ribbon-button" title="Save" aria-label="Save" onclick="saveFormComponent()">
+            <img id="save-icon" alt="Save Icon">
+            <span>Speichern</span>
+        </button>
+        <button class="ribbon-button" title="Refresh" aria-label="Refresh" onclick="refreshFormComponent()">
+            <img id="refresh-icon" alt="Refresh Icon">
+            <span>Aktualisieren</span>
+        </button>
+        <button class="ribbon-button" title="Search & Replace" aria-label="Search & Replace"
+            onclick="handleSearchAndReplace()">
+            <img id="searchreplace-icon" alt="Search & Replace Icon">
+            <span>Suchen & Ersetzen</span>
+        </button>
+    </div>
+
+    <script>
+        function getFluentIconUrl(iconName, hash = '') {
+            const base = "https://content.powerapps.com/resource/uci-infra-web/resources/images/";
+            return `${base}${iconName}${hash ? '.' + hash : ''}.svg`;
+        }
+
+        // New: build a stable Dataverse Web Resource URL (no fallback to Fluent)
+        function getClientUrl() {
+            const xrm = (window.parent && window.parent.Xrm) ? window.parent.Xrm : window.Xrm;
+            return xrm && xrm.Utility && xrm.Utility.getGlobalContext ? xrm.Utility.getGlobalContext().getClientUrl() : '';
+        }
+
+        // Set icons dynamically using known hashes
+        document.getElementById("save-icon").src = getFluentIconUrl("Save", "c3e8b193ccb83c8b1f680b864b3a3109");
+        document.getElementById("refresh-icon").src = getFluentIconUrl("Refresh", "b68f8f8104b01abf8aa068d43e0d1417");
+        document.getElementById('searchreplace-icon').src = `${getClientUrl()}/WebResources/${encodeURIComponent("hso_searchreplace_icon")}`;
+
+        function saveFormComponent() {
+            if (window.parent.Xrm) {
+                const formContext = window.parent.Xrm.Page;
+                const formComponentControl = formContext.getControl("hso_navigationkalkulationposition");
+                if (formComponentControl) {
+                    formComponentControl.data.entity.save(1);
+                } else {
+                    console.error("Form component control not found.");
+                }
+            }
+        }
+
+        function refreshFormComponent() {
+            if (window.parent.Xrm) {
+                const formContext = window.parent.Xrm.Page;
+                const formComponentControl = formContext.getControl("hso_navigationkalkulationposition");
+                if (formComponentControl) {
+                    formComponentControl.refresh();
+                } else {
+                    console.error("Form component control not found.");
+                }
+            }
+        }
+
+        function handleSearchAndReplace() {
+            if (typeof window.parent.Xrm !== "undefined" && window.parent.Xrm !== null) {
+                const formContext = window.parent.Xrm.Page;
+                const formComponentControl = formContext.getControl("hso_navigationkalkulationposition");
+                if (formComponentControl) {
+                    const entity = formComponentControl.data.entity;
+                    const positionType = entity.attributes.get("hso_positionelementtype")?.getValue();
+                    const recordTitle = entity.attributes.get("hso_name")?.getValue() || "this record";
+                    const recordId = entity.getId()?.replace(/[{}]/g, "");
+
+                    if (positionType === 100000006) {
+                        const confirmed = confirm(`Möchten Sie Suchen & Ersetzen für Position '${recordTitle}' öffnen?`);
+                        if (!confirmed) return;
+
+                        const paneId = "CalculationSearchAndReplace_SidePanel";
+                        const existingPane = window.parent.Xrm.App.sidePanes.getPane(paneId);
+
+                        if (existingPane) {
+                            existingPane.navigate({
+                                pageType: "custom",
+                                name: "hso_calculationpositionsearchreplace_aaddb",
+                                recordId: recordId,
+                                hidden: false
+                            });
+                        } else {
+                            window.parent.Xrm.App.sidePanes.createPane({
+                                title: "Search & Replace",
+                                paneId: paneId,
+                                imageSrc: "WebResources/hso_searchreplace_icon",
+                                hideHeader: false,
+                                canClose: true,
+                                width: 1200,
+                                isSelected: true,
+                                hidden: false
+                            }).then((pane) => {
+                                pane.navigate({
+                                    pageType: "custom",
+                                    name: "hso_calculationpositionsearchreplace_aaddb",
+                                    recordId: recordId,
+                                    hidden: false
+                                });
+                            });
+                        }
+                    } else {
+                        alert("Suchen & Ersetzen ist für diesen Positionselementtyp nicht erlaubt. Öffnen Sie das Suchen & Ersetzen Side Pane entweder für die gesamte Kalkulationssversion über die Ribbon Bar oder für einen ausgewählten Knotenpunkt.");
+                    }
+                } else {
+                    console.error("Form component control not found.");
+                }
+            } else {
+                console.error("Xrm context is not available. Make sure this page is hosted inside a model-driven app form.");
+            }
+        }
+    </script>
+</body>
+
+</html>

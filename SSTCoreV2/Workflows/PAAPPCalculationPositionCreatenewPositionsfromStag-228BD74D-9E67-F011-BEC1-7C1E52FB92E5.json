@@ -1,0 +1,1271 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps-1": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_webcontents": {
+        "api": {
+          "name": "shared_webcontents"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverseHTTPwithAzureAD"
+        },
+        "runtimeSource": "invoker"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)": {
+          "defaultValue": "operations-d365-schulz-int-11.crm4.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarDataverseInstance",
+            "description": "The Dataverse Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "Payload",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "A list of Positions to be created",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "title": "Operation Type",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "New Positions are either created as new, as copy or from import",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_2": {
+                  "title": "Calculation",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GUID of the Calculation where the Positions are added to",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "4fd90405-c2ec-43e2-9a40-209a4c767552"
+          }
+        }
+      },
+      "actions": {
+        "Initialize_varLog": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varLog",
+                "type": "string",
+                "value": "[INF] - [@{utcNow()}] - Initializing Flow Run. @{decodeUriComponent('%0A')}"
+              }
+            ]
+          },
+          "runAfter": {
+            "Parse_JSON": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "192d5244-a286-4431-8856-3732364a6d4b"
+          }
+        },
+        "Summary": {
+          "type": "Scope",
+          "actions": {
+            "Calculation_Positions_successfully_processed": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@variables('varIsError')",
+                      "@false"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Finish_Log_with_Success": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[SUC] - [@{utcNow()}] - Flow run was successful. New Positions have been added to the Calculation."
+                  }
+                },
+                "Update_Processing_Log_[Success]": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_processinglogs",
+                      "recordId": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']",
+                      "item/hso_end_datetime": "@utcNow()",
+                      "item/hso_log": "@variables('varLog')",
+                      "item/hso_processingstatus": 100000002
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Finish_Log_with_Success": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Apply_to_each_Error_Summary": {
+                    "type": "Foreach",
+                    "foreach": "@variables('varError')",
+                    "actions": {
+                      "Append_Error_Message": {
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varErrorMessage",
+                          "value": "[ERROR] - Action '@{items('Apply_to_each_Error_Summary')?['Action']}' failed with error message: @{items('Apply_to_each_Error_Summary')?['Message']} (Status: @{items('Apply_to_each_Error_Summary')?['Status']} / Status Code: @{items('Apply_to_each_Error_Summary')?['StatusCode']}) @{decodeUriComponent('%0A')}"
+                        }
+                      }
+                    }
+                  },
+                  "Finish_Log_with_Error": {
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "varLog",
+                      "value": "[ERR] - [@{utcNow()}] - Flow run has failed. New Positions may have been partially added to Calculation. Check Log for further details."
+                    },
+                    "runAfter": {
+                      "Apply_to_each_Error_Summary": [
+                        "Succeeded"
+                      ]
+                    }
+                  },
+                  "Update_Processing_Log_[Error]": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_processinglogs",
+                        "recordId": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']",
+                        "item/hso_end_datetime": "@utcNow()",
+                        "item/hso_flowerror": "@variables('varErrorMessage')",
+                        "item/hso_log": "@variables('varLog')",
+                        "item/hso_processingstatus": 100000003
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateOnlyRecord",
+                        "connectionName": "shared_commondataserviceforapps-1"
+                      }
+                    },
+                    "runAfter": {
+                      "Finish_Log_with_Error": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Process_Payload_-_Error": [
+              "Succeeded",
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ],
+            "Call_Custom_API_-_Error": [
+              "Succeeded",
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ],
+            "Processing_Log": [
+              "Succeeded",
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "445baebe-53bb-4448-b6a5-4a134ef8c21a"
+          }
+        },
+        "Initialize_varError": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varError",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varIsError": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_varErrorMessage": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorMessage",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varError": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Parse_JSON": {
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@triggerBody()['text']",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "@@odata.type": {
+                    "type": "string"
+                  },
+                  "hso_companyid@odata.bind": {
+                    "type": "string"
+                  },
+                  "hso_quoteid@odata.bind": {
+                    "type": "string"
+                  },
+                  "hso_calculationid@odata.bind": {
+                    "type": "string"
+                  },
+                  "hso_language": {
+                    "type": "integer"
+                  },
+                  "transactioncurrencyid@odata.bind": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hso_calculationdetailid": {
+                    "type": "string"
+                  },
+                  "hso_calculationdetail_parentid@odata.bind": {
+                    "type": "string"
+                  },
+                  "hso_positionelementtype": {
+                    "type": "integer"
+                  },
+                  "hso_name": {
+                    "type": "string"
+                  },
+                  "hso_projecttype": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "hso_calculationtype": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "hso_quantity": {
+                    "type": [
+                      "integer",
+                      "number"
+                    ]
+                  },
+                  "hso_positionquantity": {
+                    "type": [
+                      "integer",
+                      "number"
+                    ]
+                  },
+                  "hso_level": {
+                    "type": "integer"
+                  },
+                  "hso_linenumber": {
+                    "type": "string"
+                  },
+                  "hso_linenumber_level": {
+                    "type": "string"
+                  },
+                  "hso_parent_linenumber_import": {
+                    "type": "string"
+                  },
+                  "hso_calculationdetail_parentid_sortinglinenum": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hso_productid@odata.bind": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hso_projecthourid@odata.bind": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hso_productionhourid@odata.bind": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hso_externalserviceid@odata.bind": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hso_projectexpenseid@odata.bind": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hso_uomid@odata.bind": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hso_surchargegroup_baseid@odata.bind": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hso_costpriceperunit": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "hso_positiondetails": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "Overrides": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "@@odata.type",
+                  "hso_companyid@odata.bind",
+                  "hso_quoteid@odata.bind",
+                  "hso_calculationid@odata.bind",
+                  "hso_calculationdetailid",
+                  "hso_positionelementtype",
+                  "hso_name",
+                  "hso_projecttype",
+                  "hso_calculationtype",
+                  "hso_quantity",
+                  "hso_level",
+                  "hso_linenumber",
+                  "hso_linenumber_level",
+                  "hso_parent_linenumber_import",
+                  "hso_calculationdetail_parentid_sortinglinenum"
+                ]
+              }
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "05e850a7-2370-47d6-8e82-f716207930f4"
+          }
+        },
+        "Initialize_varNumberOfRecords": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfRecords",
+                "type": "integer",
+                "value": "@length(body('Parse_JSON'))"
+              }
+            ]
+          },
+          "runAfter": {
+            "Parse_JSON": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_varBatchSettings": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varBatchSettings",
+                "type": "object",
+                "value": {
+                  "maxBatchSize": 10,
+                  "minBatchSize": 1,
+                  "maxParallelism": 20,
+                  "minParallelism": 1
+                }
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Process_Payload": {
+          "type": "Scope",
+          "actions": {
+            "Append_Calculation_Positions_to_process_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - @{variables('varNumberOfRecords')} Calculation Positions to create. @{decodeUriComponent('%0A')}"
+              }
+            },
+            "Append_processed_Calculation_Positions_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - @{variables('varNumberOfRecords')} Calculation Positions created. @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "Do_until_all_Levels_are_processed": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Do_until_all_Levels_are_processed": {
+              "type": "Until",
+              "expression": "@equals(variables('varIterationLevel'),add(\r\n  max(variables('varProcessingLevels')), \r\n  1\r\n))",
+              "limit": {
+                "count": 60,
+                "timeout": "PT1H"
+              },
+              "actions": {
+                "Filter_Payload_by_Level": {
+                  "type": "Query",
+                  "inputs": {
+                    "from": "@body('Remove_Overrides_from_JSON')",
+                    "where": "@equals(item()['hso_level'],variables('varIterationLevel'))"
+                  }
+                },
+                "Calculate_Parallelism": {
+                  "type": "Compose",
+                  "inputs": "@min(\r\n  max(\r\n    div(\r\n      length(body('Filter_Payload_by_Level')),\r\n      variables('varBatchSettings')?['maxBatchSize']\r\n    ),\r\n    variables('varBatchSettings')?['minBatchSize']\r\n  ),\r\n  variables('varBatchSettings')?['maxParallelism']\r\n)",
+                  "runAfter": {
+                    "Filter_Payload_by_Level": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Calculate_Batch_Size": {
+                  "type": "Compose",
+                  "inputs": "@add(\r\n  div(\r\n    length(body('Filter_Payload_by_Level')), \r\n    outputs('Calculate_Parallelism')\r\n  ), \r\n  if(\r\n    greaterOrEquals(\r\n      mod(\r\n        length(body('Filter_Payload_by_Level')),\r\n        outputs('Calculate_Parallelism')\r\n      ),\r\n      1\r\n    ), \r\n    1, \r\n    0\r\n  )\r\n)\r\n",
+                  "runAfter": {
+                    "Calculate_Parallelism": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Split_Records_into_Chunks": {
+                  "type": "Compose",
+                  "inputs": "@chunk(\r\n  body('Filter_Payload_by_Level'),\r\n  outputs('Calculate_Batch_Size')\r\n)",
+                  "runAfter": {
+                    "Calculate_Batch_Size": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Apply_to_each_Chunk": {
+                  "type": "Foreach",
+                  "foreach": "@outputs('Split_Records_into_Chunks')",
+                  "actions": {
+                    "Items_to_process": {
+                      "type": "Compose",
+                      "inputs": "@items('Apply_to_each_Chunk')"
+                    },
+                    "Create_Calculation_Positions_by_Level": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "request/method": "POST",
+                          "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_calculationdetails/Microsoft.Dynamics.CRM.CreateMultiple",
+                          "request/headers": {
+                            "OData-MaxVersion": "4.0",
+                            "OData-Version": "4.0",
+                            "If-None-Match": "null",
+                            "Accept": "application/json",
+                            "Content-Type": "application/json; charset=utf-8",
+                            "MSCRM.BypassCustomPluginExecution": "true",
+                            "MSCRM.SuppressDuplicateDetection": "true",
+                            "MSCRM.BypassBusinessLogicExecution": "CustomSync,CustomAsync",
+                            "MSCRM.SuppressCallbackRegistrationExpanderJob": "true"
+                          },
+                          "request/body": "{\n \"Targets\": @{items('Apply_to_each_Chunk')}\n}"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                          "operationId": "InvokeHttp",
+                          "connectionName": "shared_webcontents"
+                        }
+                      },
+                      "runAfter": {
+                        "Items_to_process": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Append_processing_Level_to_Log": [
+                      "Succeeded"
+                    ]
+                  },
+                  "runtimeConfiguration": {
+                    "concurrency": {
+                      "repetitions": 20
+                    }
+                  }
+                },
+                "Increment_varIterationLevel_by_1": {
+                  "type": "IncrementVariable",
+                  "inputs": {
+                    "name": "varIterationLevel",
+                    "value": 1
+                  },
+                  "runAfter": {
+                    "Apply_to_each_Chunk": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Append_processing_Level_to_Log": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[INF] - [@{utcNow()}] - Process @{length(body('Filter_Payload_by_Level'))} Level-@{variables('varIterationLevel')} Items with @{outputs('Calculate_Parallelism')} Batch(es) (Batch Size: @{outputs('Calculate_Batch_Size')}). @{decodeUriComponent('%0A')}"
+                  },
+                  "runAfter": {
+                    "Split_Records_into_Chunks": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "Remove_Overrides_from_JSON": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Remove_Overrides_from_JSON": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Parse_JSON')",
+                "select": "@removeProperty(item(), 'Overrides')"
+              },
+              "runAfter": {
+                "Append_Calculation_Positions_to_process_to_Log": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varIterationLevel": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_varIsError": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varIsError",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "Parse_JSON": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Process_Payload_-_Error": {
+          "type": "Scope",
+          "actions": {
+            "Filter_Results_for_failed_actions_[Process_Payload]": {
+              "type": "Query",
+              "inputs": {
+                "from": "@result('Process_Payload')",
+                "where": "@equals(item()?['status'],'Failed')"
+              },
+              "runAfter": {
+                "Append_Process_Payload_Error_to_Log": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Select_Error_Summary_[Process_Payload]": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Filter_Results_for_failed_actions_[Process_Payload]')",
+                "select": {
+                  "Action": "@item()?['name']",
+                  "Code": "@item()?['code']",
+                  "Status": "@item()?['status']",
+                  "StatusCode": "@item()?['outputs']?['statusCode']",
+                  "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                }
+              },
+              "runAfter": {
+                "Filter_Results_for_failed_actions_[Process_Payload]": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Apply_to_each_Error_Summary_[Process_Payload]": {
+              "type": "Foreach",
+              "foreach": "@body('Select_Error_Summary_[Process_Payload]')",
+              "actions": {
+                "Append_Error_Summary_[Process_Payload]": {
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "varError",
+                    "value": "@items('Apply_to_each_Error_Summary_[Process_Payload]')"
+                  }
+                }
+              },
+              "runAfter": {
+                "Select_Error_Summary_[Process_Payload]": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Set_varIsError_when_processing_Payload_failed": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varIsError",
+                "value": true
+              }
+            },
+            "Append_Process_Payload_Error_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[ERR] - [@{utcNow()}] - Error when creating Calculation Positions. @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "Set_varIsError_when_processing_Payload_failed": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Respond_to_App_[Error]": {
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {
+                      "title": "Result",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "errormessage": {
+                      "title": "ErrorMessage",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "result": "Error",
+                  "errormessage": "Error when creating Calculation Positions. "
+                }
+              },
+              "runAfter": {
+                "Apply_to_each_Error_Summary_[Process_Payload]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ce5af8a3-e40c-436f-9b1f-0bb7687963c6"
+              }
+            }
+          },
+          "runAfter": {
+            "Process_Payload": [
+              "TimedOut",
+              "Failed"
+            ]
+          }
+        },
+        "Call_Custom_API": {
+          "type": "Scope",
+          "actions": {
+            "Switch_on_Operation_Type": {
+              "type": "Switch",
+              "expression": "@triggerBody()?['text_1']",
+              "default": {
+                "actions": {}
+              },
+              "cases": {
+                "New": {
+                  "actions": {
+                    "Call_hso_CalculationdetailApi_to_set_default_values": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "actionName": "hso_CalculationdetailApi",
+                          "item/hso_CalculationdetailApiPayload": "@outputs('CalculationDetail_API_Payload_(Set_Default_Values)_[New]')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "PerformUnboundAction",
+                          "connectionName": "shared_commondataserviceforapps-1"
+                        }
+                      },
+                      "runAfter": {
+                        "CalculationDetail_API_Payload_(Set_Default_Values)_[New]": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "CalculationDetail_API_Payload_(Set_Default_Values)_[New]": {
+                      "type": "Compose",
+                      "inputs": {
+                        "OperationType": 4,
+                        "Records": "@body('Select_Payload_to_call_Custom_API')"
+                      }
+                    }
+                  },
+                  "case": "New"
+                }
+              },
+              "runAfter": {
+                "CalculationDetail_API_Payload_(with_Override)": [
+                  "SUCCEEDED"
+                ]
+              }
+            },
+            "Select_Payload_to_call_Custom_API": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Parse_JSON')",
+                "select": "@item()['hso_calculationdetailid']"
+              },
+              "runAfter": {
+                "Append_call_Custom_API_to_Log": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Append_call_Custom_API_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - Call Custom API to set default values for new Calculation Positions. @{decodeUriComponent('%0A')}"
+              }
+            },
+            "Append_Custom_API_called_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - Custom API to set default values successfully called. @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "Switch_on_Operation_Type": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Select_Overrides_to_call_Custom_API": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Parse_JSON')",
+                "select": "@concat('\"', item()?['hso_calculationdetailid'], '\": ', string(split(item()?['Overrides'], ',')))"
+              },
+              "runAfter": {
+                "Select_Payload_to_call_Custom_API": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "CalculationDetail_API_Payload_(with_Override)": {
+              "type": "Compose",
+              "inputs": "@json(concat('{\"OperationType\": 4, \"Records\": ', string(body('Select_Payload_to_call_Custom_API')), ', \"Overrides\": {', join(body('Select_Overrides_to_call_Custom_API'), ','), '}}'))",
+              "runAfter": {
+                "Select_Overrides_to_call_Custom_API": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Update_Calculation_Position_Processing_Status": [
+              "Succeeded",
+              "TimedOut",
+              "Failed"
+            ]
+          }
+        },
+        "Call_Custom_API_-_Error": {
+          "type": "Scope",
+          "actions": {
+            "Set_varIsError_when_calling_Custom_API_failed": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varIsError",
+                "value": true
+              }
+            },
+            "Filter_Results_for_failed_actions_[Call_Custom_API]": {
+              "type": "Query",
+              "inputs": {
+                "from": "@result('Call_Custom_API')",
+                "where": "@equals(item()?['status'],'Failed')"
+              },
+              "runAfter": {
+                "Append_Custom_API_Error_to_Log": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Select_Error_Summary_[Call_Custom_API]": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Filter_Results_for_failed_actions_[Call_Custom_API]')",
+                "select": {
+                  "Action": "@item()?['name']",
+                  "Code": "@item()?['code']",
+                  "Status": "@item()?['status']",
+                  "StatusCode": "@item()?['outputs']?['statusCode']",
+                  "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                }
+              },
+              "runAfter": {
+                "Filter_Results_for_failed_actions_[Call_Custom_API]": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Apply_to_each_Error_Summary_[Call_Custom_API]": {
+              "type": "Foreach",
+              "foreach": "@body('Select_Error_Summary_[Call_Custom_API]')",
+              "actions": {
+                "Drill_down_on_failed_action": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@items('Apply_to_each_Error_Summary_[Call_Custom_API]')?['StatusCode']",
+                          "@null"
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Filter_Results_for_failed_action_[Call_Custom_API]_Drill_Down": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@result('Switch_on_Operation_Type')",
+                        "where": "@equals(item()?['status'],'Failed')"
+                      }
+                    },
+                    "Select_Error_Summary_[Call_Custom_API]_Drill_Down": {
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Filter_Results_for_failed_action_[Call_Custom_API]_Drill_Down')",
+                        "select": {
+                          "Action": "@item()?['name']",
+                          "Code": "@item()?['code']",
+                          "Status": "@item()?['status']",
+                          "StatusCode": "@item()?['outputs']?['statusCode']",
+                          "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                        }
+                      },
+                      "runAfter": {
+                        "Filter_Results_for_failed_action_[Call_Custom_API]_Drill_Down": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Apply_to_each_Error_Summary_[Call_Custom_API]_Drill_Down": {
+                      "type": "Foreach",
+                      "foreach": "@body('Select_Error_Summary_[Call_Custom_API]_Drill_Down')",
+                      "actions": {
+                        "Append_Error_Summary_[Call_Custom_API]_Drill_Down": {
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "varError",
+                            "value": "@items('Apply_to_each_Error_Summary_[Call_Custom_API]_Drill_Down')"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Select_Error_Summary_[Call_Custom_API]_Drill_Down": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Append_Error_Summary_[Call_Custom_API]": {
+                        "type": "AppendToArrayVariable",
+                        "inputs": {
+                          "name": "varError",
+                          "value": "@items('Apply_to_each_Error_Summary_[Call_Custom_API]')"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Select_Error_Summary_[Call_Custom_API]": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Append_Custom_API_Error_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[ERR] - [@{utcNow()}] - Error when calling the Custom API to set default values for new Calculation Positions. @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "Set_varIsError_when_calling_Custom_API_failed": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Call_Custom_API": [
+              "TimedOut",
+              "Failed"
+            ]
+          }
+        },
+        "Respond_to_App": {
+          "type": "Scope",
+          "actions": {
+            "Respond_to_App_[Success]": {
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {
+                      "title": "Result",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "errormessage": {
+                      "title": "ErrorMessage",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "result": "Success"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "ce5af8a3-e40c-436f-9b1f-0bb7687963c6"
+              }
+            }
+          },
+          "runAfter": {
+            "Process_Payload": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Processing_Log": {
+          "type": "Scope",
+          "actions": {
+            "Create_Processing_Log": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "item/hso_name": "Neue Kalkulationspositionen (in Batch) erstellen - @{formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')}",
+                  "item/hso_processingtask": 100000015,
+                  "item/hso_flowrunurl": "@concat(\r\n  'https://emea.flow.microsoft.com/manage/environments/', \r\n  workflow()?['tags']['environmentName'], \r\n  '/flows/', \r\n  workflow()?['name'], \r\n  '/runs/', \r\n  workflow()?['run']['name']\r\n)",
+                  "item/hso_calculationid@odata.bind": "hso_calculations(@{triggerBody()?['text_2']})",
+                  "item/hso_start_datetime": "@utcNow()",
+                  "item/hso_origin": 100000000,
+                  "item/hso_processedrecords": "@variables('varNumberOfRecords')",
+                  "item/hso_processingstatus": 100000001
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varIterationLevel": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Select_Level_from_Payload": {
+          "type": "Select",
+          "inputs": {
+            "from": "@body('Parse_JSON')",
+            "select": "@item()['hso_level']"
+          },
+          "runAfter": {
+            "Initialize_varNumberOfRecords": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_varProcessingLevels": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varProcessingLevels",
+                "type": "array",
+                "value": "@sort(\r\n  union(\r\n    body('Select_Level_from_Payload'),\r\n    body('Select_Level_from_Payload')\r\n  )\r\n)\r\n"
+              }
+            ]
+          },
+          "runAfter": {
+            "Select_Level_from_Payload": [
+              "Succeeded"
+            ],
+            "Initialize_varErrorMessage": [
+              "Succeeded"
+            ],
+            "Initialize_varBatchSettings": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_varIterationLevel": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varIterationLevel",
+                "type": "integer",
+                "value": "@min(variables('varProcessingLevels'))"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varProcessingLevels": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Update_Calculation_Position_Processing_Status": {
+          "type": "Scope",
+          "description": "After creating new Calculation Positions the Processing Status must be updated to ensure that the Plug-In to eventually update the Parents Processing Status is executed. An additional Dataverse Update is necessary because of BypassCustomPlugInExecution.",
+          "actions": {
+            "Select_Payload_for_Update": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Parse_JSON')",
+                "select": {
+                  "@{string('@odata.type')}": "@item()?['@odata.type']",
+                  "hso_calculationdetailid": "@item()?['hso_calculationdetailid']",
+                  "hso_processingstatus": "@false"
+                }
+              }
+            },
+            "Calculate_Parallelism_for_Update": {
+              "type": "Compose",
+              "inputs": "@min(\r\n  max(\r\n    div(\r\n      length(body('Select_Payload_for_Update')),\r\n      variables('varBatchSettings')?['maxBatchSize']\r\n    ),\r\n    variables('varBatchSettings')?['minBatchSize']\r\n  ),\r\n  variables('varBatchSettings')?['maxParallelism']\r\n)",
+              "runAfter": {
+                "Append_update_Calculation_Positions_to_Log": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Calculate_Batch_Size_for_Update": {
+              "type": "Compose",
+              "inputs": "@add(\r\n  div(\r\n    length(body('Select_Payload_for_Update')), \r\n    outputs('Calculate_Parallelism_for_Update')\r\n  ), \r\n  if(\r\n    greaterOrEquals(\r\n      mod(\r\n        length(body('Select_Payload_for_Update')),\r\n        outputs('Calculate_Parallelism_for_Update')\r\n      ),\r\n      1\r\n    ), \r\n    1, \r\n    0\r\n  )\r\n)\r\n",
+              "runAfter": {
+                "Calculate_Parallelism_for_Update": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Split_Records_into_Chunks_for_Update": {
+              "type": "Compose",
+              "inputs": "@chunk(\r\n  body('Select_Payload_for_Update'),\r\n  outputs('Calculate_Batch_Size_for_Update')\r\n)",
+              "runAfter": {
+                "Calculate_Batch_Size_for_Update": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Process_Updates_for_each_Chunk": {
+              "type": "Foreach",
+              "foreach": "@outputs('Split_Records_into_Chunks_for_Update')",
+              "actions": {
+                "Items_to_update": {
+                  "type": "Compose",
+                  "inputs": "@items('Process_Updates_for_each_Chunk')"
+                },
+                "Update_Calculation_Positions": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "request/method": "POST",
+                      "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_calculationdetails/Microsoft.Dynamics.CRM.UpdateMultiple",
+                      "request/headers": {
+                        "OData-MaxVersion": "4.0",
+                        "OData-Version": "4.0",
+                        "If-None-Match": "null",
+                        "Accept": "application/json",
+                        "Content-Type": "application/json; charset=utf-8"
+                      },
+                      "request/body": "{\n \"Targets\": @{items('Process_Updates_for_each_Chunk')}\n}"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                      "operationId": "InvokeHttp",
+                      "connectionName": "shared_webcontents"
+                    }
+                  },
+                  "runAfter": {
+                    "Items_to_update": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "Split_Records_into_Chunks_for_Update": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 20
+                }
+              }
+            },
+            "Append_update_Calculation_Positions_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - Update Processing Status for @{length(body('Select_Payload_for_Update'))} new Calculation Positions to check Parents Processing Status. @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "Select_Payload_for_Update": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "43abaca5-e993-4bd4-b6df-850a27ea537d"
+              }
+            },
+            "Append_updated_Calculation_Positions_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - Processing Status for @{length(body('Select_Payload_for_Update'))} Calculation Positions updated. @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "Process_Updates_for_each_Chunk": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "43abaca5-e993-4bd4-b6df-850a27ea537d"
+              }
+            }
+          },
+          "runAfter": {
+            "Respond_to_App": [
+              "Succeeded",
+              "TimedOut",
+              "Failed"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,687 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataverse"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_a_resource_requirement_is_created": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "msdyn_resourcerequirement",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filterexpression": "_msdyn_projectid_value ne null"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "f1bd37a9-c2d7-4a01-aaff-d2a4b78af44c"
+          }
+        }
+      },
+      "actions": {
+        "Check_if_Project_is_filled": {
+          "type": "If",
+          "expression": {
+            "not": {
+              "equals": [
+                "@triggerOutputs()?['body/_msdyn_projectid_value']",
+                "@null"
+              ]
+            }
+          },
+          "actions": {
+            "Get_Project": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "msdyn_projects",
+                  "recordId": "@triggerOutputs()?['body/_msdyn_projectid_value']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "57f92aff-484a-4a80-9780-4c09eb6e9bc8"
+              }
+            },
+            "Get_Project_Team_Members": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "msdyn_projectteams",
+                  "$filter": "_msdyn_resourcerequirementid_value eq '@{triggerOutputs()?['body/msdyn_resourcerequirementid']}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "Get_Project": [
+                  "SUCCEEDED"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "75577b71-ac4b-4ce6-9e43-baf3a06b24ce"
+              }
+            },
+            "Auf_alle_anwenden": {
+              "type": "Foreach",
+              "foreach": "@outputs('Get_Project_Team_Members')?['body/value']",
+              "actions": {
+                "Get_ressource_assigments": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "msdyn_resourceassignments",
+                      "$filter": "_msdyn_projectteamid_value eq @{items('Auf_alle_anwenden')?['msdyn_projectteamid']}"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "74e68cf5-aa22-4d30-b22e-f86843e32e88"
+                  }
+                },
+                "Auf_alle_anwenden_2": {
+                  "type": "Foreach",
+                  "foreach": "@outputs('Get_ressource_assigments')?['body/value']",
+                  "actions": {
+                    "Get_Project_Task": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "msdyn_projecttasks",
+                          "recordId": "@items('Auf_alle_anwenden_2')?['_msdyn_taskid_value']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "GetItem",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "cb64ae14-dd52-4871-a8b9-197cf8b85ca5"
+                      }
+                    },
+                    "Get_Project_Categorie_of_Project_Task": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "hso_projectcategories",
+                          "recordId": "@outputs('Get_Project_Task')?['body/_hso_projectcategoryid_value']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "GetItem",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "runAfter": {
+                        "Get_Project_Task": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "2f3d4378-754c-4656-8c82-d38fbb3728d5"
+                      }
+                    },
+                    "If_Kategorie_Group_of_project_categorie_equals_MON": {
+                      "type": "If",
+                      "expression": {
+                        "equals": [
+                          "@outputs('Get_Project_Categorie_of_Project_Task')?['body/sst_kategoriegruppe_txt']",
+                          "MON"
+                        ]
+                      },
+                      "actions": {
+                        "Create_Work_Order": {
+                          "type": "OpenApiConnection",
+                          "description": "",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "msdyn_workorders",
+                              "item/msdyn_name": "MON-@{body('Get_Project_Task')?['sst_tasknumber']}",
+                              "item/msdyn_workordertype@odata.bind": "/msdyn_workordertypes(@{outputs('Compose_Work_Order_Type')})",
+                              "item/msdyn_serviceaccount@odata.bind": "/accounts(@{outputs('Get_Project')?['body/_msdyn_customer_value']})",
+                              "item/sst_organisationseinheit_ref@odata.bind": "/businessunits(@{outputs('Get_Project')?['body/_msdyn_contractorganizationalunitid_value']})",
+                              "item/msdyn_taxable": true,
+                              "item/msdyn_systemstatus": 690970000,
+                              "item/msdyn_workordersummary": "Montage",
+                              "item/msdyn_primaryincidentestimatedduration": "@triggerOutputs()?['body/msdyn_effort']",
+                              "item/msdyn_primaryincidenttype@odata.bind": "/msdyn_incidenttypes(@{outputs('Compose_Incident_Type')})",
+                              "item/sst_Unternehmen_ref@odata.bind": "/cdm_companies(@{outputs('Get_Project')?['body/_sst_owningcompany_value']})",
+                              "item/msdyn_totalestimatedduration": "@triggerOutputs()?['body/msdyn_effort']",
+                              "item/sst_Projekt_ref@odata.bind": "/msdyn_projects(@{triggerOutputs()?['body/_msdyn_projectid_value']})",
+                              "item/sst_Projektaufgabe_ref@odata.bind": "/msdyn_projecttasks(@{outputs('Get_Project_Task')?['body/msdyn_projecttaskid']})",
+                              "item/msdyn_timetopromised": "@addHours(triggerOutputs()?['body/msdyn_todate'],12)",
+                              "item/msdyn_timefrompromised": "@addHours(triggerOutputs()?['body/msdyn_fromdate'],11)"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "CreateRecord",
+                              "connectionName": "shared_commondataserviceforapps"
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "61af3abd-8be1-4eaa-817a-28c76333bade"
+                          }
+                        },
+                        "Wait_until_requirement_is_created,_then_update_requirement_": {
+                          "type": "Until",
+                          "expression": "@equals(variables('CheckRequirement'), true)",
+                          "limit": {
+                            "count": 60,
+                            "timeout": "PT1H"
+                          },
+                          "actions": {
+                            "Get_newly_created_Resource_Requirement_": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "msdyn_resourcerequirements",
+                                  "$filter": "_msdyn_workorder_value eq '@{outputs('Create_Work_Order')?['body/msdyn_workorderid']}'"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "operationId": "ListRecords",
+                                  "connectionName": "shared_commondataserviceforapps"
+                                }
+                              },
+                              "metadata": {
+                                "operationMetadataId": "7ef67a96-c8bb-4fd1-95f5-3c04c31a42cd"
+                              }
+                            },
+                            "Check_Lenght_of_List:_If_Leght_=1_Update_Requirement_and_exit_loop": {
+                              "type": "If",
+                              "expression": {
+                                "equals": [
+                                  "@variables('Lenght of ResourceRequirements')",
+                                  "@1"
+                                ]
+                              },
+                              "actions": {
+                                "Auf_alle_anwenden_3": {
+                                  "type": "Foreach",
+                                  "foreach": "@outputs('Get_newly_created_Resource_Requirement_')?['body/value']",
+                                  "actions": {
+                                    "Update_new_Resource_Requirement": {
+                                      "type": "OpenApiConnection",
+                                      "inputs": {
+                                        "parameters": {
+                                          "entityName": "msdyn_resourcerequirements",
+                                          "recordId": "@items('Auf_alle_anwenden_3')?['msdyn_resourcerequirementid']",
+                                          "item/msdyn_duration": "@triggerOutputs()?['body/msdyn_duration']",
+                                          "item/msdyn_todate": "@addHours(triggerOutputs()?['body/msdyn_todate'],-11)",
+                                          "item/msdyn_fromdate": "@addHours(triggerOutputs()?['body/msdyn_fromdate'],11)",
+                                          "item/ownerid@odata.bind": "/systemusers(@{outputs('Get_Project')?['body/_msdyn_projectmanager_value']})",
+                                          "item/sst_country_id@odata.bind": "/sst_countries(@{outputs('Get_Project')?['body/_sst_country_id_value']})",
+                                          "item/msdyn_city": "@outputs('Get_Project')?['body/sst_city_txt']",
+                                          "item/sst_postalcode_txt": "@outputs('Get_Project')?['body/sst_postalcode_txt']",
+                                          "item/sst_ProjectAssembly_ref@odata.bind": "/msdyn_projects(@{triggerOutputs()?['body/_msdyn_projectid_value']})",
+                                          "item/sst_projecttask_ref@odata.bind": "/msdyn_projecttasks(@{outputs('Get_Project_Task')?['body/msdyn_projecttaskid']})",
+                                          "item/sst_projectcategorie_id@odata.bind": "/categories(@{outputs('Get_Project_Categorie_of_Project_Task')?['body/hso_projectcategoryid']})",
+                                          "item/sst_street_txt": "@outputs('Get_Project')?['body/sst_deliverystreet_txt']"
+                                        },
+                                        "host": {
+                                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                          "operationId": "UpdateRecord",
+                                          "connectionName": "shared_commondataserviceforapps"
+                                        }
+                                      },
+                                      "metadata": {
+                                        "operationMetadataId": "61ae6858-81f8-4356-bef0-142b5a97e3bc"
+                                      }
+                                    },
+                                    "Set_GUID_Of_New_Requirement": {
+                                      "type": "SetVariable",
+                                      "inputs": {
+                                        "name": "GUID Of new Requirement",
+                                        "value": "@outputs('Update_new_Resource_Requirement')?['body/msdyn_resourcerequirementid']"
+                                      },
+                                      "runAfter": {
+                                        "Update_new_Resource_Requirement": [
+                                          "Succeeded"
+                                        ]
+                                      },
+                                      "metadata": {
+                                        "operationMetadataId": "f749deeb-036a-4f53-9873-d4751d882c1a"
+                                      }
+                                    }
+                                  },
+                                  "metadata": {
+                                    "operationMetadataId": "262c0e92-d48b-4902-afa4-2b4a56352f7e"
+                                  }
+                                },
+                                "Set_CheckRequirement_variable_to_true": {
+                                  "type": "SetVariable",
+                                  "inputs": {
+                                    "name": "CheckRequirement",
+                                    "value": "@true"
+                                  },
+                                  "runAfter": {
+                                    "Auf_alle_anwenden_3": [
+                                      "Succeeded"
+                                    ]
+                                  },
+                                  "metadata": {
+                                    "operationMetadataId": "a437ca87-9f35-4326-a55a-79c0c37d89c3"
+                                  }
+                                }
+                              },
+                              "else": {
+                                "actions": {
+                                  "Delay_10_sec": {
+                                    "type": "Wait",
+                                    "inputs": {
+                                      "interval": {
+                                        "count": 10,
+                                        "unit": "Second"
+                                      }
+                                    },
+                                    "metadata": {
+                                      "operationMetadataId": "43218d7d-90ad-4895-b8ad-d2bfaeb039b7"
+                                    }
+                                  }
+                                }
+                              },
+                              "runAfter": {
+                                "Variable_festlegen": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "f357c78c-aea2-45ec-8557-8aad32fe5fd7"
+                              }
+                            },
+                            "Variable_festlegen": {
+                              "type": "SetVariable",
+                              "inputs": {
+                                "name": "Lenght of ResourceRequirements",
+                                "value": "@length(outputs('Get_newly_created_Resource_Requirement_')?['body/value'])"
+                              },
+                              "runAfter": {
+                                "Get_newly_created_Resource_Requirement_": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "4e6929d1-ea70-4d93-b2da-7d585107f727"
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Create_Work_Order": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "f9ad30e4-e416-479f-ab13-4884bf62a221"
+                          }
+                        },
+                        "Get_all_ResourceRequirement_Categories_from_OLD_Resource_Requirment_": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "msdyn_requirementresourcecategories",
+                              "$filter": "_msdyn_resourcerequirement_value eq  '@{triggerOutputs()?['body/msdyn_resourcerequirementid']}'"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "ListRecords",
+                              "connectionName": "shared_commondataserviceforapps"
+                            }
+                          },
+                          "runAfter": {
+                            "Wait_until_requirement_is_created,_then_update_requirement_": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "9ed10b2d-b9c4-4503-96d1-557f0db6bb29"
+                          }
+                        },
+                        "Update_Project_Team_to_new_Resource_Requirement": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "msdyn_projectteams",
+                              "recordId": "@items('Auf_alle_anwenden')?['msdyn_projectteamid']",
+                              "item/msdyn_resourcerequirementid@odata.bind": "/msdyn_resourcerequirements(@{variables('GUID Of new Requirement')})"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "UpdateRecord",
+                              "connectionName": "shared_commondataserviceforapps"
+                            }
+                          },
+                          "runAfter": {
+                            "Update_all_Requirement_Org_Units": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "c551f6c8-03ab-4e80-ad71-38e0a268b120"
+                          }
+                        },
+                        "Update_All_Requirement_Categories_to_new_Requirement": {
+                          "type": "Foreach",
+                          "foreach": "@outputs('Get_all_ResourceRequirement_Categories_from_OLD_Resource_Requirment_')?['body/value']",
+                          "actions": {
+                            "Update_Requirement_Categories": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "msdyn_requirementresourcecategories",
+                                  "recordId": "@items('Update_All_Requirement_Categories_to_new_Requirement')?['msdyn_requirementresourcecategoryid']",
+                                  "item/msdyn_ResourceRequirement@odata.bind": "/msdyn_resourcerequirements(@{variables('GUID Of new Requirement')})"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "operationId": "UpdateRecord",
+                                  "connectionName": "shared_commondataserviceforapps"
+                                }
+                              },
+                              "metadata": {
+                                "operationMetadataId": "f7556e71-2084-4a3b-8ce3-b2f478ceda85"
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Get_all_ResourceRequirement_Categories_from_OLD_Resource_Requirment_": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "86a365f4-8cde-4d14-9c3a-8c27004a7e8d"
+                          }
+                        },
+                        "Get_all_Requirement_Org_Units": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "msdyn_requirementorganizationunits",
+                              "$filter": "_msdyn_resourcerequirement_value eq  '@{triggerOutputs()?['body/msdyn_resourcerequirementid']}'"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "ListRecords",
+                              "connectionName": "shared_commondataserviceforapps"
+                            }
+                          },
+                          "runAfter": {
+                            "Update_All_Requirement_Categories_to_new_Requirement": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "21ba89eb-0e79-48ae-9601-b5270a265cb7"
+                          }
+                        },
+                        "Update_all_Requirement_Org_Units": {
+                          "type": "Foreach",
+                          "foreach": "@outputs('Get_all_Requirement_Org_Units')?['body/value']",
+                          "actions": {
+                            "Update_Requirement_Org_Unit": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "msdyn_requirementorganizationunits",
+                                  "recordId": "@items('Update_all_Requirement_Org_Units')?['msdyn_requirementorganizationunitid']",
+                                  "item/msdyn_ResourceRequirement@odata.bind": "/msdyn_resourcerequirements(@{variables('GUID Of new Requirement')})"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "operationId": "UpdateRecord",
+                                  "connectionName": "shared_commondataserviceforapps"
+                                }
+                              },
+                              "metadata": {
+                                "operationMetadataId": "222f6705-8c7e-4dc4-a8a1-9ce643296c46"
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Get_all_Requirement_Org_Units": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "d1f74bb9-5628-4637-a54e-63a9ef01fe24"
+                          }
+                        },
+                        "Delete_old_Requirement": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "msdyn_resourcerequirements",
+                              "recordId": "@triggerOutputs()?['body/msdyn_resourcerequirementid']"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "DeleteRecord",
+                              "connectionName": "shared_commondataserviceforapps"
+                            }
+                          },
+                          "runAfter": {
+                            "Update_Project_Team_to_new_Resource_Requirement": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "359e6010-102d-4a01-97e8-39d54d230283"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "runAfter": {
+                        "Compose_Work_Order_Type": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "2ef80450-3dc9-4a1b-a9f5-66824c6a8f74"
+                      }
+                    },
+                    "Compose_Work_Order_Type": {
+                      "type": "Compose",
+                      "inputs": "@first(outputs('Get_Work_Order_Type_\"Montage\"')?['body/value'])?['msdyn_workordertypeId']",
+                      "runAfter": {
+                        "Compose_Incident_Type": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "290bec69-c093-4049-beeb-bcb7d472571e"
+                      }
+                    },
+                    "Get_Work_Order_Type_\"Montage\"": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "msdyn_workordertypes",
+                          "$filter": "msdyn_name eq 'Montage'"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "ListRecords",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "runAfter": {
+                        "Get_Incident_Type_\"Montage\"": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "361cd6b6-dfd3-4f36-bf06-b81b63872223"
+                      }
+                    },
+                    "Get_Incident_Type_\"Montage\"": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "msdyn_incidenttypes",
+                          "$filter": "msdyn_name eq 'Montage'"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "ListRecords",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "runAfter": {
+                        "Get_Project_Categorie_of_Project_Task": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "1cf5fc7b-6b78-461c-869f-8443a868da8c"
+                      }
+                    },
+                    "Compose_Incident_Type": {
+                      "type": "Compose",
+                      "inputs": "@first(outputs('Get_Incident_Type_\"Montage\"')?['body/value'])?['msdyn_incidenttypeid']",
+                      "runAfter": {
+                        "Get_Work_Order_Type_\"Montage\"": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "290bec69-c093-4049-beeb-bcb7d472571e"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Get_ressource_assigments": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "77c0ea59-65b2-4580-a8b6-de22908823b1"
+                  }
+                }
+              },
+              "runAfter": {
+                "Get_Project_Team_Members": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "0f66e7c1-582c-4ffd-85cd-b890d4dfba02"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "GUID_Of_NEW_Requirement": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "49649b00-636a-4125-9ff6-d6437661e5b0"
+          }
+        },
+        "Initialize_CheckRequirement": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "CheckRequirement",
+                "type": "boolean",
+                "value": "@false"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "7989d092-7a85-4e72-8d2e-ccb46e53b1aa"
+          }
+        },
+        "Initialize_Lenghts_Variable": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Lenght of ResourceRequirements",
+                "type": "integer"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_CheckRequirement": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f7baaaef-11e0-45a4-a683-4913cc5f73f3"
+          }
+        },
+        "GUID_Of_NEW_Requirement": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "GUID Of new Requirement",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_Lenghts_Variable": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "dc3bc39d-a9d1-4178-83b7-91174eb95b31"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

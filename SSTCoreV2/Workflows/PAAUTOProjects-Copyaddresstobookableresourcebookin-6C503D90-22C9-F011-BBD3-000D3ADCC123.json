@@ -1,0 +1,234 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps-1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "If_Address_is_Updated_in_Projects": {
+          "metadata": {
+            "operationMetadataId": "988afcdb-29d4-460a-bd20-cfb8f09d610b"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps-1",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "msdyn_project",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "sst_deliverystreet_txt,sst_postalcode_txt,sst_city_txt,msdyn_projectid"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Update_project_address_to_Work_Order": {
+          "actions": {
+            "List_work_orders_from_triggered_project": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "18e90715-3fc6-493c-93fd-32e808af67da"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps-1",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "msdyn_workorders",
+                  "$filter": "_sst_projekt_ref_value eq '@{triggerOutputs()?['body/msdyn_projectid']}'",
+                  "$top": 10
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "List_contains_row": {
+              "actions": {
+                "Apply_to_each": {
+                  "foreach": "@outputs('List_work_orders_from_triggered_project')?['body/value']",
+                  "actions": {
+                    "Update_a_row": {
+                      "runAfter": {
+                        "Compose_1": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "b4408056-1c98-4c04-afd2-b5cb0c342f04"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps-1",
+                          "operationId": "UpdateOnlyRecord",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "msdyn_workorders",
+                          "recordId": "@items('Apply_to_each')?['msdyn_workorderid']"
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    },
+                    "Compose_1": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "5ca54a9b-3de9-4bdd-97e8-72573b21c29b"
+                      },
+                      "type": "Compose",
+                      "inputs": "@items('Apply_to_each')?['msdyn_workorderid']"
+                    }
+                  },
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "67f61445-fe4a-498d-b9bd-fbf17624fccc"
+                  },
+                  "type": "Foreach"
+                }
+              },
+              "runAfter": {
+                "List_work_orders_from_triggered_project": [
+                  "Succeeded"
+                ]
+              },
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@length(outputs('List_work_orders_from_triggered_project')?['body/value'])",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "be93aef4-060e-4149-9520-9908044bbb79"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Update_project_address_to_Bookable_resourcebooking": [
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d1da1774-595e-4648-8daa-b064381f0a06"
+          },
+          "type": "Scope",
+          "description": "Currently deactivated because Dual Write prevents from updating work orders\n"
+        },
+        "Update_project_address_to_Bookable_resourcebooking": {
+          "actions": {
+            "List_rows_in_bookable_resource_bookings": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "6d770277-ba5d-4742-ab2f-56217125f23f"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps-1",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "bookableresourcebookings",
+                  "$filter": "_sst_projectassembly_id_value eq @{triggerOutputs()?['body/msdyn_projectid']}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "List_contains_rows": {
+              "actions": {
+                "For_each_booking": {
+                  "foreach": "@outputs('List_rows_in_bookable_resource_bookings')?['body/value']",
+                  "actions": {
+                    "Update_address_from_project_to_bookable_resource_booking": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "d14968a8-db2b-41ee-846e-072980b3f4f5"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps-1",
+                          "operationId": "UpdateOnlyRecord",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "bookableresourcebookings",
+                          "recordId": "@item()?['bookableresourcebookingid']",
+                          "item/sst_deliveryaddress": "@triggerOutputs()?['body/sst_address']"
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    }
+                  },
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "0f451f20-a004-4c1a-9ad8-8bfe8ad419e4"
+                  },
+                  "type": "Foreach"
+                }
+              },
+              "runAfter": {
+                "List_rows_in_bookable_resource_bookings": [
+                  "Succeeded"
+                ]
+              },
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@length(outputs('List_rows_in_bookable_resource_bookings')?['body/value'])",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "695ab998-aa85-4119-9c18-a59050863857"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "88fcaceb-396d-4125-9866-a950ba40d922"
+          },
+          "type": "Scope"
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,15 @@
+<environmentvariabledefinition schemaname="sst_shared_sharepointonline_bb509ce3d4484bb48cc72a78685be48f">
+  <apiid>/providers/microsoft.powerapps/apis/shared_sharepointonline</apiid>
+  <displayname default="EnvVar | Bereitschaftspauschale | SharePoint List">
+    <label description="EnvVar | Bereitschaftspauschale | SharePoint List" languagecode="1031" />
+  </displayname>
+  <introducedversion>1.2024.827.1</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <parameterkey>table</parameterkey>
+  <parentdefinitionid>
+    <schemaname>sst_shared_sharepointonline_2cfeb8e254084515887c935022852068</schemaname>
+  </parentdefinitionid>
+  <secretstore>0</secretstore>
+  <type>100000004</type>
+</environmentvariabledefinition>

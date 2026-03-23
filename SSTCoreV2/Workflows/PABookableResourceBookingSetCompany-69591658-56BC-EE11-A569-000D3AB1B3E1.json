@@ -1,0 +1,140 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps_1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_a_row_is_added,_modified_or_deleted": {
+          "metadata": {
+            "operationMetadataId": "8b078b4e-e483-45a5-8d80-500e87721614"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps_1",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 4,
+              "subscriptionRequest/entityname": "bookableresourcebooking",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "msdyn_workorder",
+              "subscriptionRequest/filterexpression": "_msdyn_workorder_value ne null"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Get_Work_Order": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "ee84d680-dd46-4777-a8fe-febf281bd7dd"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps_1",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "msdyn_workorders",
+              "recordId": "@triggerOutputs()?['body/_msdyn_workorder_value']"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Update_Company_on_Booking": {
+          "runAfter": {
+            "Get_Work_Order": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "961de050-3d13-4a34-9361-7db31473162e"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps_1",
+              "operationId": "UpdateRecord",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "bookableresourcebookings",
+              "recordId": "@triggerOutputs()?['body/bookableresourcebookingid']",
+              "item/sst_company_id@odata.bind": "/cdm_companies(@{outputs('Get_Work_Order')?['body/_sst_unternehmen_ref_value']})"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Bedingung": {
+          "actions": {
+            "Zeile_aktualisieren": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "83caa8c4-f879-4722-8ba2-f67eb3bdeef2"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps_1",
+                  "operationId": "UpdateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "bookableresourcebookings",
+                  "recordId": "@triggerOutputs()?['body/bookableresourcebookingid']",
+                  "item/sst_ProjectAssembly_id@odata.bind": "/msdyn_projects(@{outputs('Get_Work_Order')?['body/_sst_projekt_ref_value']})"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "runAfter": {
+            "Update_Company_on_Booking": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "not": {
+              "equals": [
+                "@outputs('Get_Work_Order')?['body/_sst_projekt_ref_value']",
+                "@null"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "0ad08480-3433-4aca-b815-dc95592892a3"
+          },
+          "type": "If"
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

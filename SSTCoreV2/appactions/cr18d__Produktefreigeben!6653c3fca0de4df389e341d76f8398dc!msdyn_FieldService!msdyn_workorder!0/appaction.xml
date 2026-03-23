@@ -1,0 +1,37 @@
+<appaction uniquename="cr18d__Produktefreigeben!6653c3fca0de4df389e341d76f8398dc!msdyn_FieldService!msdyn_workorder!0">
+  <appmoduleid>
+    <uniquename>msdyn_FieldService</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Produkte freigeben">
+    <label description="Produkte freigeben" languagecode="1031" />
+  </buttonlabeltext>
+  <context>1</context>
+  <contextentity>
+    <logicalname>msdyn_workorder</logicalname>
+  </contextentity>
+  <contextvalue>msdyn_workorder</contextvalue>
+  <fonticon>$clientsvg:Accept</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>0</location>
+  <name>Produktefreigeben!6653c3fca0de4df389e341d76f8398dc</name>
+  <onclickeventformulacomponentlibraryid>
+    <name>cr18d_fieldservicedefaultcommandlibrary_5ffdf</name>
+  </onclickeventformulacomponentlibraryid>
+  <onclickeventformulacomponentname>437374c4c0ff440fa93c753e8a897599</onclickeventformulacomponentname>
+  <onclickeventformulafunctionname>OnSelect</onclickeventformulafunctionname>
+  <onclickeventtype>1</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100100037.5000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>cr18d_fieldservicedefaultcommandlibrary_5ffdf</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>437374c4c0ff440fa93c753e8a897599</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

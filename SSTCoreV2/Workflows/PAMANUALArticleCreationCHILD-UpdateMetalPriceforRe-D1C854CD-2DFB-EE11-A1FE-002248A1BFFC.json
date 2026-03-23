@@ -1,0 +1,503 @@
+{
+  "properties": {
+    "connectionReferences": {},
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)": {
+          "defaultValue": "d365-schulz-int-11b9dbaf056743afd3devaos.axcloud.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarUnifiedOperationsInstance",
+            "description": "The Unified Operations Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "strTenant",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Tenant for authentication.",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "title": "strClient",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Client for authentication.",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_2": {
+                  "title": "strSecret",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Secret for authentication.",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_3": {
+                  "title": "strItemNumber",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "ItemNumber to be recalculated.",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "number": {
+                  "description": "Product SubType to distinguish between Product Master and Product",
+                  "title": "intProductSubType",
+                  "type": "number",
+                  "x-ms-content-hint": "NUMBER",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "text_3",
+                "number"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "c1a67479-f193-44f2-989f-7b99424f8fd0"
+          }
+        }
+      },
+      "actions": {
+        "Product_Item_Number": {
+          "type": "Compose",
+          "inputs": "@triggerBody()?['text_3']",
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "fea555a9-a17e-4fa9-8236-f7d66750bb7e"
+          }
+        },
+        "Update_metal_prices": {
+          "type": "Scope",
+          "actions": {
+            "List_CDS_Released_Products_[crosscompany]": {
+              "type": "Http",
+              "inputs": {
+                "uri": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/data/@{variables('varFinOpsEntity')}?$filter=(ItemNumber eq '@{triggerBody()['text_3']}')&$select=dataAreaId&cross-company=true",
+                "method": "GET",
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "tenant": "@triggerBody()['text']",
+                  "audience": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/",
+                  "clientId": "@triggerBody()['text_1']",
+                  "secret": "@triggerBody()['text_2']"
+                }
+              },
+              "runAfter": {
+                "Is_Product_Master": [
+                  "SUCCEEDED"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c0bdceec-565c-4291-a72a-484af6b68a4b"
+              }
+            },
+            "ItemNumber_found": {
+              "type": "If",
+              "expression": {
+                "greater": [
+                  "@length(body('List_CDS_Released_Products_[crosscompany]')?['value'])",
+                  0
+                ]
+              },
+              "actions": {
+                "Apply_to_each_company": {
+                  "type": "Foreach",
+                  "foreach": "@body('List_CDS_Released_Products_[crosscompany]')?['value']",
+                  "actions": {
+                    "Company": {
+                      "type": "Compose",
+                      "inputs": "@items('Apply_to_each_company')?['dataAreaId']",
+                      "metadata": {
+                        "operationMetadataId": "7ecfacc2-cdfe-42ff-a049-b089c1ca3115"
+                      }
+                    },
+                    "Update_prices": {
+                      "type": "Http",
+                      "inputs": {
+                        "uri": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/data/MetalSurcharges/Microsoft.Dynamics.DataEntities.updateMetalSurcharges",
+                        "method": "POST",
+                        "headers": {
+                          "Content-Type": "application/json"
+                        },
+                        "body": {
+                          "_itemId": "@{triggerBody()['text_3']}",
+                          "_dataAreaId": "@{items('Apply_to_each_company')?['dataAreaId']}"
+                        },
+                        "authentication": {
+                          "type": "ActiveDirectoryOAuth",
+                          "tenant": "@triggerBody()['text']",
+                          "audience": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/",
+                          "clientId": "@triggerBody()['text_1']",
+                          "secret": "@triggerBody()['text_2']"
+                        }
+                      },
+                      "runAfter": {
+                        "Company": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "c0bdceec-565c-4291-a72a-484af6b68a4b"
+                      }
+                    },
+                    "Append_to_arrNewPrices": {
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "arrNewPrices",
+                        "value": "@body('Update_prices')"
+                      },
+                      "runAfter": {
+                        "Update_prices": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "413941d6-35c1-4448-a1c6-569a77f690b1"
+                      }
+                    },
+                    "Append_to_ResponseMessage": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "strResponseMsg",
+                        "value": "@{coalesce(body('Update_prices')?['error']?['innererror']?['message'], 'Something went wrong...')}\n"
+                      },
+                      "runAfter": {
+                        "Update_prices": [
+                          "Failed",
+                          "TimedOut"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "1ed15260-809c-467b-96b5-e355b502539a"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "11e9ff07-55e5-4d30-b2a5-dbdc25c976d8"
+                  }
+                },
+                "Set_strResponseMsg_on_success": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "strResponseMsg",
+                    "value": "Prices updated."
+                  },
+                  "runAfter": {
+                    "Apply_to_each_company": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "1e4808a7-40c6-4ba8-9020-83417a66b7d0"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Set_strResponseMsg_not_found": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "strResponseMsg",
+                      "value": "No product found."
+                    },
+                    "metadata": {
+                      "operationMetadataId": "1e4808a7-40c6-4ba8-9020-83417a66b7d0"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "List_CDS_Released_Products_[crosscompany]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "832dd361-d97a-4929-a264-712088659268"
+              }
+            },
+            "Is_Product_Master": {
+              "type": "If",
+              "description": "100000000 = Productmaster, 100000001 = Product",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@triggerBody()?['number']",
+                      100000000
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Set_varFinOpsEntity_to_ReleasedProductsV2": {
+                  "type": "SetVariable",
+                  "description": "Call FinOps Entity ReleasedProductsV2 because Products of type Product Master are not yet available in Entity CDSReleasedDistinctProducts",
+                  "inputs": {
+                    "name": "varFinOpsEntity",
+                    "value": "ReleasedProductsV2"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Set_varFinOpsEntity_to_CDSReleasedDistinctProducts": {
+                    "type": "SetVariable",
+                    "description": "Call FinOps Entity CDSReleasedDistinctProducts because standard Products are already released and activated when created in the parent process",
+                    "inputs": {
+                      "name": "varFinOpsEntity",
+                      "value": "CDSReleasedDistinctProducts"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Init_strStatus": [
+              "Succeeded"
+            ],
+            "Init_strResponseMsg": [
+              "SUCCEEDED"
+            ],
+            "arrNewPrices": [
+              "SUCCEEDED"
+            ],
+            "Initialize_varFinOpsEntity": [
+              "SUCCEEDED"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "49ff1c3f-90fc-4c18-b01c-39972dbb9acc"
+          }
+        },
+        "Update_metal_prices_[CATCH]": {
+          "type": "Scope",
+          "actions": {
+            "Terminate": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "400",
+                  "message": "@variables('strResponseMsg')"
+                }
+              },
+              "runAfter": {
+                "Respond_to_a_PowerApp_or_flow_on_error": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c82897fe-af62-4208-808b-755177a3eef2"
+              }
+            },
+            "Set_strStatus": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "strStatus",
+                "value": "400"
+              },
+              "metadata": {
+                "operationMetadataId": "c65b93d8-9d9a-48c2-8fb9-e39ac1bd7856"
+              }
+            },
+            "Respond_to_a_PowerApp_or_flow_on_error": {
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "strstatus": {
+                      "title": "strStatus",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "responsemsg": {
+                      "title": "ResponseMsg",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "newprices": {
+                      "title": "NewPrices",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "strstatus": "@variables('strStatus')",
+                  "responsemsg": "@variables('strResponseMsg')",
+                  "newprices": "@{string(variables('arrNewPrices'))}"
+                }
+              },
+              "runAfter": {
+                "Set_strStatus": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "0ce4a7dc-9241-4a8b-b264-df19d8b37c03"
+              }
+            }
+          },
+          "runAfter": {
+            "Update_metal_prices": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "49ff1c3f-90fc-4c18-b01c-39972dbb9acc"
+          }
+        },
+        "Respond_to_a_PowerApp_or_flow": {
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "strstatus": {
+                  "title": "strStatus",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                },
+                "responsemsg": {
+                  "title": "ResponseMsg",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                },
+                "newprices": {
+                  "title": "NewPrices",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                }
+              },
+              "additionalProperties": {}
+            },
+            "statusCode": 200,
+            "body": {
+              "strstatus": "@variables('strStatus')",
+              "responsemsg": "@variables('strResponseMsg')",
+              "newprices": "@{string(variables('arrNewPrices'))}"
+            }
+          },
+          "runAfter": {
+            "Update_metal_prices_[CATCH]": [
+              "Skipped"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "cec81570-dfe3-4b64-8d1c-7864e6a258ab"
+          }
+        },
+        "Init_strResponseMsg": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strResponseMsg",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Product_Item_Number": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "13505fef-dc98-4121-a092-2f1cf5c09362"
+          }
+        },
+        "arrNewPrices": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "arrNewPrices",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Product_Item_Number": [
+              "SUCCEEDED"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a653de3b-6692-49c7-b173-057ac1091b3a"
+          }
+        },
+        "Init_strStatus": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strStatus",
+                "type": "string",
+                "value": "200"
+              }
+            ]
+          },
+          "runAfter": {
+            "Product_Item_Number": [
+              "SUCCEEDED"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "12fdfa48-45e6-45ad-94a8-14771b1f3393"
+          }
+        },
+        "Initialize_varFinOpsEntity": {
+          "type": "InitializeVariable",
+          "description": "The FinOps Entity that is called to check whether at least one released product is available to proceed with the processing ",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varFinOpsEntity",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Product_Item_Number": [
+              "SUCCEEDED"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

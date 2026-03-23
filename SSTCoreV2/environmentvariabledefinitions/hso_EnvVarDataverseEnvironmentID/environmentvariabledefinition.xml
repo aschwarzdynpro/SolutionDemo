@@ -1,0 +1,14 @@
+<environmentvariabledefinition schemaname="hso_EnvVarDataverseEnvironmentID">
+  <defaultvalue>431783f6-367c-eb49-984b-4e70e4c0424d</defaultvalue>
+  <description default="Current Dataverse Environment ID. Do not change the display name.">
+    <label description="Current Dataverse Environment ID. Do not change the display name." languagecode="1031" />
+  </description>
+  <displayname default="EnvVar | Dataverse Environment ID">
+    <label description="EnvVar | Dataverse Environment ID" languagecode="1031" />
+  </displayname>
+  <introducedversion>1.2023.1011.15</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000000</type>
+</environmentvariabledefinition>

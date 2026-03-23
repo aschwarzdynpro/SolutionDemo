@@ -1,0 +1,11 @@
+<customapiresponseproperty uniquename="hso_TemplateApiResponseProperty">
+  <description default="HSO - Template API Response">
+    <label description="HSO - Template API Response" languagecode="1031" />
+  </description>
+  <displayname default="HSO - Template API Response">
+    <label description="HSO - Template API Response" languagecode="1031" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <name>HSO - Template API Response</name>
+  <type>10</type>
+</customapiresponseproperty>

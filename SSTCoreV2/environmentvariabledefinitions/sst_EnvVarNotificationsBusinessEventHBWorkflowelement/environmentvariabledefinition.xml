@@ -1,0 +1,11 @@
+<environmentvariabledefinition schemaname="sst_EnvVarNotificationsBusinessEventHBWorkflowelement">
+  <defaultvalue>Workflow_ProjBudgetRevision_000000011_ProjBudgetRevisionApproval</defaultvalue>
+  <displayname default="EnvVar | Notifications | Business Event | HB | Workflow element">
+    <label description="EnvVar | Notifications | Business Event | HB | Workflow element" languagecode="1031" />
+  </displayname>
+  <introducedversion>1.0.0.0</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000000</type>
+</environmentvariabledefinition>

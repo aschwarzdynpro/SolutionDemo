@@ -1,0 +1,14 @@
+<environmentvariabledefinition schemaname="hso_EnvVarArticlesearchADFSettings">
+  <defaultvalue>{   "subscriptionId": "4f595913-46c8-423b-ad32-046950dced24",   "resourceGroupName": "rg_vendorcatalogue_UAT",   "dataFactoryName": "adf-vcm-uat",   "pipelineName": "3_3 Products_Validated_Import" }</defaultvalue>
+  <description default="The parameters required to trigger the (Standard) Catalog Import Azure Data Factory Pipeline">
+    <label description="The parameters required to trigger the (Standard) Catalog Import Azure Data Factory Pipeline" languagecode="1031" />
+  </description>
+  <displayname default="EnvVar | Articlesearch | ADF Settings">
+    <label description="EnvVar | Articlesearch | ADF Settings" languagecode="1031" />
+  </displayname>
+  <introducedversion>1.2023.1011.13</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000003</type>
+</environmentvariabledefinition>

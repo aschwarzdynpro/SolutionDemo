@@ -1,0 +1,39 @@
+<appaction uniquename="sst__DeleteSingle!c18592bcb3b44f26829d0dfbee6a8b0e!msdynce_saleshub!hso_calculationdetail!0">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Position löschen">
+    <label description="Position löschen" languagecode="1031" />
+    <label description="Delete (Single)" languagecode="1033" />
+  </buttonlabeltext>
+  <buttontooltipdescription default="Die ausgewählte Kalkulationsposition sowie etwaige untergeordnete Positionen werden gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.">
+    <label description="Die ausgewählte Kalkulationsposition sowie etwaige untergeordnete Positionen werden gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden." languagecode="1031" />
+  </buttontooltipdescription>
+  <buttontooltiptitle default="Kalkulationsposition löschen">
+    <label description="Kalkulationsposition löschen" languagecode="1031" />
+  </buttontooltiptitle>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculationdetail</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculationdetail</contextvalue>
+  <fonticon>$clientsvg:Delete</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>0</location>
+  <name>DeleteSingle!c18592bcb3b44f26829d0dfbee6a8b0e</name>
+  <onclickeventjavascriptfunctionname>Schulz.CalculationPositionRibbon.callCustomAPIExecuteOperation_SingleDelete</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":5},{"type":4},{"type":21,"value":"SingleDelete"},{"type":19,"value":0}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>36ff4f4d-c662-ee11-8df0-000d3ab3405b</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100100067.5000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilitytype>0</visibilitytype>
+</appaction>

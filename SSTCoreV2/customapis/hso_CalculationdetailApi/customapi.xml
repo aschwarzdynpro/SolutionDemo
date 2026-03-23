@@ -1,0 +1,18 @@
+<customapi uniquename="hso_CalculationdetailApi">
+  <allowedcustomprocessingsteptype>2</allowedcustomprocessingsteptype>
+  <bindingtype>0</bindingtype>
+  <description default="Generische API die Logik für eine Kalkulationsposition ausführen kann (Massenlöschen, Standardwerte setzen, Neu Berechnen, ..)">
+    <label description="Generische API die Logik für eine Kalkulationsposition ausführen kann (Massenlöschen, Standardwerte setzen, Neu Berechnen, ..)" languagecode="1031" />
+  </description>
+  <displayname default="HSO - Calculationdetail API">
+    <label description="HSO - Calculationdetail API" languagecode="1031" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <isfunction>0</isfunction>
+  <isprivate>0</isprivate>
+  <name>HSO - Calculationdetail API</name>
+  <plugintypeid>
+    <plugintypeexportkey>6482ec77-8d24-4cbf-9488-3047066d35f2</plugintypeexportkey>
+  </plugintypeid>
+  <workflowsdkstepenabled>0</workflowsdkstepenabled>
+</customapi>

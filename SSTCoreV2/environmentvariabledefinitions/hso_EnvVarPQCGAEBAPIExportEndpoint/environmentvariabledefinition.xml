@@ -1,0 +1,14 @@
+<environmentvariabledefinition schemaname="hso_EnvVarPQCGAEBAPIExportEndpoint">
+  <defaultvalue>https://dev-schulz-integrationapi.azure-api.net/i810-gaeb/gaeb-export</defaultvalue>
+  <description default="The API Endpoint called when exporting a Calculation as GAEB-File">
+    <label description="The API Endpoint called when exporting a Calculation as GAEB-File" languagecode="1031" />
+  </description>
+  <displayname default="EnvVar | PQC | GAEB API Export Endpoint">
+    <label description="EnvVar | PQC | GAEB API Export Endpoint" languagecode="1031" />
+  </displayname>
+  <introducedversion>1.0.0.0</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000000</type>
+</environmentvariabledefinition>

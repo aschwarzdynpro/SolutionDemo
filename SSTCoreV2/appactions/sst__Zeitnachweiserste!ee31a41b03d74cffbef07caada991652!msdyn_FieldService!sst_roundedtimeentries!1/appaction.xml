@@ -1,0 +1,37 @@
+<appaction uniquename="sst__Zeitnachweiserste!ee31a41b03d74cffbef07caada991652!msdyn_FieldService!sst_roundedtimeentries!1">
+  <appmoduleid>
+    <uniquename>msdyn_FieldService</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Zeitnachweis erstellen ">
+    <label description="Zeitnachweis erstellen " languagecode="1031" />
+  </buttonlabeltext>
+  <context>1</context>
+  <contextentity>
+    <logicalname>sst_roundedtimeentries</logicalname>
+  </contextentity>
+  <contextvalue>sst_roundedtimeentries</contextvalue>
+  <fonticon>RecentMeeting</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>1</location>
+  <name>Zeitnachweiserste!ee31a41b03d74cffbef07caada991652</name>
+  <onclickeventformulacomponentlibraryid>
+    <name>cr18d_fieldservicedefaultcommandlibrary_5ffdf</name>
+  </onclickeventformulacomponentlibraryid>
+  <onclickeventformulacomponentname>4ddc7a53569949089167eb936ca4c42c</onclickeventformulacomponentname>
+  <onclickeventformulafunctionname>OnSelect</onclickeventformulafunctionname>
+  <onclickeventtype>1</onclickeventtype>
+  <origin>0</origin>
+  <sequence>1000100005.5000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>cr18d_fieldservicedefaultcommandlibrary_5ffdf</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>4ddc7a53569949089167eb936ca4c42c</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

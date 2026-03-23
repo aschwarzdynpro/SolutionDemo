@@ -1,0 +1,32 @@
+<appaction uniquename="hso__Artikelsucheffnen!926f96ab3a204d35938096c9f4326f13!hso_ProjectQuoteCalculation!hso_calculationdetail!2">
+  <appmoduleid>
+    <uniquename>hso_ProjectQuoteCalculation</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Artikelsuche öffnen">
+    <label description="Artikelsuche öffnen" languagecode="1031" />
+  </buttonlabeltext>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculationdetail</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculationdetail</contextvalue>
+  <fonticon>SearchCampaigns</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>2</location>
+  <name>Artikelsucheffnen!926f96ab3a204d35938096c9f4326f13</name>
+  <onclickeventjavascriptfunctionname>Schulz.CalculationPositionRibbon.openItemSearchApp</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":5}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>36ff4f4d-c662-ee11-8df0-000d3ab3405b</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100100045.0000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilitytype>0</visibilitytype>
+</appaction>

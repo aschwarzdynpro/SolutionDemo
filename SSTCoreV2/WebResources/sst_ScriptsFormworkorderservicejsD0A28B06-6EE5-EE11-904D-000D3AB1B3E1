@@ -1,0 +1,28 @@
+if (typeof (Schulz) === "undefined") { Schulz = {}; };
+if (typeof (Schulz.WorkOrderServiceForm) === "undefined") { Schulz.WorkOrderServiceForm = {}; }
+
+Schulz.WorkOrderServiceForm.onLoad = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    //Schulz.WorkOrderForm.registerEvents(formContext);
+
+        Schulz.WorkOrderServiceForm.setFormReadonlyIfWorkOrderIsFinished(formContext);    
+
+};
+
+Schulz.WorkOrderServiceForm.setFormReadonlyIfWorkOrderIsFinished = (formContext) => {
+
+    var workOrderId = formContext.getAttribute("msdyn_workorder").getValue()[0].id;
+    Xrm.WebApi.retrieveRecord("msdyn_workorder", workOrderId, "?$select=msdyn_systemstatus").then(
+    function success(result) {
+        if (result.msdyn_systemstatus >= 690970003)
+        {
+            Schulz.Common.disableAllFields(formContext);
+            formContext.ui.setFormNotification("Die Work Order ist abgeschlossen. Änderungen sind nicht mehr möglich.", "INFO", "wo_readonly");
+        }
+    },
+    function (error) {
+        console.log(error.message);
+        // handle error conditions
+    }
+);
+}

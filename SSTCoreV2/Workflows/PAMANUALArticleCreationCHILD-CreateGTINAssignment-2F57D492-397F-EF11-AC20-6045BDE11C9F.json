@@ -1,0 +1,662 @@
+{
+  "properties": {
+    "connectionReferences": {},
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)": {
+          "defaultValue": "d365-schulz-int-11b9dbaf056743afd3devaos.axcloud.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarUnifiedOperationsInstance",
+            "description": "The Unified Operations Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "03b39877-0019-4de5-8684-ad27d1303c63"
+          },
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "Itemnumber for creation of gtin assignment.",
+                  "title": "strItemNumber",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "Tenant ID",
+                  "title": "strTenant",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "Client ID",
+                  "title": "strClient",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_3": {
+                  "description": "Secret",
+                  "title": "strSecret",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_4": {
+                  "description": "Array of CompanyCodes (example: [\"HSV\", \"HB\"])",
+                  "title": "arrReleasingCompanies",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_5": {
+                  "description": "EAN/GTIN to be assigned",
+                  "title": "strEAN",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "boolean": {
+                  "description": "Control if flow will send response. \"Yes\", if response should be send.",
+                  "title": "boolResponse",
+                  "type": "boolean",
+                  "x-ms-content-hint": "BOOLEAN",
+                  "x-ms-dynamically-added": true
+                },
+                "text_6": {
+                  "description": "Unit for gtin assignement.",
+                  "title": "strUnit",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "text_3",
+                "text_4",
+                "text_5",
+                "boolean",
+                "text_6"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Parse_arrReleasingCompanies": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "00ce9d66-c8c1-41be-b2f8-08b4fe79df0b"
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@triggerBody()?['text_4']",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "Init_strInlineFinOpsURL": {
+          "runAfter": {
+            "Parse_arrReleasingCompanies": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "284e1ceb-899d-4f12-9a59-ad34242f1f2b"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strInlineFinOpsURL",
+                "type": "string",
+                "value": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}"
+              }
+            ]
+          }
+        },
+        "Init_arrReleasingCompanies": {
+          "runAfter": {
+            "Init_strInlineFinOpsURL": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "516e2db8-552f-4b80-9682-76abbe906c77"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "arrReleasingCompanies",
+                "type": "array",
+                "value": "@body('Parse_arrReleasingCompanies')"
+              }
+            ]
+          }
+        },
+        "Processing": {
+          "actions": {
+            "Fetch_GTIN_Assignements_to_item": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "2fe59aa3-50d5-4843-a36a-19f69f01e9a6"
+              },
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "@{variables('strInlineFinOpsURL')}/data/SSTProductGTINassignments?$filter=ProductNumber eq '@{triggerBody()?['text']}'&cross-company=true",
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "authority": "",
+                  "tenant": "@{triggerBody()?['text_1']}",
+                  "audience": "@{variables('strInlineFinOpsURL')}",
+                  "clientId": "@{triggerBody()?['text_2']}",
+                  "secret": "@{triggerBody()?['text_3']}"
+                }
+              }
+            },
+            "No_existing_GTIN_Assignement": {
+              "actions": {
+                "Apply_to_each_Releasing_Company_[NEW]": {
+                  "foreach": "@variables('arrReleasingCompanies')",
+                  "actions": {
+                    "Create_gtin_assignement_[NEW]": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "a8d27b91-6904-4b31-9131-7054ef964ee7"
+                      },
+                      "type": "Http",
+                      "inputs": {
+                        "method": "POST",
+                        "uri": "@{variables('strInlineFinOpsURL')}/data/SSTProductGTINassignments?cross-company=true",
+                        "headers": {
+                          "Content-Type": "application/json"
+                        },
+                        "body": {
+                          "dataAreaId": "@{items('Apply_to_each_Releasing_Company_[NEW]')}",
+                          "ProductNumber": "@{triggerBody()?['text']}",
+                          "ProductConfigurationId": "",
+                          "ProductSizeId": "",
+                          "ProductColorId": "",
+                          "ProductStyleId": "",
+                          "ProductVersionId": "",
+                          "ProductUnitSymbol": "@{triggerBody()?['text_6']}",
+                          "GlobalTradeItemNumberCodeType": "UCC13",
+                          "GlobalTradeItemNumber": "@{triggerBody()?['text_5']}",
+                          "GlobalTradeItemNumberDescription": ""
+                        },
+                        "authentication": {
+                          "type": "ActiveDirectoryOAuth",
+                          "authority": "",
+                          "tenant": "@{triggerBody()?['text_1']}",
+                          "audience": "@{variables('strInlineFinOpsURL')}",
+                          "clientId": "@{triggerBody()?['text_2']}",
+                          "secret": "@{triggerBody()?['text_3']}"
+                        }
+                      }
+                    },
+                    "Append_response_on_error_[NEW]": {
+                      "runAfter": {
+                        "Create_gtin_assignement_[NEW]": [
+                          "TimedOut",
+                          "Failed"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "09f97001-1fab-4d4b-9bc4-7c484b22f96f"
+                      },
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "strResponse",
+                        "value": "@coalesce(body('Create_gtin_assignement_[NEW]')?['error']?['innererror']?['message'], 'Something went wrong...')"
+                      }
+                    },
+                    "Append_response_on_success_[NEW]": {
+                      "runAfter": {
+                        "Create_gtin_assignement_[NEW]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3d80fd27-cc31-4344-aad1-c8c31b1fdc36"
+                      },
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "strResponse",
+                        "value": "GTIN Assignment for @{items('Apply_to_each_Releasing_Company_[NEW]')} done."
+                      }
+                    },
+                    "Append_processed_[NEW]": {
+                      "runAfter": {
+                        "Append_response_on_success_[NEW]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "f789775e-85d5-44f0-bf21-1c231d5f2144"
+                      },
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "arrGTINAssignements",
+                        "value": "@items('Apply_to_each_Releasing_Company_[NEW]')"
+                      }
+                    }
+                  },
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "ccf28677-4fa5-47dd-bdb0-3156efb3c466"
+                  },
+                  "type": "Foreach"
+                }
+              },
+              "runAfter": {
+                "Fetch_GTIN_Assignements_to_item": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Apply_to_each_releasing_company": {
+                    "foreach": "@variables('arrReleasingCompanies')",
+                    "actions": {
+                      "Filter_array_existing_GTIN_Assignements": {
+                        "runAfter": {},
+                        "metadata": {
+                          "operationMetadataId": "afb8f4b4-2e71-40d7-b88a-f01e8db2fa33"
+                        },
+                        "type": "Query",
+                        "inputs": {
+                          "from": "@body('Fetch_GTIN_Assignements_to_item')?['value']",
+                          "where": "@equals(tolower(item()?['dataAreaId']),toLower(items('Apply_to_each_releasing_company')))"
+                        }
+                      },
+                      "Trade_Agreement_Journal_exists_for_current_company": {
+                        "actions": {
+                          "Append_response_on_success_[EXISITING]": {
+                            "runAfter": {},
+                            "metadata": {
+                              "operationMetadataId": "20c33a46-e142-471a-b8eb-71220e1d3f91"
+                            },
+                            "type": "AppendToStringVariable",
+                            "inputs": {
+                              "name": "strResponse",
+                              "value": "GTIN Assignment for @{items('Apply_to_each_releasing_company')} already exisiting."
+                            }
+                          }
+                        },
+                        "runAfter": {
+                          "Filter_array_existing_GTIN_Assignements": [
+                            "Succeeded"
+                          ]
+                        },
+                        "else": {
+                          "actions": {
+                            "Create_gtin_assignement_[PARTLY]": {
+                              "runAfter": {},
+                              "metadata": {
+                                "operationMetadataId": "a8d27b91-6904-4b31-9131-7054ef964ee7"
+                              },
+                              "type": "Http",
+                              "inputs": {
+                                "method": "POST",
+                                "uri": "@{variables('strInlineFinOpsURL')}/data/SSTProductGTINassignments?cross-company=true",
+                                "headers": {
+                                  "Content-Type": "application/json"
+                                },
+                                "body": {
+                                  "dataAreaId": "@{items('Apply_to_each_releasing_company')}",
+                                  "ProductNumber": "@{triggerBody()?['text']}",
+                                  "ProductConfigurationId": "",
+                                  "ProductSizeId": "",
+                                  "ProductColorId": "",
+                                  "ProductStyleId": "",
+                                  "ProductVersionId": "",
+                                  "ProductUnitSymbol": "@{triggerBody()?['text_6']}",
+                                  "GlobalTradeItemNumberCodeType": "UCC13",
+                                  "GlobalTradeItemNumber": "@{triggerBody()?['text_5']}",
+                                  "GlobalTradeItemNumberDescription": ""
+                                },
+                                "authentication": {
+                                  "type": "ActiveDirectoryOAuth",
+                                  "authority": "",
+                                  "tenant": "@{triggerBody()?['text_1']}",
+                                  "audience": "@{variables('strInlineFinOpsURL')}",
+                                  "clientId": "@{triggerBody()?['text_2']}",
+                                  "secret": "@{triggerBody()?['text_3']}"
+                                }
+                              }
+                            },
+                            "Append_response_on_error_[PARTLY]": {
+                              "runAfter": {
+                                "Create_gtin_assignement_[PARTLY]": [
+                                  "TimedOut",
+                                  "Failed"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "7a3006e9-806c-4da6-972a-54d55b3503e7"
+                              },
+                              "type": "AppendToStringVariable",
+                              "inputs": {
+                                "name": "strResponse",
+                                "value": "@coalesce(body('Create_gtin_assignement_[PARTLY]')?['error']?['innererror']?['message'], 'Something went wrong...')"
+                              }
+                            },
+                            "Append_response_on_success_[PARTLY]": {
+                              "runAfter": {
+                                "Create_gtin_assignement_[PARTLY]": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "a45764f6-2a0f-426b-84ac-3352d26f3a25"
+                              },
+                              "type": "AppendToStringVariable",
+                              "inputs": {
+                                "name": "strResponse",
+                                "value": "GTIN Assignment for @{items('Apply_to_each_releasing_company')} done."
+                              }
+                            },
+                            "Append_processed_[PARTLY]": {
+                              "runAfter": {
+                                "Append_response_on_success_[PARTLY]": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "155cea6f-6b4c-44a7-a7c5-351e64ca546d"
+                              },
+                              "type": "AppendToArrayVariable",
+                              "inputs": {
+                                "name": "arrGTINAssignements",
+                                "value": "@items('Apply_to_each_releasing_company')"
+                              }
+                            }
+                          }
+                        },
+                        "expression": {
+                          "and": [
+                            {
+                              "greater": [
+                                "@length(body('Filter_array_existing_GTIN_Assignements'))",
+                                0
+                              ]
+                            }
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "c9b61ef6-b5ff-4779-8a63-560aa15971ed"
+                        },
+                        "type": "If"
+                      }
+                    },
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "ccf28677-4fa5-47dd-bdb0-3156efb3c466"
+                    },
+                    "type": "Foreach"
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@length(body('Fetch_GTIN_Assignements_to_item')?['value'])",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "139fa545-ba87-448f-a1df-3cc3002303f1"
+              },
+              "type": "If",
+              "description": " - complete creation path"
+            }
+          },
+          "runAfter": {
+            "Init_intStatus": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "35d74559-6630-4157-90f6-49177a2afb07"
+          },
+          "type": "Scope"
+        },
+        "Init_arrGTINAssignements": {
+          "runAfter": {
+            "Init_arrReleasingCompanies": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "5ee04889-ffe1-41ae-83de-1e41609df34e"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "arrGTINAssignements",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "Init_intStatus": {
+          "runAfter": {
+            "Init_strResponse": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "66568279-180a-4528-9134-bb6292fa9ec6"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "intStatus",
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "Error": {
+          "actions": {
+            "Condition_-_Journal_for_every_company": {
+              "actions": {
+                "Set_status_on_success": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "94e26148-da8c-4030-a3ef-f1d6209a8eaa"
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "intStatus",
+                    "value": 200
+                  }
+                }
+              },
+              "runAfter": {},
+              "else": {
+                "actions": {
+                  "Set_status_on_failure": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "524c4956-a969-43f2-8b8f-6ab226cb4a04"
+                    },
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "intStatus",
+                      "value": 400
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@length(variables('arrGTINAssignements'))",
+                      "@length(variables('arrReleasingCompanies'))"
+                    ]
+                  }
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "63a2fef6-9ec6-4df1-aa1b-abb5780076be"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Processing": [
+              "Succeeded",
+              "TimedOut",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "8923ea62-20d8-4381-82bc-9d8765484700"
+          },
+          "type": "Scope"
+        },
+        "Response": {
+          "actions": {
+            "Send_response": {
+              "actions": {
+                "Log_Success": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "cc4a8352-855b-480e-ac23-afad249ae128"
+                  },
+                  "type": "Compose",
+                  "inputs": "Status: @{variables('intStatus')}\nJournalNumbers:\n@{variables('strResponse')}"
+                },
+                "Respond_to_a_PowerApp_or_flow": {
+                  "runAfter": {
+                    "Log_Success": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "4fb3ebf1-a201-49ba-82db-b15b82428cec"
+                  },
+                  "type": "Response",
+                  "kind": "PowerApp",
+                  "inputs": {
+                    "statusCode": 200,
+                    "body": {
+                      "status": "@variables('intStatus')",
+                      "strresponse": "@{string(variables('strResponse'))\r\n}"
+                    },
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "title": "Status",
+                          "x-ms-dynamically-added": true,
+                          "type": "number"
+                        },
+                        "strresponse": {
+                          "title": "strResponse",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "runAfter": {},
+              "else": {
+                "actions": {
+                  "Log_Error": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "66ade1ea-5613-4d8b-9984-a4797a18edfd"
+                    },
+                    "type": "Compose",
+                    "inputs": "Status: @{variables('intStatus')}\nJournalNumbers:\n@{variables('strResponse')}"
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@triggerBody()['boolean']",
+                      "@true"
+                    ]
+                  }
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "7d1bc88c-d4ff-4a97-bafd-4c30e5878e3b"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Error": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "65444540-454f-4c78-826d-bccebfb7c01c"
+          },
+          "type": "Scope"
+        },
+        "Init_strResponse": {
+          "runAfter": {
+            "Init_arrGTINAssignements": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "52b21698-0ac2-4ec0-9e80-0cb3dd4adf3a"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strResponse",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

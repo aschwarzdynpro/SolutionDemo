@@ -1,0 +1,1459 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_webcontents": {
+        "api": {
+          "name": "shared_webcontents"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverseHTTPwithAzureAD"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)": {
+          "defaultValue": "operations-d365-schulz-int-11.crm4.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarDataverseInstance",
+            "description": "The Dataverse Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "NewCalculationGUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GUID of the Calculation that has been created",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "title": "SourceCalculationGUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GUID of the source Calculation that has been copied",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_2": {
+                  "title": "ProcessingLogGUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GUID of the Processing Log for the Parent Flow",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_3": {
+                  "title": "ProcessOwnerGUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GUID of the User that initiated the process",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_4": {
+                  "description": "The Name of the Calculation that has been created",
+                  "title": "NewCalculationName",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "text_3",
+                "text_4"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "d2bcf55c-a5db-4a72-8a8b-8a2995a786e0"
+          }
+        }
+      },
+      "actions": {
+        "Summary": {
+          "type": "Scope",
+          "actions": {
+            "All_Parameters_successfully_copied": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@variables('varSurchargeGroup_Parameters')?['SurchargeGroupsProcessingStatus']",
+                      "OK"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@variables('varMetalPrice_Parameters')?['MetalPricesProcessingStatus']",
+                      "OK"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@variables('varSalesPrice_Parameters')?['SalesPricesProcessingStatus']",
+                      "OK"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@variables('varPaymentTerm_Parameters')?['PaymentTermsProcessingStatus']",
+                      "OK"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Respond_to_Parent_Flow_[Success]": {
+                  "type": "Response",
+                  "kind": "PowerApp",
+                  "inputs": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "outcome": {
+                          "title": "Outcome",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        },
+                        "status_surchargegroups": {
+                          "title": "Status_SurchargeGroups",
+                          "type": "string",
+                          "x-ms-content-hint": "TEXT",
+                          "x-ms-dynamically-added": true
+                        },
+                        "status_metalprices": {
+                          "title": "Status_MetalPrices",
+                          "type": "string",
+                          "x-ms-content-hint": "TEXT",
+                          "x-ms-dynamically-added": true
+                        },
+                        "status_salesprices": {
+                          "title": "Status_SalesPrices",
+                          "type": "string",
+                          "x-ms-content-hint": "TEXT",
+                          "x-ms-dynamically-added": true
+                        },
+                        "status_paymentterms": {
+                          "title": "Status_PaymentTerms",
+                          "type": "string",
+                          "x-ms-content-hint": "TEXT",
+                          "x-ms-dynamically-added": true
+                        },
+                        "errormessage": {
+                          "title": "ErrorMessage",
+                          "type": "string",
+                          "x-ms-content-hint": "TEXT",
+                          "x-ms-dynamically-added": true
+                        }
+                      },
+                      "additionalProperties": {}
+                    },
+                    "statusCode": 200,
+                    "body": {
+                      "outcome": "Success",
+                      "status_surchargegroups": "OK",
+                      "status_metalprices": "OK",
+                      "status_salesprices": "OK",
+                      "status_paymentterms": "OK",
+                      "errormessage": "@{null}"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "94f1f080-b44e-4a75-82d1-3924fa748ad0"
+                  }
+                },
+                "Update_Processing_Log_[Success]": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_processinglogs",
+                      "recordId": "@outputs('Create_ProcessingLog')?['body/hso_processinglogid']",
+                      "item/hso_end_datetime": "@utcNow()",
+                      "item/hso_log": "@variables('varLog')",
+                      "item/hso_processingstatus": 100000002
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "runAfter": {
+                    "Finish_varLog_with_Success": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Finish_varLog_with_Success": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[SUC] - [@{utcNow()}] - Flow run was successful. All required Parameters have been added to the Calculation."
+                  },
+                  "runAfter": {
+                    "Respond_to_Parent_Flow_[Success]": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Apply_to_each_Error_Summary": {
+                    "type": "Foreach",
+                    "foreach": "@variables('varError')",
+                    "actions": {
+                      "Append_Error_Message": {
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varErrorMessage",
+                          "value": "[ERROR] - Action '@{items('Apply_to_each_Error_Summary')?['Action']}' failed with error message: @{items('Apply_to_each_Error_Summary')?['Message']} (Status: @{items('Apply_to_each_Error_Summary')?['Status']} / Status Code: @{items('Apply_to_each_Error_Summary')?['StatusCode']})"
+                        },
+                        "metadata": {
+                          "operationMetadataId": "a7a17c59-dd66-4433-8461-2e1dca2400c9"
+                        }
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "6a29090f-1834-448f-826f-f33d425b3dcf"
+                    }
+                  },
+                  "Respond_to_Parent_Flow_[Error]": {
+                    "type": "Response",
+                    "kind": "PowerApp",
+                    "inputs": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "outcome": {
+                            "title": "Outcome",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          },
+                          "status_surchargegroups": {
+                            "title": "Status_SurchargeGroups",
+                            "type": "string",
+                            "x-ms-content-hint": "TEXT",
+                            "x-ms-dynamically-added": true
+                          },
+                          "status_metalprices": {
+                            "title": "Status_MetalPrices",
+                            "type": "string",
+                            "x-ms-content-hint": "TEXT",
+                            "x-ms-dynamically-added": true
+                          },
+                          "status_salesprices": {
+                            "title": "Status_SalesPrices",
+                            "type": "string",
+                            "x-ms-content-hint": "TEXT",
+                            "x-ms-dynamically-added": true
+                          },
+                          "status_paymentterms": {
+                            "title": "Status_PaymentTerms",
+                            "type": "string",
+                            "x-ms-content-hint": "TEXT",
+                            "x-ms-dynamically-added": true
+                          },
+                          "errormessage": {
+                            "title": "ErrorMessage",
+                            "type": "string",
+                            "x-ms-content-hint": "TEXT",
+                            "x-ms-dynamically-added": true
+                          }
+                        },
+                        "additionalProperties": {}
+                      },
+                      "statusCode": 200,
+                      "body": {
+                        "outcome": "Error",
+                        "status_surchargegroups": "@{variables('varSurchargeGroup_Parameters')?['SurchargeGroupsProcessingStatus']}",
+                        "status_metalprices": "@{variables('varMetalPrice_Parameters')?['MetalPricesProcessingStatus']}",
+                        "status_salesprices": "@{variables('varSalesPrice_Parameters')?['SalesPricesProcessingStatus']}",
+                        "status_paymentterms": "@{variables('varPaymentTerm_Parameters')?['PaymentTermsProcessingStatus']}",
+                        "errormessage": "@{variables('varErrorMessage')}"
+                      }
+                    },
+                    "runAfter": {
+                      "Apply_to_each_Error_Summary": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "94f1f080-b44e-4a75-82d1-3924fa748ad0"
+                    }
+                  },
+                  "Finish_varLog_with_Error": {
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "varLog",
+                      "value": "[ERR] - [@{utcNow()}] - Flow run has failed. Calculation Parameters may have been partially added to Calculation. Check Log for further details."
+                    },
+                    "runAfter": {
+                      "Respond_to_Parent_Flow_[Error]": [
+                        "Succeeded"
+                      ]
+                    }
+                  },
+                  "Update_Processing_Log_[Error]": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_processinglogs",
+                        "recordId": "@outputs('Create_ProcessingLog')?['body/hso_processinglogid']",
+                        "item/hso_end_datetime": "@utcNow()",
+                        "item/hso_flowerror": "@variables('varErrorMessage')",
+                        "item/hso_log": "@variables('varLog')",
+                        "item/hso_processingstatus": 100000003
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateOnlyRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    },
+                    "runAfter": {
+                      "Finish_varLog_with_Error": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "59db6112-5de5-44a9-a42b-f7d34150ce9d"
+              }
+            }
+          },
+          "runAfter": {
+            "Calculation_Sales_Prices": [
+              "Succeeded",
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ],
+            "Calculation_Payment_Terms": [
+              "Succeeded",
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ],
+            "Calculation_Surcharge_Groups": [
+              "Succeeded",
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ],
+            "Calculation_Metal_Prices": [
+              "Succeeded",
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "88f99fac-fa9b-4a86-a4e8-4bd9901da1a3"
+          }
+        },
+        "Initialize_varLog": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varLog",
+                "type": "string",
+                "value": "[INF] - [@{utcNow()}] - Initializing Flow Run @{decodeUriComponent('%0A')}"
+              }
+            ]
+          },
+          "runAfter": {}
+        },
+        "Initialize_varError": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varError",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varOdataType": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "eed278cb-0b03-4e74-a461-5346e9267c39"
+          }
+        },
+        "Initialize_varErrorMessage": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorMessage",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varError": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b4ebf231-4b62-467b-9a38-a2e6c3aabb02"
+          }
+        },
+        "Processing_Log": {
+          "type": "Scope",
+          "actions": {
+            "Create_ProcessingLog": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "item/hso_name": "Kalkulations-Parameter für \"@{triggerBody()?['text_4']}\" kopieren ",
+                  "item/hso_processingtask": 100000010,
+                  "item/ownerid@odata.bind": "systemusers(@{triggerBody()?['text_3']})",
+                  "item/hso_flowrunurl": "@concat('https://emea.flow.microsoft.com/manage/environments/', workflow()?['tags']['environmentName'], '/flows/', workflow()?['name'], '/runs/', workflow()?['run']['name'])\n",
+                  "item/hso_start_datetime": "@utcNow()",
+                  "item/hso_parentprocessinglogid@odata.bind": "hso_processinglogs(@{triggerBody()?['text_2']})",
+                  "item/hso_processingstatus": 100000001
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "f54699b3-6e85-4a9c-913e-b65223597f55"
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varPaymentTerm_Parameters": [
+              "Succeeded"
+            ],
+            "Initialize_varErrorMessage": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "18d515bf-7b56-4593-919c-e49ad0e9fcf3"
+          }
+        },
+        "Calculation_Surcharge_Groups": {
+          "type": "Scope",
+          "actions": {
+            "Get_Calculation_Surcharge_Groups": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_surchargegroup_calculations",
+                  "$select": "_hso_surchargegroupid_value, hso_name, hso_surchargegroup_base_guid, hso_overheadsurchargepercentage, hso_profitsurchargepercentage, hso_discountpercentage",
+                  "$filter": "_hso_calculationid_value eq '@{triggerBody()?['text_1']}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "34451ac7-42d7-4705-9d60-e74031d3e8d5"
+              }
+            },
+            "Update_Surcharge_Groups_to_process": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varSurchargeGroup_Parameters",
+                "value": "@outputs('Surcharge_Groups_to_process')"
+              },
+              "runAfter": {
+                "Surcharge_Groups_to_process": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Copy_Calculation_Surcharge_Groups": {
+              "type": "Scope",
+              "actions": {
+                "Select_Calculation_Surcharge_Groups": {
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@outputs('Get_Calculation_Surcharge_Groups')?['body/value']",
+                    "select": {
+                      "@{string('@')}odata.type": "#Microsoft.Dynamics.CRM.hso_surchargegroup_calculation",
+                      "hso_name": "@item()?['hso_name']",
+                      "hso_calculationid@odata.bind": "/hso_calculations(@{triggerBody()?['text']})",
+                      "hso_surchargegroupid@odata.bind": "/hso_surchargegroups(@{item()?['_hso_surchargegroupid_value']})",
+                      "hso_surchargegroup_base_guid": "@item()?['hso_surchargegroup_base_guid']",
+                      "hso_overheadsurchargepercentage": "@decimal(item()?['hso_overheadsurchargepercentage'])",
+                      "hso_profitsurchargepercentage": "@decimal(item()?['hso_profitsurchargepercentage'])",
+                      "hso_discountpercentage": "@decimal(item()?['hso_discountpercentage'])"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "e7e4874b-16d2-4a78-91e0-589205c058ba"
+                  }
+                },
+                "Create_Calculation_Surcharge_Groups": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "request/method": "POST",
+                      "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_surchargegroup_calculations/Microsoft.Dynamics.CRM.CreateMultiple",
+                      "request/headers": {
+                        "OData-MaxVersion": "4.0",
+                        "OData-Version": "4.0",
+                        "If-None-Match": "null",
+                        "Accept": "application/json",
+                        "Content-Type": "application/json; charset=utf-8"
+                      },
+                      "request/body": "{\n \"Targets\": @{body('Select_Calculation_Surcharge_Groups')}\n}"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                      "operationId": "InvokeHttp",
+                      "connectionName": "shared_webcontents"
+                    }
+                  },
+                  "runAfter": {
+                    "Select_Calculation_Surcharge_Groups": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "2efd1899-a6a1-4c2c-9a6b-a52e9115a1ba"
+                  }
+                },
+                "Surcharge_Groups_processed": {
+                  "type": "Compose",
+                  "inputs": "@setProperty(\r\n  variables('varSurchargeGroup_Parameters'),\r\n  'SurchargeGroupsProcessed',\r\n  length(body('Create_Calculation_Surcharge_Groups')?['Ids'])\r\n)",
+                  "runAfter": {
+                    "Create_Calculation_Surcharge_Groups": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Update_Surcharge_Groups_processed": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "varSurchargeGroup_Parameters",
+                    "value": "@outputs('Surcharge_Groups_processed')"
+                  },
+                  "runAfter": {
+                    "Surcharge_Groups_processed": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "6d05c2e7-3fa5-4086-bb18-24c58d950f74"
+                  }
+                },
+                "Append_Calculation_Surcharge_Groups_to_Log_[Success]": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[INF] - [@{utcNow()}] - @{length(body('Create_Calculation_Surcharge_Groups')?['Ids'])} of @{length(outputs('Get_Calculation_Surcharge_Groups')?['body/value'])} Surcharge Groups successfully added to Calculation. @{decodeUriComponent('%0A')}"
+                  },
+                  "runAfter": {
+                    "Update_Surcharge_Groups_processed": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "Get_Calculation_Surcharge_Groups": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Surcharge_Groups_to_process": {
+              "type": "Compose",
+              "inputs": "@setProperty(\r\n  variables('varSurchargeGroup_Parameters'),\r\n  'SurchargeGroupsToProcess',\r\n  length(outputs('Get_Calculation_Surcharge_Groups')?['body/value'])\r\n)",
+              "runAfter": {
+                "Get_Calculation_Surcharge_Groups": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Copy_Calculation_Surcharge_Groups_-_Error": {
+              "type": "Scope",
+              "actions": {
+                "Filter_Results_for_failed_actions_[Surcharge_Groups]": {
+                  "type": "Query",
+                  "inputs": {
+                    "from": "@result('Copy_Calculation_Surcharge_Groups')",
+                    "where": "@equals(item()?['status'],'Failed')"
+                  }
+                },
+                "Select_Error_Summary_[Surcharge_Groups]": {
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@body('Filter_Results_for_failed_actions_[Surcharge_Groups]')",
+                    "select": {
+                      "Action": "@item()?['name']",
+                      "Code": "@item()?['code']",
+                      "Status": "@item()?['status']",
+                      "StatusCode": "@item()?['outputs']?['statusCode']",
+                      "Message": "@coalesce(\r\n  item()?['outputs']?['body']?['error']?['message'],\r\n  item()?['outputs']?['body']?['message'],\r\n  item()?['error']?['message'],\r\n  'No Message found. Please check Flow-Run.'\r\n)"
+                    }
+                  },
+                  "runAfter": {
+                    "Filter_Results_for_failed_actions_[Surcharge_Groups]": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Apply_to_each_Error_Summary_[Surcharge_Groups]": {
+                  "type": "Foreach",
+                  "foreach": "@body('Select_Error_Summary_[Surcharge_Groups]')",
+                  "actions": {
+                    "Append_Error_Summary_[Surcharge_Groups]": {
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "varError",
+                        "value": "@items('Apply_to_each_Error_Summary_[Surcharge_Groups]')"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Select_Error_Summary_[Surcharge_Groups]": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Append_Calculation_Surcharge_Groups_to_Log_[Error]": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[ERR] - [@{utcNow()}] - Error when adding Calculation Surcharge Groups! @{length(outputs('Get_created_Calculation_Surcharge_Groups')?['body/value'])} of @{length(outputs('Get_Calculation_Surcharge_Groups')?['body/value'])} Surcharge Groups added to Calculation. @{decodeUriComponent('%0A')}"
+                  },
+                  "runAfter": {
+                    "Get_created_Calculation_Surcharge_Groups": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Get_created_Calculation_Surcharge_Groups": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_surchargegroup_calculations",
+                      "$select": "hso_name",
+                      "$filter": "_hso_calculationid_value eq '@{triggerBody()?['text']}'"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "runAfter": {
+                    "Apply_to_each_Error_Summary_[Surcharge_Groups]": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "Copy_Calculation_Surcharge_Groups": [
+                  "TimedOut",
+                  "Failed"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1a971a29-dbcc-4478-8366-ffcf02c88db7"
+          }
+        },
+        "Initialize_varSurchargeGroup_Parameters": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varSurchargeGroup_Parameters",
+                "type": "object",
+                "value": {
+                  "SurchargeGroupsToProcess": 0,
+                  "SurchargeGroupsProcessed": 0,
+                  "SurchargeGroupsProcessingStatus": "OK"
+                }
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "99dd8e6c-e9f0-49b7-a0f4-f76515b6ff6d"
+          }
+        },
+        "Initialize_varMetalPrice_Parameters": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varMetalPrice_Parameters",
+                "type": "object",
+                "value": {
+                  "MetalPricesToProcess": 0,
+                  "MetalPricesProcessed": 0,
+                  "MetalPricesProcessingStatus": "OK"
+                }
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varSurchargeGroup_Parameters": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "99dd8e6c-e9f0-49b7-a0f4-f76515b6ff6d"
+          }
+        },
+        "Initialize_varSalesPrice_Parameters": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varSalesPrice_Parameters",
+                "type": "object",
+                "value": {
+                  "SalesPricesToProcess": 0,
+                  "SalesPricesProcessed": 0,
+                  "SalesPricesProcessingStatus": "OK"
+                }
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varMetalPrice_Parameters": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "99dd8e6c-e9f0-49b7-a0f4-f76515b6ff6d"
+          }
+        },
+        "Initialize_varPaymentTerm_Parameters": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varPaymentTerm_Parameters",
+                "type": "object",
+                "value": {
+                  "PaymentTermsToProcess": 0,
+                  "PaymentTermsProcessed": 0,
+                  "PaymentTermsProcessingStatus": "OK"
+                }
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varSalesPrice_Parameters": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "99dd8e6c-e9f0-49b7-a0f4-f76515b6ff6d"
+          }
+        },
+        "Initialize_varOdataType": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varOdataType",
+                "type": "string",
+                "value": "@{string('@')}odata.type"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b55f9086-5bc2-42d3-b045-19fb1ca43941"
+          }
+        },
+        "Calculation_Metal_Prices": {
+          "type": "Scope",
+          "actions": {
+            "Get_Calculation_Metalprices": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_calculationmetalprices",
+                  "$select": "_hso_metalpriceid_value, hso_name, _hso_metallabelid_value, hso_quantity, hso_currentcost, hso_purchasecostpercentage, _hso_uomid_value",
+                  "$filter": "_hso_calculationid_value eq '@{triggerBody()?['text_1']}'",
+                  "$expand": "hso_metallabelid($select=hso_purchasecostpercentage)"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "b4f719e6-6b87-4c09-aa2f-dc1a113b6aad"
+              }
+            },
+            "Metal_Prices_to_process": {
+              "type": "Compose",
+              "inputs": "@length(outputs('GET_Calculation_Metalprices')?['body/value'])",
+              "runAfter": {
+                "Get_Calculation_Metalprices": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Copy_Calculation_Metal_Prices": {
+              "type": "Scope",
+              "actions": {
+                "Select_Calculation_Metalprices": {
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@outputs('Get_Calculation_Metalprices')?['body/value']",
+                    "select": {
+                      "@{string('@')}odata.type": "#Microsoft.Dynamics.CRM.hso_calculationmetalprice",
+                      "hso_name": "@item()?['hso_name']",
+                      "hso_calculationid@odata.bind": "/hso_calculations(@{triggerBody()?['text']})",
+                      "hso_metallabelid@odata.bind": "/hso_metallabels(@{item()?['_hso_metallabelid_value']})",
+                      "hso_metalpriceid@odata.bind": "/hso_metalprices(@{item()?['_hso_metalpriceid_value']})",
+                      "hso_quantity": "@decimal(item()?['hso_quantity'])",
+                      "hso_currentcost": "@decimal(item()?['hso_currentcost'])",
+                      "hso_purchasecostpercentage": "@decimal(item()?['hso_purchasecostpercentage'])",
+                      "hso_uomid@odata.bind": "/uoms(@{item()?['_hso_uomid_value']})"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "a0c27093-4fce-4ddd-8e6a-49268de8f6d2"
+                  }
+                },
+                "Create_Calculation_Metalprices": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "request/method": "POST",
+                      "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_calculationmetalprices/Microsoft.Dynamics.CRM.CreateMultiple",
+                      "request/headers": {
+                        "OData-MaxVersion": "4.0",
+                        "OData-Version": "4.0",
+                        "If-None-Match": "null",
+                        "Accept": "application/json",
+                        "Content-Type": "application/json; charset=utf-8"
+                      },
+                      "request/body": "{\n \"Targets\": @{body('Select_Calculation_Metalprices')}\n}"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                      "operationId": "InvokeHttp",
+                      "connectionName": "shared_webcontents"
+                    }
+                  },
+                  "runAfter": {
+                    "Select_Calculation_Metalprices": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "b9cbf52b-fc24-4862-b75f-f40bb52afcb0"
+                  }
+                },
+                "Metal_Prices_processed": {
+                  "type": "Compose",
+                  "inputs": "@length(body('Create_Calculation_Metalprices')?['Ids'])",
+                  "runAfter": {
+                    "Create_Calculation_Metalprices": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "Get_Calculation_Metalprices": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Copy_Calculation_Metal_Prices_-_Error": {
+              "type": "Scope",
+              "actions": {
+                "Filter_Results_for_failed_actions_[Metal_Prices]": {
+                  "type": "Query",
+                  "inputs": {
+                    "from": "@result('Copy_Calculation_Metal_Prices')",
+                    "where": "@equals(item()?['status'],'Failed')"
+                  }
+                },
+                "Select_Error_Summary_[Metal_Prices]": {
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@body('Filter_Results_for_failed_actions_[Metal_Prices]')",
+                    "select": {
+                      "Action": "@item()?['name']",
+                      "Code": "@item()?['code']",
+                      "Status": "@item()?['status']",
+                      "StatusCode": "@item()?['outputs']?['statusCode']",
+                      "Message": "@coalesce(\n  item()?['outputs']?['body']?['error']?['message'],\n  item()?['outputs']?['body']?['message'],\n  item()?['error']?['message'],\n  'No Message found. Please check Flow-Run.'\n)"
+                    }
+                  },
+                  "runAfter": {
+                    "Filter_Results_for_failed_actions_[Metal_Prices]": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Apply_to_each_Error_Summary_[Metal_Prices]": {
+                  "type": "Foreach",
+                  "foreach": "@body('Select_Error_Summary_[Metal_Prices]')",
+                  "actions": {
+                    "Append_Error_Summary_[Metal_Prices]": {
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "varError",
+                        "value": "@items('Apply_to_each_Error_Summary_[Metal_Prices]')"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Select_Error_Summary_[Metal_Prices]": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Get_created_Calculation_Metal_Prices": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_calculationmetalprices",
+                      "$select": "hso_name",
+                      "$filter": "_hso_calculationid_value eq '@{triggerBody()?['text']}'"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "runAfter": {
+                    "Apply_to_each_Error_Summary_[Metal_Prices]": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Append_Calculation_Metal_Prices_to_Log_[Error]": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[ERR] - [@{utcNow()}] - Error when adding Calculation Metal Prices! @{length(outputs('Get_created_Calculation_Metal_Prices')?['body/value'])} of @{length(outputs('Get_Calculation_Metalprices')?['body/value'])} Metal Prices added to Calculation. @{decodeUriComponent('%0A')}"
+                  },
+                  "runAfter": {
+                    "Get_created_Calculation_Metal_Prices": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "Copy_Calculation_Metal_Prices": [
+                  "TimedOut",
+                  "Failed"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "92d3226b-031a-4a55-a7e2-6021f215d093"
+          }
+        },
+        "Calculation_Sales_Prices": {
+          "type": "Scope",
+          "actions": {
+            "Get_Calculation_Salesprices": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_calculationsalesprices",
+                  "$select": "hso_name, hso_productid, _hso_categoryid_value, hso_salesprice, hso_pricetype, hso_priceorigin",
+                  "$filter": "_hso_calculationid_value eq '@{triggerBody()?['text_1']}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "77742ffc-1bc4-4890-9caa-b8032bd96ddf"
+              }
+            },
+            "Salesprices_to_process": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@outputs('Sales_Prices_to_process')",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Copy_Calculation_Sales_Prices": {
+                  "type": "Scope",
+                  "actions": {
+                    "Select_Calculation_Salesprices": {
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@outputs('Get_Calculation_Salesprices')?['body/value']",
+                        "select": {
+                          "@{variables('varOdataType')}": "#Microsoft.Dynamics.CRM.hso_calculationsalesprice",
+                          "hso_name": "@item()?['hso_name']",
+                          "hso_calculationid@odata.bind": "/hso_calculations(@{triggerBody()?['text']})",
+                          "hso_productid@odata.bind": "@If(\r\n  empty(item()?['_hso_productid_value']), \r\n  '', \r\n  concat(\r\n    'products(',\r\n    item()?['_hso_productid_value'], \r\n    ')'\r\n  )\r\n)",
+                          "hso_categoryid@odata.bind": "@If(\r\n  empty(item()?['_hso_categoryid_value']), \r\n  '', \r\n  concat(\r\n    'hso_projectcategories(', \r\n    item()?['_hso_categoryid_value'], \r\n    ')'\r\n  )\r\n)",
+                          "hso_salesprice": "@decimal(item()?['hso_salesprice'])",
+                          "hso_pricetype": "@item()?['hso_pricetype']",
+                          "hso_priceorigin": "@item()?['hso_priceorigin']"
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "a0c27093-4fce-4ddd-8e6a-49268de8f6d2"
+                      }
+                    },
+                    "Create_Calculation_Salesprices": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "request/method": "POST",
+                          "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_calculationsalesprices/Microsoft.Dynamics.CRM.CreateMultiple",
+                          "request/headers": {
+                            "OData-MaxVersion": "4.0",
+                            "OData-Version": "4.0",
+                            "If-None-Match": "null",
+                            "Accept": "application/json",
+                            "Content-Type": "application/json; charset=utf-8"
+                          },
+                          "request/body": "{\n \"Targets\": @{body('Select_Calculation_Salesprices')}\n}"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                          "operationId": "InvokeHttp",
+                          "connectionName": "shared_webcontents"
+                        }
+                      },
+                      "runAfter": {
+                        "Select_Calculation_Salesprices": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "b9cbf52b-fc24-4862-b75f-f40bb52afcb0"
+                      }
+                    },
+                    "Sales_Prices_processed": {
+                      "type": "Compose",
+                      "inputs": "@length(body('Create_Calculation_Salesprices')?['Ids'])",
+                      "runAfter": {
+                        "Create_Calculation_Salesprices": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "Copy_Calculation_Sales_Prices_-_Error": {
+                  "type": "Scope",
+                  "actions": {
+                    "Select_Error_Summary_[Sales_Prices]": {
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Filter_Results_for_failed_actions_[Sales_Prices]')",
+                        "select": {
+                          "Action": "@item()?['name']",
+                          "Code": "@item()?['code']",
+                          "Status": "@item()?['status']",
+                          "StatusCode": "@item()?['outputs']?['statusCode']",
+                          "Message": "@coalesce(\n  item()?['outputs']?['body']?['error']?['message'],\n  item()?['outputs']?['body']?['message'],\n  item()?['error']?['message'],\n  'No Message found. Please check Flow-Run.'\n)"
+                        }
+                      },
+                      "runAfter": {
+                        "Filter_Results_for_failed_actions_[Sales_Prices]": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Apply_to_each_Error_Summary_[Sales_Prices]": {
+                      "type": "Foreach",
+                      "foreach": "@body('Select_Error_Summary_[Sales_Prices]')",
+                      "actions": {
+                        "Append_Error_Summary_[Sales_Prices]": {
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "varError",
+                            "value": "@items('Apply_to_each_Error_Summary_[Sales_Prices]')"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Select_Error_Summary_[Sales_Prices]": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Get_created_Calculation_Sales_Prices": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "hso_calculationsalesprices",
+                          "$select": "hso_name",
+                          "$filter": "_hso_calculationid_value eq '@{triggerBody()?['text']}'"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "ListRecords",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "runAfter": {
+                        "Apply_to_each_Error_Summary_[Sales_Prices]": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Append_Calculation_Sales_Prices_to_Log_[Error]": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "varLog",
+                        "value": "[ERR] - [@{utcNow()}] - Error when adding Calculation Sales Prices! @{length(outputs('Get_created_Calculation_Sales_Prices')?['body/value'])} of @{length(outputs('Get_Calculation_Salesprices')?['body/value'])} Sales Prices added to Calculation. @{decodeUriComponent('%0A')}"
+                      },
+                      "runAfter": {
+                        "Get_created_Calculation_Sales_Prices": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Filter_Results_for_failed_actions_[Sales_Prices]": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@result('Copy_Calculation_Sales_Prices')",
+                        "where": "@equals(item()?['status'],'Failed')"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Copy_Calculation_Sales_Prices": [
+                      "TimedOut",
+                      "Failed"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Sales_Prices_to_process": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "65570a8f-516e-4656-a558-9ac51973cbfc"
+              }
+            },
+            "Sales_Prices_to_process": {
+              "type": "Compose",
+              "inputs": "@length(outputs('Get_Calculation_Salesprices')?['body/value'])",
+              "runAfter": {
+                "Get_Calculation_Salesprices": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "cb9788d0-df5f-4c84-bb5b-f0880529e402"
+          }
+        },
+        "Calculation_Payment_Terms": {
+          "type": "Scope",
+          "actions": {
+            "Get_Calculation_Payment_Terms": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_paymentterm_calculations",
+                  "$select": "_hso_paymenttermid_value, hso_name, hso_paymenttermpercentage, hso_sortorder",
+                  "$filter": "_hso_calculationid_value eq '@{triggerBody()?['text_1']}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "620c64bb-a5fb-4c2f-8c65-49f8431089fa"
+              }
+            },
+            "Calculation_Payment_Terms_to_process": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@outputs('Payment_Terms_to_process')",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Copy_Calculation_Payment_Terms": {
+                  "type": "Scope",
+                  "actions": {
+                    "Select_Calculation_Payment_Terms": {
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@outputs('Get_Calculation_Payment_Terms')?['body/value']",
+                        "select": {
+                          "@{string('@')}odata.type": "#Microsoft.Dynamics.CRM.hso_paymentterm_calculation",
+                          "hso_name": "@item()?['hso_name']",
+                          "hso_calculationid@odata.bind": "/hso_calculations(@{triggerBody()?['text']})",
+                          "hso_paymenttermid@odata.bind": "/hso_paymentterms(@{item()?['_hso_paymenttermid_value']})",
+                          "hso_paymenttermpercentage": "@if(\r\n  equals(\r\n    item()?['hso_paymenttermpercentage'],\r\n    null\r\n  ),\r\n  null,\r\n  decimal(item()?['hso_paymenttermpercentage'])\r\n)",
+                          "hso_sortorder": "@if(\r\n  equals(\r\n    item()?['hso_sortorder'],\r\n    null\r\n  ),\r\n  null,\r\n  int(item()?['hso_sortorder'])\r\n)"
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "1e1a85b9-5662-4081-bdf3-1bd22904318c"
+                      }
+                    },
+                    "Create_Calculation_Payment_Terms": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "request/method": "POST",
+                          "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_paymentterm_calculations/Microsoft.Dynamics.CRM.CreateMultiple",
+                          "request/headers": {
+                            "OData-MaxVersion": "4.0",
+                            "OData-Version": "4.0",
+                            "If-None-Match": "null",
+                            "Accept": "application/json",
+                            "Content-Type": "application/json; charset=utf-8"
+                          },
+                          "request/body": "{\n \"Targets\": @{body('Select_Calculation_Payment_Terms')}\n}"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                          "operationId": "InvokeHttp",
+                          "connectionName": "shared_webcontents"
+                        }
+                      },
+                      "runAfter": {
+                        "Select_Calculation_Payment_Terms": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "a67506bc-eccb-4031-bab3-ae897559fed5"
+                      }
+                    },
+                    "Payment_Terms_processed": {
+                      "type": "Compose",
+                      "inputs": "@length(body('Create_Calculation_Payment_Terms')?['Ids'])",
+                      "runAfter": {
+                        "Create_Calculation_Payment_Terms": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "f544d889-7121-4f3c-9f78-df8108160472"
+                  }
+                },
+                "Copy_Calculation_Sales_Prices_-_Error_1": {
+                  "type": "Scope",
+                  "actions": {
+                    "Select_Error_Summary_[Payment_Terms]": {
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Filter_Results_for_failed_actions_[Payment_Terms]')",
+                        "select": {
+                          "Action": "@item()?['name']",
+                          "Code": "@item()?['code']",
+                          "Status": "@item()?['status']",
+                          "StatusCode": "@item()?['outputs']?['statusCode']",
+                          "Message": "@coalesce(\n  item()?['outputs']?['body']?['error']?['message'],\n  item()?['outputs']?['body']?['message'],\n  item()?['error']?['message'],\n  'No Message found. Please check Flow-Run.'\n)"
+                        }
+                      },
+                      "runAfter": {
+                        "Filter_Results_for_failed_actions_[Payment_Terms]": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Apply_to_each_Error_Summary_[Payment_Terms]": {
+                      "type": "Foreach",
+                      "foreach": "@body('Select_Error_Summary_[Payment_Terms]')",
+                      "actions": {
+                        "Append_Error_Summary_[Payment_Terms]": {
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "varError",
+                            "value": "@items('Apply_to_each_Error_Summary_[Payment_Terms]')"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Select_Error_Summary_[Payment_Terms]": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Get_created_Calculation_Payment_Terms": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "hso_paymentterm_calculations",
+                          "$select": "hso_name",
+                          "$filter": "_hso_calculationid_value eq '@{triggerBody()?['text']}'"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "ListRecords",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "runAfter": {
+                        "Apply_to_each_Error_Summary_[Payment_Terms]": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Append_Calculation_Payment_Terms_to_Log_[Error]": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "varLog",
+                        "value": "[ERR] - [@{utcNow()}] - Error when adding Calculation Payment Terms! @{length(outputs('Get_created_Calculation_Payment_Terms')?['body/value'])} of @{length(outputs('Get_Calculation_Payment_Terms')?['body/value'])} Payment Terms added to Calculation. @{decodeUriComponent('%0A')}"
+                      },
+                      "runAfter": {
+                        "Get_created_Calculation_Payment_Terms": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Filter_Results_for_failed_actions_[Payment_Terms]": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@result('Copy_Calculation_Payment_Terms')",
+                        "where": "@equals(item()?['status'],'Failed')"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Copy_Calculation_Payment_Terms": [
+                      "TimedOut",
+                      "Failed"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Payment_Terms_to_process": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "f6f15a76-8f7d-49e3-acf8-1a86aa0d02ec"
+              }
+            },
+            "Payment_Terms_to_process": {
+              "type": "Compose",
+              "inputs": "@length(outputs('Get_Calculation_Payment_Terms')?['body/value'])",
+              "runAfter": {
+                "Get_Calculation_Payment_Terms": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "fffa89ed-9d4a-4f8e-8d93-47206be2338d"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

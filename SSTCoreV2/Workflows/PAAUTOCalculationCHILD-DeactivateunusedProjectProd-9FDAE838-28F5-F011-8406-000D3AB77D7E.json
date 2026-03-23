@@ -1,0 +1,629 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps-1": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "staticResults": {
+        "Update_the_statuscode_of_Project_Product_to_unused0": {
+          "status": "Succeeded",
+          "outputs": {
+            "statusCode": "OK",
+            "headers": {}
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "The Calculation that is processed",
+                  "title": "Calculation GUID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "The Processing Log that will be used as Parent",
+                  "title": "Parent Processing Log GUID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "ca7a1577-5a73-4b77-a4ca-12d077e32594"
+          }
+        }
+      },
+      "actions": {
+        "Processing_Log": {
+          "type": "Scope",
+          "actions": {
+            "Convert_time_zone": {
+              "type": "Expression",
+              "kind": "ConvertTimeZone",
+              "inputs": {
+                "baseTime": "@utcNow()",
+                "sourceTimeZone": "UTC",
+                "destinationTimeZone": "W. Europe Standard Time",
+                "formatString": "s"
+              },
+              "metadata": {
+                "operationMetadataId": "6af29cdb-96e2-430d-957b-13c3fba8e592"
+              }
+            },
+            "Get_Parent_Processing_Log": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "recordId": "@triggerBody()?['text_1']",
+                  "$select": "hso_processinglogid,ownerid,_ownerid_value,_hso_calculationid_value"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              },
+              "runAfter": {
+                "Get_Calculation_Version": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "81285dd3-9c4c-4d40-84b6-951a38c08bdc"
+              }
+            },
+            "Create_Processing_Log": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "item/hso_name": "Nicht genutzte Projektartikel für Projekt '@{outputs('Get_Calculation_Version')?['body/hso_name']}' deaktivieren - @{body('Convert_time_zone')}",
+                  "item/hso_processingtask": 100000031,
+                  "item/ownerid@odata.bind": "systemusers(@{outputs('Get_Parent_Processing_Log')?['body/_ownerid_value']})",
+                  "item/hso_flowrunurl": "@concat('https://emea.flow.microsoft.com/manage/environments/', workflow()?['tags']['environmentName'], '/flows/', workflow()?['name'], '/runs/', workflow()?['run']['name'])",
+                  "item/hso_calculationid@odata.bind": "hso_calculations(@{outputs('Get_Calculation_Version')?['body/hso_calculationid']})",
+                  "item/hso_start_datetime": "@utcNow()",
+                  "item/hso_origin": 100000000,
+                  "item/hso_parentprocessinglogid@odata.bind": "hso_processinglogs(@{outputs('Get_Parent_Processing_Log')?['body/hso_processinglogid']})",
+                  "item/hso_processingstatus": 100000001
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              },
+              "runAfter": {
+                "Get_Parent_Processing_Log": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "112f44ad-c804-439d-8e95-636031e83c1d"
+              }
+            },
+            "Get_Calculation_Version": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_calculations",
+                  "recordId": "@triggerBody()?['text']",
+                  "$select": "hso_calculationid,hso_name,_hso_companyid_value"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              },
+              "runAfter": {
+                "Convert_time_zone": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varErrorMessage": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "92a22ad9-26e0-4c9d-8ebe-16555f866469"
+          }
+        },
+        "Get_and_Update_relevant_Project_Article_rows": {
+          "type": "Scope",
+          "actions": {
+            "List_relevant_Project_Products": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_projectproducts",
+                  "$select": "hso_projectproductid, statuscode",
+                  "fetchXml": "<fetch>\n  <entity name=\"hso_projectproduct\">\n    <attribute name=\"hso_projectproductid\" />\n   <attribute name=\"hso_productrequirementdetailid\" />\n    <attribute name=\"statuscode\" />\n    <filter type=\"and\">\n      <condition attribute=\"statecode\" operator=\"eq\" value=\"0\" />\n      <condition attribute=\"hso_calculationid\" operator=\"eq\" value=\"@{triggerBody()?['text']}\" />\n      <filter type=\"or\">\n        <filter type=\"and\">\n          <condition attribute=\"hso_isbillofmaterials\" operator=\"eq\" value=\"1\" />\n          <link-entity name=\"hso_calculationdetail\" from=\"hso_billofmaterial_projectproductid\" to=\"hso_projectproductid\" link-type=\"not any\" alias=\"aa\" />\n        </filter>\n        <filter type=\"and\">\n          <condition attribute=\"hso_isbillofmaterials\" operator=\"eq\" value=\"0\" />\n          <link-entity name=\"hso_calculationdetail\" from=\"hso_projectproductid\" to=\"hso_projectproductid\" link-type=\"not any\" alias=\"ab\" />\n        </filter>\n      </filter>\n    </filter>\n  </entity>\n</fetch>"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "eaf7103e-c26d-49e2-841a-60859cdba06a"
+              }
+            },
+            "Apply_to_each_Project_Product": {
+              "type": "Foreach",
+              "foreach": "@outputs('List_relevant_Project_Products')?['body/value']",
+              "actions": {
+                "Update_the_statuscode_of_Project_Product_to_unused": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_projectproducts",
+                      "recordId": "@items('Apply_to_each_Project_Product')?['hso_projectproductid']",
+                      "item/statecode": 1,
+                      "item/statuscode": 867520001
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "runtimeConfiguration": {
+                    "staticResult": {
+                      "staticResultOptions": "Disabled",
+                      "name": "Update_the_statuscode_of_Project_Product_to_unused0"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "054e18ce-3b66-4fe5-8caa-8f8369912594"
+                  }
+                },
+                "Increment_varProjectProducts_Processed_by_Number_of_unique_Project_Products": {
+                  "type": "IncrementVariable",
+                  "inputs": {
+                    "name": "varProjectProducts_Processed",
+                    "value": 1
+                  },
+                  "runAfter": {
+                    "Product_Requirement_Detail_exists": [
+                      "SUCCEEDED"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "669fdf96-4e15-4911-a047-e0beb12b36b9"
+                  }
+                },
+                "Product_Requirement_Detail_exists": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@outputs('Update_the_statuscode_of_Project_Product_to_unused')?['body/_hso_productrequirementdetailid_value']",
+                            "@null"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Delete_Product_Requirement_Detail": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "hso_productrequirementdetails",
+                          "recordId": "@outputs('Update_the_statuscode_of_Project_Product_to_unused')?['body/_hso_productrequirementdetailid_value']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "DeleteRecord",
+                          "connectionName": "shared_commondataserviceforapps-1"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Update_the_statuscode_of_Project_Product_to_unused": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "Set_varProjectProducts_ToProcess": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "759f7657-90a0-47f2-9148-d4a2a1cd5b22"
+              }
+            },
+            "Set_varProjectProducts_ToProcess": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varProjectProducts_ToProcess",
+                "value": "@length(outputs('List_relevant_Project_Products')?['body/value'])"
+              },
+              "runAfter": {
+                "List_relevant_Project_Products": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "b5c3efc4-407a-4ee5-91ac-ec93f28cdf30"
+              }
+            },
+            "Apply_to_each_unique_Project_Product_-_Error": {
+              "type": "Scope",
+              "actions": {
+                "Apply_to_each_Error_Summary_[Apply_to_each_Project_Product]": {
+                  "type": "Foreach",
+                  "foreach": "@body('Select_Error_Summary_[Apply_to_each_Project_Product]')",
+                  "actions": {
+                    "Append_Error_Summary_[Apply_to_each_Project_Product]": {
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "varError",
+                        "value": "@items('Apply_to_each_Error_Summary_[Apply_to_each_Project_Product]')"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "56a7bcfc-c9b9-4761-b216-042dd1b4eb8e"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Select_Error_Summary_[Apply_to_each_Project_Product]": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "b6832a0c-8055-4a36-bbb2-5207e0ae1539"
+                  }
+                },
+                "Select_Error_Summary_[Apply_to_each_Project_Product]": {
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@body('Filter_Results_for_failed_actions_[Apply_to_each_Project_Product]')?['outputs']",
+                    "select": {
+                      "Action": "@item()?['name']",
+                      "Code": "@item()?['code']",
+                      "Status": "@item()?['status']",
+                      "StatusCode": "@item()?['outputs']?['statusCode']",
+                      "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')\r\n"
+                    }
+                  },
+                  "runAfter": {
+                    "Filter_Results_for_failed_actions_[Apply_to_each_Project_Product]": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "c2838f23-1476-45e9-8c15-d2d71a40f2f7"
+                  }
+                },
+                "Filter_Results_for_failed_actions_[Apply_to_each_Project_Product]": {
+                  "type": "Query",
+                  "inputs": {
+                    "from": "@result('Apply_to_each_Project_Product')",
+                    "where": "@equals(item()['status'],'Failed')"
+                  },
+                  "runAfter": {
+                    "Results_for_failed_actions_[Apply_to_each_Project_Product]": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "9261fa8e-257c-4507-81d5-155edf31489e"
+                  }
+                },
+                "Results_for_failed_actions_[Apply_to_each_Project_Product]": {
+                  "type": "Compose",
+                  "inputs": "@result('Apply_to_each_Project_Product')",
+                  "metadata": {
+                    "operationMetadataId": "96175c6f-a633-4d6d-b61b-30bcb230d55d"
+                  }
+                }
+              },
+              "runAfter": {
+                "Apply_to_each_Project_Product": [
+                  "TimedOut",
+                  "Failed"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "498b34cc-f95b-4194-b03c-1946bacef9f0"
+              }
+            }
+          },
+          "runAfter": {
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e57563cf-2162-4db7-9f8a-947812c4d3ff"
+          }
+        },
+        "Summary": {
+          "type": "Scope",
+          "actions": {
+            "Project_Products_successfully_processed": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@variables('varProjectProducts_ToProcess')",
+                      "@variables('varProjectProducts_Processed')"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Respond_to_Parent_Flow_[Success]": {
+                  "type": "Response",
+                  "kind": "PowerApp",
+                  "inputs": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "processing": {
+                          "title": "Processing",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": {}
+                    },
+                    "statusCode": 200,
+                    "body": {
+                      "processing": "Success"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_Processing_Log_[Success]": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "14cd8d32-f326-4934-bc31-96e1f7f016a4"
+                  }
+                },
+                "Update_Processing_Log_[Success]": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_processinglogs",
+                      "recordId": "@body('Create_Processing_Log')?['hso_processinglogid']",
+                      "item/hso_end_datetime": "@{utcNow()}",
+                      "item/hso_processedrecords": "@variables('varProjectProducts_Processed')",
+                      "item/hso_processingstatus": 100000002
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "c92bd2a2-98ce-4976-9306-8924187cd48a"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Respond_to_Parent_Flow_[Failure]": {
+                    "type": "Response",
+                    "kind": "PowerApp",
+                    "inputs": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "processing": {
+                            "title": "Processing",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": {}
+                      },
+                      "statusCode": 200,
+                      "body": {
+                        "processing": "Failure"
+                      }
+                    },
+                    "runAfter": {
+                      "Update_Processing_Log_[Failure]": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "857b6cd3-2842-48d4-8257-182edfa977ed"
+                    }
+                  },
+                  "Update_Processing_Log_[Failure]": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_processinglogs",
+                        "recordId": "@body('Create_Processing_Log')?['hso_processinglogid']",
+                        "item/hso_end_datetime": "@{utcNow()}",
+                        "item/hso_flowerror": "Fehler beim Deaktivieren der ungenutzten Projektartikel",
+                        "item/hso_processedrecords": "@variables('varProjectProducts_Processed')",
+                        "item/hso_processingstatus": 100000003
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateRecord",
+                        "connectionName": "shared_commondataserviceforapps-1"
+                      }
+                    },
+                    "runAfter": {
+                      "Apply_to_each_Error_Summary": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "359e494e-0511-488c-87f9-d721f9c3e6be"
+                    }
+                  },
+                  "Apply_to_each_Error_Summary": {
+                    "type": "Foreach",
+                    "foreach": "@variables('varError')",
+                    "actions": {
+                      "Append_Error_Message": {
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varErrorMessage",
+                          "value": "[ERROR] - Action '@{items('Apply_to_each_Error_Summary')?['Action']}' failed with error message: @{items('Apply_to_each_Error_Summary')?['Message']} (Status: @{items('Apply_to_each_Error_Summary')?['Status']} / Status Code: @{items('Apply_to_each_Error_Summary')?['StatusCode']})"
+                        },
+                        "metadata": {
+                          "operationMetadataId": "c801379e-9ed6-4290-9936-705a3282ffbf"
+                        }
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "66f73e1e-6b2b-4c6e-a510-06ca30f2ecec"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "aa834b6e-ec5e-4be9-bd29-31d8624c0eb6"
+              }
+            }
+          },
+          "runAfter": {
+            "Get_and_Update_relevant_Project_Article_rows": [
+              "Succeeded",
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "65e17768-db9d-4127-a92c-c93b8cf61af0"
+          }
+        },
+        "Initialize_varError": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varError",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varProjectProducts_Processed": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f00e5d25-b35a-423b-9c8d-a980ae8a73e5"
+          }
+        },
+        "Initialize_varProjectProducts_ToProcess": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varProjectProducts_ToProcess",
+                "type": "integer"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "9db80b36-110f-44c4-b1d8-30e426ccb294"
+          }
+        },
+        "Initialize_varProjectProducts_Processed": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varProjectProducts_Processed",
+                "type": "integer"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varProjectProducts_ToProcess": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2f11c4cc-dc8d-4c97-94f1-3071da15d11b"
+          }
+        },
+        "Initialize_varErrorMessage": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorMessage",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varError": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1b78bf5d-e3d5-4bf9-ae6c-52695cffee90"
+          }
+        }
+      },
+      "description": "Flow prüft ob nicht genutzte Projektartikel in einer Kalkulationsversion vorliegen. Ist dies der Fall, werden diese Projektartikel deaktiviert."
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,14 @@
+<environmentvariabledefinition schemaname="hso_EnvVarSharePointSiteAdress">
+  <defaultvalue>https://schulzst.sharepoint.com/sites/D365-INT</defaultvalue>
+  <description default="The SharePoint Site that is connected to the respective Dataverse Environment to accelerate the Sharepoint Document Integration">
+    <label description="The SharePoint Site that is connected to the respective Dataverse Environment to accelerate the Sharepoint Document Integration" languagecode="1031" />
+  </description>
+  <displayname default="[DEPRECATED] EnvVar | SharePoint Site Adress">
+    <label description="[DEPRECATED] EnvVar | SharePoint Site Adress" languagecode="1031" />
+  </displayname>
+  <introducedversion>1.0.0.0</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000000</type>
+</environmentvariabledefinition>

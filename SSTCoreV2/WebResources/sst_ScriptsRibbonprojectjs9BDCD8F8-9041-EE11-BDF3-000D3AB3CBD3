@@ -1,0 +1,54 @@
+if (typeof (Schulz) === "undefined") { Schulz = {}; };
+if (typeof (Schulz.ProjectRibbon) === "undefined") { Schulz.ProjectRibbon = {}; }
+
+
+Schulz.ProjectRibbon.refreshPSP = async (formContext) => {
+        Xrm.Utility.showProgressIndicator("Aktualisiere Projektstrukturplan...");
+        var projectID = formContext.data.entity.getId();
+
+        Xrm.WebApi.updateRecord("msdyn_project", projectID, {
+            "sst_lastpsprefresh_dat": new Date().toISOString()
+        }).then(
+            function success(result) {
+                // Success
+                Xrm.Utility.closeProgressIndicator();
+                formContext.ui.setFormNotification("Der Projektstruktuplan wird im Hintergrund aktualisiert.", "INFO", "PSPUpdateStarted");
+                setTimeout(() => {
+                    formContext.ui.clearFormNotification("PSPUpdateStarted");
+                }, 3000);
+            },
+            function (error) {
+                // Error
+                Xrm.Utility.closeProgressIndicator();
+                Xrm.Navigation.openErrorDialog({ message: error.message });
+            }
+        );
+}
+Schulz.ProjectRibbon.getEnvironmentVariable = async (schemaName) => {
+    var value = null;
+
+    // Get the matching environment variable definition with related values
+    var data = await Xrm.WebApi.retrieveMultipleRecords("environmentvariabledefinition", "?$top=1" +
+        "&$select=environmentvariabledefinitionid,defaultvalue" +
+        "&$expand=environmentvariabledefinition_environmentvariablevalue($select=value)" +
+        `&$filter=schemaname eq '${schemaName}'`);
+
+    if (data && data.entities && data.entities.length > 0) {
+        // Definition exists
+        var definition = data.entities[0];
+
+        // Use the default value only if no related values
+        value = definition.defaultvalue;
+
+        // Get the related value if provided
+        if (definition.environmentvariabledefinition_environmentvariablevalue.length > 0) {
+            value = definition.environmentvariabledefinition_environmentvariablevalue[0].value;
+        }
+    }
+
+    return value;
+}
+
+Schulz.ProjectRibbon.refreshPSPFromSubgrid = (formContext) => {
+    Schulz.ProjectRibbon.refreshPSP(formContext);
+}

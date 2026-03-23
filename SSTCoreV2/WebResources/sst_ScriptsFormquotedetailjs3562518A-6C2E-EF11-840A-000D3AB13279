@@ -1,0 +1,70 @@
+if (typeof (Schulz) === "undefined") { Schulz = {}; };
+
+Schulz.QuoteDetailForm = {
+    
+    onLoad: function(executionContext) {
+        let formContext = executionContext.getFormContext();
+        Schulz.QuoteDetailForm.registerEvents(formContext);
+
+        Schulz.QuoteDetailForm.presetSalesProductCategory(executionContext);
+
+        Schulz.QuoteDetailForm.showWarningOnCreate(formContext);
+
+        Schulz.QuoteDetailForm.toggleDiscountFields(formContext);
+    },
+
+    registerEvents: function(formContext) {
+        formContext.getAttribute("isproductoverridden").addOnChange(Schulz.QuoteDetailForm.presetSalesProductCategory);
+        // Register event for discount mode change
+        formContext.getAttribute("sst_discountmode_bol").addOnChange(function() {
+            Schulz.QuoteDetailForm.toggleDiscountFields(formContext);
+        });
+    },
+    /**
+     * Enables/disables discount fields based on sst_discountmode_bol value
+     */
+    toggleDiscountFields: function(formContext) {
+        var discountMode = formContext.getAttribute("sst_discountmode_bol").getValue();
+        var discountPercentage = formContext.getControl("sst_discountpercentage_dec");
+        var discountMoney = formContext.getControl("sst_discountmoney_ccy");
+        if (discountMode === false) {
+            if (discountPercentage) discountPercentage.setDisabled(false);
+            if (discountMoney) discountMoney.setDisabled(true);
+        } else {
+            if (discountPercentage) discountPercentage.setDisabled(true);
+            if (discountMoney) discountMoney.setDisabled(false);
+        }
+    },
+
+    showWarningOnCreate: function(formContext) {
+        let isCreateForm = formContext.ui.getFormType() === 1;
+        if (isCreateForm) {
+            formContext.ui.setFormNotification("Berechnung von Einstandspreis und -betrag erfolgt nach dem ersten Speichern.", "INFO", "purchaseprice");
+        }
+    },
+
+    presetSalesProductCategory: function(executionContext) {
+
+        let formContext = executionContext.getFormContext();
+
+        let productOverridden = formContext.getAttribute("isproductoverridden").getValue();
+        
+        let salesProductCategoryField = formContext.getAttribute("msdyn_salesproductcategory");
+
+        if (productOverridden === null || productOverridden === false)
+        {
+            salesProductCategoryField.setValue(null);
+            return;
+        }
+
+        if (salesProductCategoryField.getValue() !== null) return;
+
+        let lookupValue = new Array();
+        lookupValue[0] = new Object();
+        lookupValue[0].id = "{233f1634-8d84-ee11-8179-000d3aad3fb6}";
+        lookupValue[0].name = "Default";
+        lookupValue[0].entityType = "msdyn_productcategory";
+
+        salesProductCategoryField.setValue(lookupValue);
+    }
+};

@@ -1,0 +1,2298 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps_2": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_webcontents": {
+        "api": {
+          "name": "shared_webcontents"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverseHTTPwithAzureAD"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)": {
+          "defaultValue": "operations-d365-schulz-int-11.crm4.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarDataverseInstance",
+            "description": "The Dataverse Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "Calculation GUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GUID of the Calculation",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "title": "Template GUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GUID of the created Template",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_2": {
+                  "title": "Parent Node Linenumber",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The Line Number of the selected Calculation Position",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "boolean": {
+                  "description": "Define whether a BOM Project Product is used for Template Positions or not",
+                  "title": "Is BOM",
+                  "type": "boolean",
+                  "x-ms-content-hint": "BOOLEAN",
+                  "x-ms-dynamically-added": true
+                },
+                "text_3": {
+                  "description": "The GUID of the created BOM Project Product for the Template",
+                  "title": "BOM Project Product GUID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_4": {
+                  "description": "The GUID of the Processing Log",
+                  "title": "Processing Log GUID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "boolean_1": {
+                  "description": "Use Placeholder Template BOM Project Product created in Parent Flow or create Template BOM Project Products as defined in Calculation",
+                  "title": "Use Placeholder BOM",
+                  "type": "boolean",
+                  "x-ms-content-hint": "BOOLEAN",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "boolean",
+                "text_4",
+                "boolean_1"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "b0f3abb6-d805-45f0-b984-8a6b92ec763c"
+          }
+        }
+      },
+      "actions": {
+        "Initialize_varNumberOfCalculationPositions_ToProcess": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfCalculationPositions_ToProcess",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f8ed7f2f-dafb-4f65-a9ce-798db1fce67c"
+          }
+        },
+        "Initialize_varNumberOfCalculationPositions_Processed": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfCalculationPositions_Processed",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varNumberOfCalculationPositions_ToProcess": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "81342c63-fe67-45e1-9355-6fd748584155"
+          }
+        },
+        "Initialize_varNumberOfCalculationProjectProducts_ToProcess": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfCalculationProjectProducts_ToProcess",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varNumberOfCalculationPositions_Processed": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "93d56043-8db8-4e83-a641-3ddbe3bff4a1"
+          }
+        },
+        "Initialize_varNumberOfCalculationProjectProducts_Processed": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfCalculationProjectProducts_Processed",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varNumberOfCalculationProjectProducts_ToProcess": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9040ee1e-6fc8-4aed-99be-71d4bf234a25"
+          }
+        },
+        "Initialize_varError": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varError",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varOdataType": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1067ffcd-405c-4ac3-b5b4-40c4de3f338b"
+          }
+        },
+        "Initialize_varErrorMessage": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorMessage",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varError": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "641eed3c-17c5-4ada-9904-70d664d8512b"
+          }
+        },
+        "Template_Positions_-_Error": {
+          "type": "Scope",
+          "actions": {
+            "Filter_Results_for_failed_actions_[Template_Positions]": {
+              "type": "Query",
+              "inputs": {
+                "from": "@result('Template_Positions')",
+                "where": "@equals(item()['status'], 'Failed')"
+              },
+              "metadata": {
+                "operationMetadataId": "4072ae0c-0c0a-49f8-a1ee-12ae6f932c06"
+              }
+            },
+            "Select_Error_Summary_[Template_Positions]": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Filter_Results_for_failed_actions_[Template_Positions]')",
+                "select": {
+                  "Action": "@item()?['name']",
+                  "Code": "@item()?['code']",
+                  "Status": "@item()?['status']",
+                  "StatusCode": "@item()?['outputs']?['statusCode']",
+                  "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                }
+              },
+              "runAfter": {
+                "Filter_Results_for_failed_actions_[Template_Positions]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "4f107225-da4a-483b-a753-8f4537dcf55d"
+              }
+            },
+            "Apply_to_each_Error_Summary_[Template_Positions]": {
+              "type": "Foreach",
+              "foreach": "@body('Select_Error_Summary_[Template_Positions]')",
+              "actions": {
+                "Append_Error_Summary": {
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "varError",
+                    "value": "@items('Apply_to_each_Error_Summary_[Template_Positions]')"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "7c9ed8f2-dc0f-4c4c-be57-4ca262762a95"
+                  }
+                }
+              },
+              "runAfter": {
+                "Select_Error_Summary_[Template_Positions]": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 20
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "b478ab09-7375-4845-aa71-4544ad52eb04"
+              }
+            }
+          },
+          "runAfter": {
+            "Template_Positions": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7463130b-ca58-4226-9b60-af3a290bc16d"
+          }
+        },
+        "Template_Positions": {
+          "type": "Scope",
+          "actions": {
+            "Select_Calculation_Details": {
+              "type": "Select",
+              "inputs": {
+                "from": "@variables('varTemplateDetails_Payload')",
+                "select": {
+                  "@{variables('varOdataType')}": "#Microsoft.Dynamics.CRM.hso_templatedetail",
+                  "hso_positionelementtype": "@item()?['hso_positionelementtype']",
+                  "hso_templateid@odata.bind": "/hso_templates(@{triggerBody()['text_1']})",
+                  "hso_quantity": "@item()?['hso_quantity']",
+                  "hso_name": "@item()?['hso_name']",
+                  "hso_productid@odata.bind": "@If(empty(item()?['_hso_productid_value']), '', concat('products(', item()?['_hso_productid_value'], ')'))",
+                  "hso_surchargegroup_baseid@odata.bind": "@If(empty(item()?['_hso_surchargegroup_baseid_value']), '', concat('hso_surchargegroup_bases(', item()?['_hso_surchargegroup_baseid_value'], ')'))",
+                  "hso_externalserviceid@odata.bind": "@If(empty(item()?['_hso_externalserviceid_value']), '', concat('hso_externalservices(', item()?['_hso_externalserviceid_value'], ')'))",
+                  "hso_textblock_description_max": "@item()?['hso_textblock_description_max']",
+                  "hso_textblock_name": "@item()?['hso_textblock_name']",
+                  "hso_level": "@item()?['hso_level']",
+                  "hso_positiondetails": "@item()?['hso_positiondetails']",
+                  "hso_positionquantity": "@item()?['hso_positionquantity']",
+                  "hso_productionhourid@odata.bind": "@If(empty(item()?['_hso_productionhourid_value']), '', concat('hso_productionhours(', item()?['_hso_productionhourid_value'], ')'))",
+                  "hso_projectproductid@odata.bind": "@If(\r\n empty(item()?['_hso_projectproductid_value']), \r\n '', \r\n concat(\r\n  'hso_projectproducts(',\r\n  item()?['_hso_projectproductid_value'],\r\n  ')'\r\n )\r\n)",
+                  "hso_projecttype": "@item()?['hso_projecttype']",
+                  "hso_projectexpenseid@odata.bind": "@If(empty(item()?['_hso_projectexpenseid_value']), '', concat('hso_projectexpenses(', item()?['_hso_projectexpenseid_value'], ')'))",
+                  "hso_projecthourid@odata.bind": "@If(empty(item()?['_hso_projecthourid_value']), '', concat('hso_projecthours(', item()?['_hso_projecthourid_value'], ')'))",
+                  "hso_uomid@odata.bind": "@If(empty(item()?['_hso_uomid_value']), '', concat('uoms(', item()?['_hso_uomid_value'], ')'))",
+                  "hso_subproject": "@item()?['hso_subproject']",
+                  "hso_calculationdetail_parentid_sortinglinenum": "@item()?['hso_calculationdetail_parentid_sortinglinenum']",
+                  "hso_linenumber": "@item()?['hso_linenumber']",
+                  "hso_linenumber_level": "@item()?['hso_linenumber_level']",
+                  "hso_parent_linenumber_import": "@item()?['hso_calculationdetail_parentid_linenumber']",
+                  "hso_isbillofmaterial": "@item()?['hso_isbillofmaterial']",
+                  "hso_billofmaterial_projectproductid@odata.bind": "@If(\r\n    equals(triggerBody()?['boolean_1'],false),\r\n    If(\r\n        empty(item()?['_hso_billofmaterial_projectproductid_value']),\r\n        '', \r\n        concat(\r\n            'hso_projectproducts(_hso_templateid_value=', \r\n            triggerBody()['text_1'], \r\n            ', hso_name=', \r\n            concat('''', replace(replace(item()?['_hso_billofmaterial_projectproductid_value@OData.Community.Display.V1.FormattedValue'], '/', ' '), '\\', ' '), ''''), \r\n            ')'\r\n        )\r\n    ),\r\n    If(\r\n        and(\r\n            equals(triggerBody()?['boolean'],true),\r\n            or(\r\n                equals(item()?['hso_positionelementtype'],100000000),\r\n                equals(item()?['hso_positionelementtype'],100000002),\r\n                equals(item()?['hso_positionelementtype'],100000003)\r\n            )\r\n        ),\r\n        concat(\r\n            'hso_projectproducts(',\r\n            triggerBody()?['text_3'],\r\n            ')'\r\n        ),\r\n        ''\r\n    )\r\n)",
+                  "hso_templatedetail_parentid@odata.bind": "@if(\r\n  or(\r\n    empty(item()?['_hso_calculationdetail_parentid_value']),\r\n    equals(item()?['hso_linenumber'], triggerBody()?['text_2'])\r\n  ), \r\n  '', \r\n  concat(\r\n    'hso_templatedetails(_hso_templateid_value=', \r\n    triggerBody()?['text_1'],\r\n    ', hso_linenumber=', \r\n    concat(\r\n      '''', \r\n      item()?['hso_calculationdetail_parentid_linenumber'], \r\n      ''''\r\n    ),\r\n    ')'\r\n  )\r\n)"
+                }
+              },
+              "runAfter": {
+                "Compose_Template_Positions_Payload": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "05c701b2-aa84-493b-8d94-758b760e925f"
+              }
+            },
+            "Calculation_Detail_Notes": {
+              "type": "Scope",
+              "actions": {
+                "Get_Calculation_Positions_with_Notes": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_calculationdetails",
+                      "fetchXml": "<fetch version=\"1.0\" output-format=\"xml-platform\" mapping=\"logical\" returntotalrecordcount=\"true\" distinct=\"true\">\n  <entity name=\"hso_calculationdetail\">\n    <attribute name=\"hso_calculationdetailid\" />\n    <attribute name=\"hso_name\" />\n    <attribute name=\"hso_linenumber\" />\n    <attribute name=\"hso_sortinglinenumber\" />\n    <attribute name=\"hso_level\" />\n    <attribute name=\"hso_calculationid\" />\n\n    <filter>\n      <condition attribute=\"hso_calculationid\" operator=\"eq\" value=\"@{triggerBody()?['text']}\" />\n    </filter>\n\n    <!-- Only include records that have related Annotations (isdocument = true) -->\n    <link-entity name=\"annotation\" from=\"objectid\" to=\"hso_calculationdetailid\" link-type=\"inner\" alias=\"a\">\n      <attribute name=\"annotationid\" />\n      <attribute name=\"filename\" />\n      <filter>\n        <condition attribute=\"isdocument\" operator=\"eq\" value=\"1\" />\n      </filter>\n    </link-entity>\n\n    <!-- Optional sorting -->\n    <order attribute=\"hso_sortinglinenumber\" descending=\"false\" />\n  </entity>\n</fetch>\n"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps_2"
+                    }
+                  }
+                },
+                "Calculation_Positions_with_Notes_to_process": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "greater": [
+                          "@length(outputs('Get_Calculation_Positions_with_Notes')?['body/value'])",
+                          0
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Apply_to_each_Calculation_Position_with_Notes": {
+                      "type": "Foreach",
+                      "foreach": "@outputs('Get_Calculation_Positions_with_Notes')?['body/value']",
+                      "actions": {
+                        "Run_a_Child_Flow_to_copy_the_Note": {
+                          "type": "Workflow",
+                          "inputs": {
+                            "host": {
+                              "workflowReferenceName": "e1a6c89b-5ed1-ee11-9079-000d3ab3c58c"
+                            },
+                            "body": {
+                              "text": "@items('Apply_to_each_Calculation_Position_with_Notes')?['a.annotationid']",
+                              "text_1": "Template Position",
+                              "text_2": "@items('Apply_to_each_Calculation_Position_with_Notes')?['hso_calculationdetailid']",
+                              "text_3": "@triggerBody()?['text_1']",
+                              "text_4": "@items('Apply_to_each_Calculation_Position_with_Notes')?['hso_linenumber']"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Append_added_Calculation_Position_Notes_to_Log": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "varLog",
+                        "value": "[INF] - [@{utcNow()}] - @{length(outputs('Get_Calculation_Positions_with_Notes')?['body/value'])} Notes added to Calculation Positions. @{decodeUriComponent('%0A')}"
+                      },
+                      "runAfter": {
+                        "Apply_to_each_Calculation_Position_with_Notes": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Get_Calculation_Positions_with_Notes": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "Do_until_all_Levels_are_processed": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ffd6d64b-822b-47c5-b423-4d102b98bd76"
+              }
+            },
+            "Compose_Template_Positions_Payload": {
+              "type": "Scope",
+              "actions": {
+                "Project_Products_used": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "greater": [
+                          "@length(variables('varProjectProductGUID_Mapping'))",
+                          0
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Apply_to_each_created_Project_Product": {
+                      "type": "Foreach",
+                      "foreach": "@variables('varProjectProductGUID_Mapping')",
+                      "actions": {
+                        "Filter_Positions_by_Project_Product": {
+                          "type": "Query",
+                          "description": "Get all Positions of Type 'Project Product'. ",
+                          "inputs": {
+                            "from": "@outputs('Get_Calculation_Details')?['body/value']",
+                            "where": "@equals(item()?['_hso_projectproductid_value'],items('Apply_to_each_created_Project_Product')?['GUIDold'])"
+                          }
+                        },
+                        "Positions_with_Project_Products_found": {
+                          "type": "If",
+                          "expression": {
+                            "and": [
+                              {
+                                "greater": [
+                                  "@length(body('Filter_Positions_by_Project_Product'))",
+                                  0
+                                ]
+                              }
+                            ]
+                          },
+                          "actions": {
+                            "Replace_Project_Product_GUID": {
+                              "type": "Select",
+                              "inputs": {
+                                "from": "@body('Filter_Positions_by_Project_Product')",
+                                "select": "@setProperty(\r\n item(),\r\n '_hso_projectproductid_value',\r\n items('Apply_to_each_created_Project_Product')?['GUIDnew']\r\n)"
+                              }
+                            },
+                            "Positions_with_replaced_Project_Product_GUIDs": {
+                              "type": "Compose",
+                              "inputs": "@union(\r\n variables('varTemplateDetails_Payload'),\r\n body('Replace_Project_Product_GUID')\r\n)",
+                              "runAfter": {
+                                "Replace_Project_Product_GUID": [
+                                  "Succeeded"
+                                ]
+                              }
+                            },
+                            "Add_Positions_with_replaced_Project_Products_to_Payload": {
+                              "type": "SetVariable",
+                              "inputs": {
+                                "name": "varTemplateDetails_Payload",
+                                "value": "@outputs('Positions_with_replaced_Project_Product_GUIDs')"
+                              },
+                              "runAfter": {
+                                "Positions_with_replaced_Project_Product_GUIDs": [
+                                  "Succeeded"
+                                ]
+                              }
+                            }
+                          },
+                          "else": {
+                            "actions": {}
+                          },
+                          "runAfter": {
+                            "Filter_Positions_by_Project_Product": [
+                              "Succeeded"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "Remove_Project_Products_from_Positions": {
+                      "type": "Query",
+                      "description": "Remove all Positions of Type 'Project Product' - these Positions are already added to the Payload in the previous step",
+                      "inputs": {
+                        "from": "@outputs('Get_Calculation_Details')?['body/value']",
+                        "where": "@not(equals(item()?['hso_positionelementtype'],100000002))"
+                      },
+                      "runAfter": {
+                        "Apply_to_each_created_Project_Product": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Add_all_other_Positions_to_Payload": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varTemplateDetails_Payload",
+                        "value": "@outputs('Positions_without_Project_Products')"
+                      },
+                      "runAfter": {
+                        "Positions_without_Project_Products": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Positions_without_Project_Products": {
+                      "type": "Compose",
+                      "inputs": "@union(\r\n variables('varTemplateDetails_Payload'),\r\n body('Remove_Project_Products_from_Positions')\r\n)",
+                      "runAfter": {
+                        "Remove_Project_Products_from_Positions": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Set_varTemplateDetails_Payload": {
+                        "type": "SetVariable",
+                        "description": "Add all Positions to Payload without replacing any Project Product GUID.",
+                        "inputs": {
+                          "name": "varTemplateDetails_Payload",
+                          "value": "@outputs('Get_Calculation_Details')?['body/value']"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "Processing_Levels": {
+              "type": "Compose",
+              "inputs": "@sort(\r\n  union(\r\n    body('Select_Level_from_Payload'),\r\n    body('Select_Level_from_Payload')\r\n  )\r\n)",
+              "runAfter": {
+                "Select_Level_from_Payload": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "e5c9f10b-dbab-47c9-a96b-21e7470604cf"
+              }
+            },
+            "Select_Level_from_Payload": {
+              "type": "Select",
+              "inputs": {
+                "from": "@variables('varTemplateDetails_Payload')",
+                "select": "@item()['hso_level']"
+              },
+              "runAfter": {
+                "Compose_Template_Positions_Payload": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Set_varIterationLevel": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varIterationLevel",
+                "value": "@min(outputs('Processing_Levels'))"
+              },
+              "runAfter": {
+                "Processing_Levels": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Do_until_all_Levels_are_processed": {
+              "type": "Until",
+              "expression": "@equals(variables('varIterationLevel'),add(\r\n  max(outputs('Processing_Levels')),\r\n  1\r\n))",
+              "limit": {
+                "count": 60,
+                "timeout": "PT1H"
+              },
+              "actions": {
+                "Filter_Payload_by_Level": {
+                  "type": "Query",
+                  "inputs": {
+                    "from": "@body('Select_Calculation_Details')",
+                    "where": "@equals(item()['hso_level'],variables('varIterationLevel'))"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "66ec9e65-c317-4bbb-9a1c-fc844ab0ff85"
+                  }
+                },
+                "Calculate_Parallelism": {
+                  "type": "Compose",
+                  "inputs": "@min(\r\n  max(\r\n    div(\r\n      length(body('Filter_Payload_by_Level')),\r\n      variables('varBatchSettings')?['maxBatchSize']\r\n    ),\r\n    variables('varBatchSettings')?['minBatchSize']\r\n  ),\r\n  variables('varBatchSettings')?['maxParallelism']\r\n)",
+                  "runAfter": {
+                    "Filter_Payload_by_Level": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "0def36eb-e7f4-4331-a6df-a0099ea3c3cd"
+                  }
+                },
+                "Calculate_Batch_Size": {
+                  "type": "Compose",
+                  "inputs": "@add(\r\n  div(\r\n    length(body('Filter_Payload_by_Level')), \r\n    outputs('Calculate_Parallelism')\r\n  ), \r\n  if(\r\n    greaterOrEquals(\r\n      mod(\r\n        length(body('Filter_Payload_by_Level')),\r\n        outputs('Calculate_Parallelism')\r\n      ),\r\n      1\r\n    ), \r\n    1, \r\n    0\r\n  )\r\n)\r\n",
+                  "runAfter": {
+                    "Calculate_Parallelism": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "8895679e-e715-4010-b8b6-ce93b02d9ddd"
+                  }
+                },
+                "Split_Records_into_Chunks": {
+                  "type": "Compose",
+                  "inputs": "@chunk(\r\n  body('Filter_Payload_by_Level'),\r\n  outputs('Calculate_Batch_Size')\r\n)",
+                  "runAfter": {
+                    "Calculate_Batch_Size": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "ef675012-4a24-42a7-9fea-f14ace4610dd"
+                  }
+                },
+                "Append_Levels_to_process_to_Log": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[INF] - [@{utcNow()}] - Process @{length(body('Filter_Payload_by_Level'))} Level-@{variables('varIterationLevel')} Items with @{outputs('Calculate_Parallelism')} Batch(es) (Batch Size: @{outputs('Calculate_Batch_Size')}). @{decodeUriComponent('%0A')}"
+                  },
+                  "runAfter": {
+                    "Split_Records_into_Chunks": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "fb587b48-8e19-442a-92bc-2df34c597fc9"
+                  }
+                },
+                "Apply_to_each_Chunk": {
+                  "type": "Foreach",
+                  "foreach": "@outputs('Split_Records_into_Chunks')",
+                  "actions": {
+                    "Items_to_process": {
+                      "type": "Compose",
+                      "inputs": "@items('Apply_to_each_Chunk')",
+                      "metadata": {
+                        "operationMetadataId": "a4dfa0b2-b37c-4f07-ae2a-8d2490a5b219"
+                      }
+                    },
+                    "Create_Template_Positions_by_Level": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "request/method": "POST",
+                          "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_templatedetails/Microsoft.Dynamics.CRM.CreateMultiple",
+                          "request/headers": {
+                            "OData-MaxVersion": "4.0",
+                            "OData-Version": "4.0",
+                            "If-None-Match": "null",
+                            "Accept": "application/json",
+                            "Content-Type": "application/json; charset=utf-8",
+                            "MSCRM.BypassCustomPluginExecution": "true",
+                            "MSCRM.SuppressDuplicateDetection": "true",
+                            "MSCRM.BypassBusinessLogicExecution": "CustomSync,CustomAsync",
+                            "MSCRM.SuppressCallbackRegistrationExpanderJob": "true"
+                          },
+                          "request/body": "{\n \"Targets\": @{items('Apply_to_each_Chunk')}\n}"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                          "operationId": "InvokeHttp",
+                          "connectionName": "shared_webcontents"
+                        }
+                      },
+                      "runAfter": {
+                        "Items_to_process": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "865ec132-7ffa-4926-8056-55222103bce5"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Append_Levels_to_process_to_Log": [
+                      "Succeeded"
+                    ]
+                  },
+                  "runtimeConfiguration": {
+                    "concurrency": {
+                      "repetitions": 20
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "19275f2b-e145-4dfe-b343-6b7ca762f101"
+                  }
+                },
+                "Increment_varIterationLevel_by": {
+                  "type": "IncrementVariable",
+                  "inputs": {
+                    "name": "varIterationLevel",
+                    "value": 1
+                  },
+                  "runAfter": {
+                    "Apply_to_each_Chunk": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Set_varNumberOfCalculationPositions_Processed": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "varNumberOfCalculationPositions_Processed",
+                    "value": "@outputs('Calculation_Positions_processed')"
+                  },
+                  "runAfter": {
+                    "Calculation_Positions_processed": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "bf0e8709-48f7-4019-a313-49490a7c13a1"
+                  }
+                },
+                "Calculation_Positions_processed": {
+                  "type": "Compose",
+                  "inputs": "@add(\r\n  variables('varNumberOfCalculationPositions_Processed'),\r\n  length(body('Filter_Payload_by_Level'))\r\n)",
+                  "runAfter": {
+                    "Apply_to_each_Chunk": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Append_processed_Calculation_Positions_to_Log": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[INF] - [@{utcNow()}] - @{variables('varNumberOfCalculationPositions_Processed')} of @{variables('varNumberOfCalculationPositions_ToProcess')} Positions added to Template. @{decodeUriComponent('%0A')}"
+                  },
+                  "runAfter": {
+                    "Set_varNumberOfCalculationPositions_Processed": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "a49d834f-5ffb-4015-8bc0-76c627823fbe"
+                  }
+                }
+              },
+              "runAfter": {
+                "Set_varIterationLevel": [
+                  "Succeeded"
+                ],
+                "Select_Calculation_Details": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Run_a_Child_Flow_-_Group_And_Update_BOM_Project_Product_Name": {
+              "type": "Workflow",
+              "inputs": {
+                "host": {
+                  "workflowReferenceName": "f0ab3344-cd16-f111-8341-7ced8d478a57"
+                },
+                "body": {
+                  "text": "@triggerBody()?['text_1']",
+                  "text_1": "@triggerBody()?['text_4']"
+                }
+              },
+              "runAfter": {
+                "Calculation_Detail_Notes": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Template_Project_Products": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1372fe2d-224d-498b-a16d-af023fc858b1"
+          }
+        },
+        "Template_Project_Products": {
+          "type": "Scope",
+          "actions": {
+            "Project_Product_Logic_ARCHIVED": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      1,
+                      1
+                    ]
+                  }
+                ]
+              },
+              "actions": {},
+              "else": {
+                "actions": {
+                  "Get_Calculation_Project_Products": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_projectproducts",
+                        "$select": "hso_name,hso_description,hso_costprice,_hso_uomid_value,_hso_metallabelid_value,hso_metalbase,hso_metalnumber,_hso_metallabelid_2_value,hso_metalbase_2,hso_metalnumber_2,_hso_metallabelid_3_value,hso_metalbase_3,hso_metalnumber_3,hso_basepricewithoutmetalsurcharge,_hso_surchargegroup_baseid_value,_hso_manufacturer_id_value,hso_productnumber_manufacturer,hso_typenumber_manufacturer,hso_suppliercatalogreference,hso_productnumber_supplier,hso_manufacturer_name,hso_europeanarticlenumber,hso_isbillofmaterials",
+                        "$filter": "_hso_calculationid_value eq '@{triggerBody()['text']}'",
+                        "$expand": "hso_textblock_hso_projectproduct($select=hso_name, hso_description, hso_projectproductid, _hso_projectproductid_value, hso_language;$expand=hso_projectproductid($select=hso_name)),\nhso_hso_calculationdetail_projectproductid_hs($select=hso_linenumber;$filter=startswith(hso_linenumber,'@{triggerBody()?['text_2']}'))"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "ListRecords",
+                        "connectionName": "shared_commondataserviceforapps_2"
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "70f01847-ae24-46d7-bb88-33e9d334b4a3"
+                    }
+                  },
+                  "Project_Products_to_process": {
+                    "type": "If",
+                    "expression": {
+                      "greater": [
+                        "@length(outputs('Get_Calculation_Project_Products')?['body/value'])",
+                        0
+                      ]
+                    },
+                    "actions": {
+                      "Add_Project_Products_for_Template_Positions": {
+                        "type": "Scope",
+                        "actions": {
+                          "Select_Calculation_Project_Products": {
+                            "type": "Select",
+                            "inputs": {
+                              "from": "@outputs('Get_Calculation_Project_Products')?['body/value']",
+                              "select": {
+                                "hso_name": "@replace(\r\n replace(\r\n  item()?['hso_name'], \r\n  '/', \r\n  ' '\r\n ), \r\n '\\', \r\n ' '\r\n)",
+                                "hso_templateid@odata.bind": "/hso_templates(@{triggerBody()['text_1']})",
+                                "hso_description": "@item()?['hso_description']",
+                                "hso_costprice": "@item()?['hso_costprice']",
+                                "hso_uomid@odata.bind": "/uoms(@{item()?['_hso_uomid_value']})",
+                                "hso_metallabelid@odata.bind": "@If(empty(item()?['_hso_metallabelid_value']), '', concat('hso_metallabels(', item()?['_hso_metallabelid_value'], ')'))",
+                                "hso_metalbase": "@item()?['hso_metalbase']",
+                                "hso_metalnumber": "@item()?['hso_metalnumber']",
+                                "hso_metallabelid_2@odata.bind": "@If(empty(item()?['_hso_metallabelid_2_value']), '', concat('hso_metallabels(', item()?['_hso_metallabelid_2_value'], ')'))",
+                                "hso_metalbase_2": "@item()?['hso_metalbase_2']",
+                                "hso_metalnumber_2": "@item()?['hso_metalnumber_2']",
+                                "hso_metallabelid_3@odata.bind": "@If(empty(item()?['_hso_metallabelid_3_value']), '', concat('hso_metallabels(', item()?['_hso_metallabelid_3_value'], ')'))",
+                                "hso_metalbase_3": "@item()?['hso_metalbase_3']",
+                                "hso_metalnumber_3": "@item()?['hso_metalnumber_3']",
+                                "hso_basepricewithoutmetalsurcharge": "@item()?['hso_basepricewithoutmetalsurcharge']",
+                                "hso_surchargegroup_baseid@odata.bind": "@If(empty(item()?['_hso_surchargegroup_baseid_value']), '', concat('hso_surchargegroup_bases(', item()?['_hso_surchargegroup_baseid_value'], ')'))",
+                                "hso_manufacturer_id@odata.bind": "@If(empty(item()?['_hso_manufacturer_id_value']), '', concat('hso_manufacturers(', item()?['_hso_manufacturer_id_value'], ')'))",
+                                "hso_productnumber_manufacturer": "@item()?['hso_productnumber_manufacturer']",
+                                "hso_typenumber_manufacturer": "@item()?['hso_typenumber_manufacturer']",
+                                "hso_suppliercatalogreference": "@item()?['hso_suppliercatalogreference']",
+                                "hso_productnumber_supplier": "@item()?['hso_productnumber_supplier']",
+                                "hso_isfromtemplate": "@true",
+                                "hso_manufacturer_name": "@item()?['hso_manufacturer_name']",
+                                "hso_europeanarticlenumber": "@item()?['hso_europeanarticlenumber']",
+                                "@{variables('varOdataType')}": "#Microsoft.Dynamics.CRM.hso_projectproduct",
+                                "RelatedCalculationPosition_LineNumber": "@if(empty(item()?['hso_hso_calculationdetail_projectproductid_hs']), 'XXX', item()?['hso_hso_calculationdetail_projectproductid_hs'][0]?['hso_linenumber'])",
+                                "hso_isbillofmaterials": "@item()?['hso_isbillofmaterials']"
+                              }
+                            },
+                            "metadata": {
+                              "operationMetadataId": "e7255e96-3695-4014-8211-3468b028347e"
+                            }
+                          },
+                          "Filter_selected_Calculation_Project_Products": {
+                            "type": "Query",
+                            "inputs": {
+                              "from": "@body('Select_Calculation_Project_Products')",
+                              "where": "@startsWith(item()?['RelatedCalculationPosition_LineNumber'],triggerBody()['text_2'])"
+                            },
+                            "runAfter": {
+                              "Select_Calculation_Project_Products": [
+                                "Succeeded"
+                              ]
+                            },
+                            "metadata": {
+                              "operationMetadataId": "5e1dca3f-e7a2-4c02-a9dc-56b9d1c9238f"
+                            }
+                          },
+                          "Set_varNumberOfCalculationProjectProducts_ToProcess": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "varNumberOfCalculationProjectProducts_ToProcess",
+                              "value": "@length(body('Filter_selected_Calculation_Project_Products'))"
+                            },
+                            "runAfter": {
+                              "Filter_selected_Calculation_Project_Products": [
+                                "Succeeded"
+                              ]
+                            },
+                            "metadata": {
+                              "operationMetadataId": "344df575-8122-46ac-9692-f5835a3e56e6"
+                            }
+                          },
+                          "Template_Project_Products_to_create": {
+                            "type": "If",
+                            "expression": {
+                              "greater": [
+                                "@variables('varNumberOfCalculationProjectProducts_ToProcess')",
+                                0
+                              ]
+                            },
+                            "actions": {
+                              "Select_Template_Project_Products": {
+                                "type": "Select",
+                                "inputs": {
+                                  "from": "@body('Filter_selected_Calculation_Project_Products')",
+                                  "select": {
+                                    "hso_name": "@item()?['hso_name']",
+                                    "hso_templateid@odata.bind": "@item()?['hso_templateid@odata.bind']",
+                                    "hso_description": "@item()?['hso_description']",
+                                    "hso_costprice": "@item()?['hso_costprice']",
+                                    "hso_uomid@odata.bind": "@item()?['hso_uomid@odata.bind']",
+                                    "hso_metallabelid@odata.bind": "@item()?['hso_metallabelid@odata.bind']",
+                                    "hso_metalbase": "@item()?['hso_metalbase']",
+                                    "hso_metalnumber": "@item()?['hso_metalnumber']",
+                                    "hso_metallabelid_2@odata.bind": "@item()?['hso_metallabelid_2@odata.bind']",
+                                    "hso_metalbase_2": "@item()?['hso_metalbase_2']",
+                                    "hso_metalnumber_2": "@item()?['hso_metalnumber_2']",
+                                    "hso_metallabelid_3@odata.bind": "@item()?['hso_metallabelid_3@odata.bind']",
+                                    "hso_metalbase_3": "@item()?['hso_metalbase_3']",
+                                    "hso_metalnumber_3": "@item()?['hso_metalnumber_3']",
+                                    "hso_basepricewithoutmetalsurcharge": "@item()?['hso_basepricewithoutmetalsurcharge']",
+                                    "hso_surchargegroup_baseid@odata.bind": "@item()?['hso_surchargegroup_baseid@odata.bind']",
+                                    "hso_manufacturer_id@odata.bind": "@item()?['hso_manufacturer_id@odata.bind']",
+                                    "hso_productnumber_manufacturer": "@item()?['hso_productnumber_manufacturer']",
+                                    "hso_typenumber_manufacturer": "@item()?['hso_typenumber_manufacturer']",
+                                    "hso_suppliercatalogreference": "@item()?['hso_suppliercatalogreference']",
+                                    "hso_productnumber_supplier": "@item()?['hso_productnumber_supplier']",
+                                    "hso_isfromtemplate": "@item()?['hso_isfromtemplate']",
+                                    "hso_manufacturer_name": "@item()?['hso_manufacturer_name']",
+                                    "hso_europeanarticlenumber": "@item()?['hso_europeanarticlenumber']",
+                                    "@variables('varOdataType')": "#Microsoft.Dynamics.CRM.hso_projectproduct"
+                                  }
+                                },
+                                "metadata": {
+                                  "operationMetadataId": "dad5341e-240f-4e26-a482-a1ab038a168b"
+                                }
+                              },
+                              "Create_Template_Project_Products": {
+                                "type": "OpenApiConnection",
+                                "inputs": {
+                                  "parameters": {
+                                    "request/method": "POST",
+                                    "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_projectproducts/Microsoft.Dynamics.CRM.CreateMultiple",
+                                    "request/headers": {
+                                      "OData-MaxVersion": "4.0",
+                                      "OData-Version": "4.0",
+                                      "If-None-Match": "null",
+                                      "Accept": "application/json",
+                                      "Content-Type": "application/json; charset=utf-8"
+                                    },
+                                    "request/body": "{\n \"Targets\": @{body('Select_Template_Project_Products')}\n}"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                                    "operationId": "InvokeHttp",
+                                    "connectionName": "shared_webcontents"
+                                  }
+                                },
+                                "runAfter": {
+                                  "Select_Template_Project_Products": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "metadata": {
+                                  "operationMetadataId": "b76848f5-4615-4120-962e-f1d96dc41181"
+                                }
+                              },
+                              "Set_varNumberOfTemplateProjectProducts_Processed": {
+                                "type": "SetVariable",
+                                "inputs": {
+                                  "name": "varNumberOfCalculationProjectProducts_Processed",
+                                  "value": "@length(body('Create_Template_Project_Products')?['Ids'])"
+                                },
+                                "runAfter": {
+                                  "Create_Template_Project_Products": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "metadata": {
+                                  "operationMetadataId": "cf08d789-97bd-4fd6-975f-46e01f1fd2cc"
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "runAfter": {
+                              "Set_varNumberOfCalculationProjectProducts_ToProcess": [
+                                "Succeeded"
+                              ]
+                            },
+                            "metadata": {
+                              "operationMetadataId": "3fbae30f-6f40-437e-9a0f-9d4e23597662"
+                            }
+                          }
+                        },
+                        "metadata": {
+                          "operationMetadataId": "77a3705a-36a6-4688-98ed-937c66592509"
+                        }
+                      },
+                      "Add_Project_Products_for_Template_Positions_-_Error": {
+                        "type": "Scope",
+                        "actions": {
+                          "Filter_Results_for_failed_actions_[Project_Products]": {
+                            "type": "Query",
+                            "inputs": {
+                              "from": "@result('Add_Project_Products_for_Template_Positions')",
+                              "where": "@equals(item()['status'], 'Failed')"
+                            },
+                            "metadata": {
+                              "operationMetadataId": "4942000f-aabd-417d-a396-f1b4df134b54"
+                            }
+                          },
+                          "Select_Error_Summary_[Project_Products]": {
+                            "type": "Select",
+                            "inputs": {
+                              "from": "@body('Filter_Results_for_failed_actions_[Project_Products]')",
+                              "select": {
+                                "Action": "@item()?['name']",
+                                "Code": "@item()?['code']",
+                                "Status": "@item()?['status']",
+                                "StatusCode": "@item()?['outputs']?['statusCode']",
+                                "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                              }
+                            },
+                            "runAfter": {
+                              "Filter_Results_for_failed_actions_[Project_Products]": [
+                                "Succeeded"
+                              ]
+                            },
+                            "metadata": {
+                              "operationMetadataId": "4c7350cb-0148-4dbe-afe8-8a0098d053e0"
+                            }
+                          },
+                          "Apply_to_each_Error_Summary_[Project_Products]": {
+                            "type": "Foreach",
+                            "foreach": "@body('Select_Error_Summary_[Project_Products]')",
+                            "actions": {
+                              "Append_Error_Summary_[Project_Products]": {
+                                "type": "AppendToArrayVariable",
+                                "inputs": {
+                                  "name": "varError",
+                                  "value": "@items('Apply_to_each_Error_Summary_[Project_Products]')"
+                                },
+                                "metadata": {
+                                  "operationMetadataId": "ec1f0892-e087-4660-92df-f6305967b452"
+                                }
+                              }
+                            },
+                            "runAfter": {
+                              "Select_Error_Summary_[Project_Products]": [
+                                "Succeeded"
+                              ]
+                            },
+                            "runtimeConfiguration": {
+                              "concurrency": {
+                                "repetitions": 20
+                              }
+                            },
+                            "metadata": {
+                              "operationMetadataId": "454050c6-207a-4e05-a745-8e9447a0f33f"
+                            }
+                          }
+                        },
+                        "runAfter": {
+                          "Add_Project_Products_for_Template_Positions": [
+                            "Failed",
+                            "TimedOut"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "db197c8e-0bd8-486f-b577-9dfbf8b21775"
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {}
+                    },
+                    "runAfter": {
+                      "Get_Calculation_Project_Products": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "a53add30-2913-48f2-bdc1-f408dc17218d"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Project_Product_found": [
+                  "Succeeded"
+                ],
+                "Use_Placeholder_BOM_Project_Product": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Filter_Calculation_Details_by_Project_Product": {
+              "type": "Query",
+              "description": "Element Type = Project Product",
+              "inputs": {
+                "from": "@outputs('Get_Calculation_Details')?['body/value']",
+                "where": "@equals(item()?['hso_positionelementtype'],100000002)"
+              }
+            },
+            "Project_Product_found": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@length(body('Filter_Calculation_Details_by_Project_Product'))",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Select_Project_Product_GUID": {
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@body('Filter_Calculation_Details_by_Project_Product')",
+                    "select": {
+                      "_hso_projectproductid_value": "@item()?['_hso_projectproductid_value']"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "83ab37b2-e02d-43c0-8fad-1f564eff7e94"
+                  }
+                },
+                "Distinct_Project_Product_GUIDs": {
+                  "type": "Compose",
+                  "inputs": "@union(\r\n body('Select_Project_Product_GUID'),\r\n body('Select_Project_Product_GUID')\r\n)",
+                  "runAfter": {
+                    "Select_Project_Product_GUID": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "984de636-5297-4e87-aaa9-f60cf97f4075"
+                  }
+                },
+                "Apply_to_each_Project_Product_GUID": {
+                  "type": "Foreach",
+                  "foreach": "@outputs('Distinct_Project_Product_GUIDs')",
+                  "actions": {
+                    "FETCH_Project_Product": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "request/method": "GET",
+                          "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_projectproducts(@{items('Apply_to_each_Project_Product_GUID')?['_hso_projectproductid_value']})?$select=_hso_calculationid_value,_hso_templateid_value,hso_name,_hso_uomid_value,hso_metalbase_2,_hso_metallabelid_2_value,hso_metalnumber_2,hso_metalbase_3,_hso_metallabelid_3_value,hso_metalnumber_3,_hso_surchargegroup_baseid_value,hso_description,hso_europeanarticlenumber,hso_costprice,hso_basepricewithoutmetalsurcharge,_hso_manufacturer_id_value,hso_productnumber_manufacturer,hso_manufacturer_name,hso_typenumber_manufacturer,hso_isbillofmaterials,hso_suppliercatalogreference,hso_supplier_name,hso_productnumber_supplier,hso_metalbase,_hso_metallabelid_value,hso_metalnumber,hso_projecttype,hso_salesprice,_hso_productid_value,_transactioncurrencyid_value",
+                          "request/headers": {
+                            "OData-MaxVersion": "4.0",
+                            "OData-Version": "4.0",
+                            "Accept": "application/json",
+                            "Content-Type": "application/json; charset=utf-8"
+                          }
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                          "operationId": "InvokeHttp",
+                          "connectionName": "shared_webcontents"
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "b849ec43-c70b-443b-8476-09b71586c708"
+                      }
+                    },
+                    "Remove_Calculation_GUID_from_Payload": {
+                      "type": "Compose",
+                      "inputs": "@removeProperty(\r\n    body('FETCH_Project_Product'),\r\n    '_hso_calculationid_value'\r\n)",
+                      "runAfter": {
+                        "FETCH_Project_Product": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Select_Project_Product_Payload": {
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@array(outputs('Remove_Calculation_GUID_from_Payload'))",
+                        "select": {
+                          "hso_name": "@body('FETCH_Project_Product')?['hso_name']",
+                          "hso_uomid@odata.bind": "uoms(@{body('FETCH_Project_Product')?['_hso_uomid_value']})",
+                          "hso_metalbase_2": "@body('FETCH_Project_Product')?['hso_metalbase_2']",
+                          "hso_metallabelid_2@odata.bind": "@if(empty(outputs('FETCH_Project_Product')?['body/_hso_metallabelid_2_value']),null,concat('hso_metallabels(', outputs('FETCH_Project_Product')?['body/_hso_metallabelid_2_value'], ')'))",
+                          "hso_metalnumber_2": "@body('FETCH_Project_Product')?['hso_metalnumber_2']",
+                          "hso_metalbase_3": "@body('FETCH_Project_Product')?['hso_metalbase_3']",
+                          "hso_metallabelid_3@odata.bind": "@if(empty(outputs('FETCH_Project_Product')?['body/_hso_metallabelid_3_value']),null,concat('hso_metallabels(', outputs('FETCH_Project_Product')?['body/_hso_metallabelid_3_value'], ')'))",
+                          "hso_metalnumber_3": "@body('FETCH_Project_Product')?['hso_metalnumber_3']",
+                          "hso_surchargegroup_baseid@odata.bind": "@if(empty(outputs('FETCH_Project_Product')?['body/_hso_surchargegroup_baseid_value']),null,concat('hso_surchargegroup_bases(', outputs('FETCH_Project_Product')?['body/_hso_surchargegroup_baseid_value'], ')'))",
+                          "hso_description": "@body('FETCH_Project_Product')?['hso_description']",
+                          "hso_europeanarticlenumber": "@body('FETCH_Project_Product')?['hso_europeanarticlenumber']",
+                          "hso_costprice": "@decimal(\r\n coalesce(\r\n  body('FETCH_Project_Product')?['hso_costprice'],\r\n  0\r\n )\r\n)",
+                          "hso_basepricewithoutmetalsurcharge": "@decimal(\r\n coalesce(\r\n  body('FETCH_Project_Product')?['hso_basepricewithoutmetalsurcharge'],\r\n  0\r\n )\r\n)",
+                          "hso_manufacturer_id@odata.bind": "@if(empty(outputs('FETCH_Project_Product')?['body/_hso_manufacturer_id_value']),null,concat('hso_manufacturers(', outputs('FETCH_Project_Product')?['body/_hso_manufacturer_id_value'], ')'))",
+                          "hso_productnumber_manufacturer": "@body('FETCH_Project_Product')?['hso_productnumber_manufacturer']",
+                          "hso_manufacturer_name": "@body('FETCH_Project_Product')?['hso_manufacturer_name']",
+                          "hso_typenumber_manufacturer": "@body('FETCH_Project_Product')?['hso_typenumber_manufacturer']",
+                          "hso_isbillofmaterials": "@outputs('FETCH_Project_Product')?['body/hso_isbillofmaterials']",
+                          "hso_templateid@odata.bind": "hso_templates(@{triggerBody()?['text_1']})",
+                          "hso_suppliercatalogreference": "@body('FETCH_Project_Product')?['hso_suppliercatalogreference']",
+                          "hso_supplier_name": "@body('FETCH_Project_Product')?['hso_supplier_name']",
+                          "hso_productnumber_supplier": "@body('FETCH_Project_Product')?['hso_productnumber_supplier']",
+                          "hso_metalbase": "@body('FETCH_Project_Product')?['hso_metalbase']",
+                          "hso_metallabelid@odata.bind": "@if(empty(outputs('FETCH_Project_Product')?['body/_hso_metallabelid_value']),null,concat('hso_metallabels(', outputs('FETCH_Project_Product')?['body/_hso_metallabelid_value'], ')'))",
+                          "hso_metalnumber": "@body('FETCH_Project_Product')?['hso_metalnumber']",
+                          "hso_projecttype": "@outputs('FETCH_Project_Product')?['body/hso_projecttype']",
+                          "hso_salesprice": "@decimal(\r\n coalesce(\r\n  body('FETCH_Project_Product')?['hso_salesprice'],\r\n  0\r\n )\r\n)",
+                          "hso_productid@odata.bind": "@if(empty(outputs('FETCH_Project_Product')?['body/_hso_productid_value']),null,concat('products(', outputs('FETCH_Project_Product')?['body/_hso_productid_value'], ')'))",
+                          "transactioncurrencyid@odata.bind": "transactioncurrencies(@{outputs('FETCH_Project_Product')?['body/_transactioncurrencyid_value']})",
+                          "hso_projectproductid": "@outputs('New_Project_Product_GUID')"
+                        }
+                      },
+                      "runAfter": {
+                        "New_Project_Product_GUID": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "CREATE_Project_Product": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "request/method": "POST",
+                          "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_projectproducts",
+                          "request/headers": {
+                            "OData-MaxVersion": "4.0",
+                            "OData-Version": "4.0",
+                            "If-None-Match": "null",
+                            "Accept": "application/json",
+                            "Content-Type": "application/json; charset=utf-8",
+                            "MSCRM.BypassCustomPluginExecution": "true",
+                            "Prefer": "return=representation"
+                          },
+                          "request/body": "@body('Select_Project_Product_Payload')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                          "operationId": "InvokeHttp",
+                          "connectionName": "shared_webcontents"
+                        }
+                      },
+                      "runAfter": {
+                        "Select_Project_Product_Payload": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "548b8d64-a139-4a72-8d7d-29a115b74844"
+                      }
+                    },
+                    "Append_Project_Product_to_Log_[Success]": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "varLog",
+                        "value": "[INF] - [@{formatDateTime(utcNow(), 'HH:mm:ss')}] -  Project Product '@{replace(\n replace(\n  replace(\n   body('FETCH_Project_Product')?['hso_name'], \n   '/', \n   ' '\n  ), \n  '\\', \n  ' '\n ), \n '\\n', \n ' '\n)}' added to Template. @{decodeUriComponent('%0A')}"
+                      },
+                      "runAfter": {
+                        "Append_Project_Product_GUIDs_to_Mapping": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Append_Project_Product_GUIDs_to_Mapping": {
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "varProjectProductGUID_Mapping",
+                        "value": {
+                          "GUIDold": "@items('Apply_to_each_Project_Product_GUID')?['_hso_projectproductid_value']",
+                          "GUIDnew": "@outputs('New_Project_Product_GUID')"
+                        }
+                      },
+                      "runAfter": {
+                        "CREATE_Project_Product": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "New_Project_Product_GUID": {
+                      "type": "Compose",
+                      "inputs": "@guid()",
+                      "runAfter": {
+                        "Remove_Calculation_GUID_from_Payload": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Distinct_Project_Product_GUIDs": [
+                      "Succeeded"
+                    ]
+                  },
+                  "runtimeConfiguration": {
+                    "concurrency": {
+                      "repetitions": 20
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Append_No_Project_Products_to_Log": {
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "varLog",
+                      "value": "[INF] - [@{formatDateTime(utcNow(), 'HH:mm:ss')}] -  No Project Products to create. @{decodeUriComponent('%0A')}"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Filter_Calculation_Details_by_Project_Product": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Use_Placeholder_BOM_Project_Product": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@triggerBody()?['boolean_1']",
+                      "@true"
+                    ]
+                  }
+                ]
+              },
+              "actions": {},
+              "else": {
+                "actions": {
+                  "Filter_Calculation_Details_by_BOM": {
+                    "type": "Query",
+                    "description": "Is Bill Of Materials = TRUE\n",
+                    "inputs": {
+                      "from": "@outputs('Get_Calculation_Details')?['body/value']",
+                      "where": "@equals(item()?['hso_isbillofmaterial'],true)"
+                    }
+                  },
+                  "BOM_Project_Product_found": {
+                    "type": "If",
+                    "expression": {
+                      "and": [
+                        {
+                          "greater": [
+                            "@length(body('Filter_Calculation_Details_by_BOM'))",
+                            0
+                          ]
+                        }
+                      ]
+                    },
+                    "actions": {
+                      "Select_BOM_Project_Product_GUID": {
+                        "type": "Select",
+                        "inputs": {
+                          "from": "@body('Filter_Calculation_Details_by_BOM')",
+                          "select": {
+                            "_hso_billofmaterial_projectproductid_value": "@item()?['_hso_billofmaterial_projectproductid_value']"
+                          }
+                        },
+                        "metadata": {
+                          "operationMetadataId": "0f3a96b4-f611-4410-81ec-ddc9c43b10af"
+                        }
+                      },
+                      "Distinct_BOM_Project_Product_GUIDs": {
+                        "type": "Compose",
+                        "inputs": "@union(\r\n body('Select_BOM_Project_Product_GUID'),\r\n body('Select_BOM_Project_Product_GUID')\r\n)",
+                        "runAfter": {
+                          "Select_BOM_Project_Product_GUID": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "528ea0e8-44db-4629-af67-2c35fc2c49e6"
+                        }
+                      },
+                      "Apply_to_each_distinct_BOM_Project_Product_GUID": {
+                        "type": "Foreach",
+                        "foreach": "@outputs('Distinct_BOM_Project_Product_GUIDs')",
+                        "actions": {
+                          "FETCH_BOM_Project_Product": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "request/method": "GET",
+                                "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_projectproducts(@{items('Apply_to_each_distinct_BOM_Project_Product_GUID')?['_hso_billofmaterial_projectproductid_value']})?$select=_hso_calculationid_value,_hso_templateid_value,hso_name,_hso_uomid_value,hso_description,hso_isbillofmaterials,hso_projecttype",
+                                "request/headers": {
+                                  "OData-MaxVersion": "4.0",
+                                  "OData-Version": "4.0",
+                                  "Accept": "application/json",
+                                  "Content-Type": "application/json; charset=utf-8"
+                                }
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                                "operationId": "InvokeHttp",
+                                "connectionName": "shared_webcontents"
+                              }
+                            },
+                            "metadata": {
+                              "operationMetadataId": "ebe389fe-8268-457b-85b3-9b1750e60703"
+                            }
+                          },
+                          "CREATE_BOM_Project_Product": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "request/method": "POST",
+                                "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_projectproducts",
+                                "request/headers": {
+                                  "OData-MaxVersion": "4.0",
+                                  "OData-Version": "4.0",
+                                  "If-None-Match": "null",
+                                  "Accept": "application/json",
+                                  "Content-Type": "application/json; charset=utf-8",
+                                  "MSCRM.BypassCustomPluginExecution": "true",
+                                  "Prefer": "return=representation"
+                                },
+                                "request/body": "{\n      \"hso_name\": \"@{replace(\r\n replace(\r\n body('FETCH_BOM_Project_Product')?['hso_name'], \r\n  '/', \r\n  ' '\r\n ), \r\n '\\', \r\n ' '\r\n)}\",\n      \"hso_uomid@odata.bind\": \"uoms(@{body('FETCH_BOM_Project_Product')?['_hso_uomid_value']})\",\n      \"hso_description\": \"@{body('FETCH_BOM_Project_Product')?['hso_description']}\",\n      \"hso_isbillofmaterials\": \"@{body('FETCH_BOM_Project_Product')?['hso_isbillofmaterials']}\",\n      \"hso_templateid@odata.bind\": \"hso_templates(@{triggerBody()?['text_1']})\",\n      \"hso_projecttype\": \"@{body('FETCH_BOM_Project_Product')?['hso_projecttype']}\"\n    }"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                                "operationId": "InvokeHttp",
+                                "connectionName": "shared_webcontents"
+                              }
+                            },
+                            "runAfter": {
+                              "FETCH_BOM_Project_Product": [
+                                "Succeeded"
+                              ]
+                            },
+                            "metadata": {
+                              "operationMetadataId": "6b15dd8f-617b-41f6-95f0-a7c773951213"
+                            }
+                          },
+                          "Append_BOM_Project_Product_to_Log_[Success]": {
+                            "type": "AppendToStringVariable",
+                            "inputs": {
+                              "name": "varLog",
+                              "value": "[INF] - [@{formatDateTime(utcNow(), 'HH:mm:ss')}] -  BOM Project Product '@{replace(\r\n replace(\r\n body('FETCH_BOM_Project_Product')?['hso_name'], \r\n  '/', \r\n  ' '\r\n ), \r\n '\\', \r\n ' '\r\n)}' added to Template. @{decodeUriComponent('%0A')}"
+                            },
+                            "runAfter": {
+                              "CREATE_BOM_Project_Product": [
+                                "Succeeded"
+                              ]
+                            }
+                          }
+                        },
+                        "runAfter": {
+                          "Distinct_BOM_Project_Product_GUIDs": [
+                            "Succeeded"
+                          ]
+                        },
+                        "runtimeConfiguration": {
+                          "concurrency": {
+                            "repetitions": 20
+                          }
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {
+                        "Append_No_BOM_Project_Product_to_Log": {
+                          "type": "AppendToStringVariable",
+                          "inputs": {
+                            "name": "varLog",
+                            "value": "[INF] - [@{formatDateTime(utcNow(), 'HH:mm:ss')}] -  No BOM Project Products to create. @{decodeUriComponent('%0A')}"
+                          }
+                        }
+                      }
+                    },
+                    "runAfter": {
+                      "Filter_Calculation_Details_by_BOM": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Collect_Information": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6aa5297f-ef01-4536-9b79-5ac23b927066"
+          }
+        },
+        "Template_Project_Product_Textblocks": {
+          "type": "Scope",
+          "actions": {
+            "Project_Products_with_Textblocks_to_process": {
+              "type": "If",
+              "expression": {
+                "greater": [
+                  "@variables('varNumberOfCalculationProjectProducts_ToProcess')",
+                  0
+                ]
+              },
+              "actions": {
+                "Apply_to_each_Project_Product": {
+                  "type": "Foreach",
+                  "foreach": "@outputs('Get_Calculation_Project_Products')?['body/value']",
+                  "actions": {
+                    "Number_of_Textblocks_for_Project_Product": {
+                      "type": "Compose",
+                      "inputs": "@length(items('Apply_to_each_Project_Product')?['hso_textblock_hso_projectproduct'])",
+                      "metadata": {
+                        "operationMetadataId": "efdf2fab-65b9-4a75-b8fa-6028ff5d01c4"
+                      }
+                    },
+                    "Textblocks_to_process": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "greater": [
+                              "@length(items('Apply_to_each_Project_Product')?['hso_textblock_hso_projectproduct'])",
+                              0
+                            ]
+                          },
+                          {
+                            "startsWith": [
+                              "@if(empty(item()?['hso_hso_calculationdetail_projectproductid_hs']), 'XXX', item()?['hso_hso_calculationdetail_projectproductid_hs'][0]?['hso_linenumber'])",
+                              "@triggerBody()['text_2']"
+                            ]
+                          }
+                        ]
+                      },
+                      "actions": {
+                        "Apply_to_each_Project_Product_Textblock": {
+                          "type": "Foreach",
+                          "foreach": "@items('Apply_to_each_Project_Product')?['hso_textblock_hso_projectproduct']",
+                          "actions": {
+                            "Append_to_varTextblockProjectProducts": {
+                              "type": "AppendToArrayVariable",
+                              "inputs": {
+                                "name": "varTextblockProjectProducts",
+                                "value": {
+                                  "@{variables('varOdataType')}": "#Microsoft.Dynamics.CRM.hso_textblock",
+                                  "hso_name": "@{items('Apply_to_each_Project_Product_Textblock')?['hso_name']}",
+                                  "hso_language": "@items('Apply_to_each_Project_Product_Textblock')?['hso_language']",
+                                  "hso_description": "@{items('Apply_to_each_Project_Product_Textblock')?['hso_description']}",
+                                  "hso_projectproductid@odata.bind": "/hso_projectproducts(_hso_templateid_value=@{triggerBody()['text_1']},hso_name='@{replace(replace(items('Apply_to_each_Project_Product')?['hso_name'], '/', ' '), '\\', ' ')}')"
+                                }
+                              },
+                              "metadata": {
+                                "operationMetadataId": "d2f4726d-5998-420f-9d45-55dfc80a9707"
+                              }
+                            }
+                          },
+                          "runtimeConfiguration": {
+                            "concurrency": {
+                              "repetitions": 20
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "7d1ce750-5dd9-446b-b69a-ad92f46e95f2"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "runAfter": {
+                        "Number_of_Textblocks_for_Project_Product": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "1fb41f64-e918-4815-ad24-86f4625e593a"
+                      }
+                    }
+                  },
+                  "runtimeConfiguration": {
+                    "concurrency": {
+                      "repetitions": 20
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "018c6758-39d0-44d0-9870-10b2a8cb7cc2"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "metadata": {
+                "operationMetadataId": "68d83a87-f09f-433e-91e4-ed88a2dd7325"
+              }
+            },
+            "Project_Product_Textblocks_to_process": {
+              "type": "If",
+              "expression": {
+                "greater": [
+                  "@length(variables('varTextblockProjectProducts'))",
+                  0
+                ]
+              },
+              "actions": {
+                "Add_Textblocks_to_Template_Project_Products": {
+                  "type": "Scope",
+                  "actions": {
+                    "Create_Project_Product_Textblocks": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "request/method": "POST",
+                          "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_textblocks/Microsoft.Dynamics.CRM.CreateMultiple",
+                          "request/headers": {
+                            "OData-MaxVersion": "4.0",
+                            "OData-Version": "4.0",
+                            "If-None-Match": "null",
+                            "Accept": "application/json",
+                            "Content-Type": "application/json; charset=utf-8"
+                          },
+                          "request/body": "{\n \"Targets\": @{variables('varTextblockProjectProducts')}\n}"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                          "operationId": "InvokeHttp",
+                          "connectionName": "shared_webcontents"
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "40f5b1d4-b33d-4d6f-a9de-28177e4bd81d"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "e0ca5d5c-04b5-4cb5-8133-444067193277"
+                  }
+                },
+                "Add_Textblocks_to_Template_Project_Products_-_Error": {
+                  "type": "Scope",
+                  "actions": {
+                    "Filter_Results_for_failed_actions_[Project_Product_Textblocks]": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@result('Add_Textblocks_to_Template_Project_Products')",
+                        "where": "@equals(item()['status'], 'Failed')"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "7090da0c-3813-4dd0-9cbd-b2ad01a0ed24"
+                      }
+                    },
+                    "Select_Error_Summary_[Project_Product_Textblocks]": {
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Filter_Results_for_failed_actions_[Project_Product_Textblocks]')",
+                        "select": {
+                          "Action": "@item()?['name']",
+                          "Code": "@item()?['code']",
+                          "Status": "@item()?['status']",
+                          "StatusCode": "@item()?['outputs']?['statusCode']",
+                          "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                        }
+                      },
+                      "runAfter": {
+                        "Filter_Results_for_failed_actions_[Project_Product_Textblocks]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "09ef6b28-0e1f-40ad-920b-c4af15853f7f"
+                      }
+                    },
+                    "Apply_to_each_Error_Summary_[Project_Product_Textblocks]": {
+                      "type": "Foreach",
+                      "foreach": "@body('Select_Error_Summary_[Project_Product_Textblocks]')",
+                      "actions": {
+                        "Append_Error_Summary_[Project_Product_Textblocks]": {
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "varError",
+                            "value": "@items('Apply_to_each_Error_Summary_[Project_Product_Textblocks]')"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "0b8037dc-f2b5-477f-b211-98969483af1e"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Select_Error_Summary_[Project_Product_Textblocks]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "runtimeConfiguration": {
+                        "concurrency": {
+                          "repetitions": 20
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "53785601-5834-40d2-b5cb-91367eb3d3d6"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Add_Textblocks_to_Template_Project_Products": [
+                      "Failed",
+                      "TimedOut"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "eedab354-2f76-4b1b-9b29-afc6d0274447"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Project_Products_with_Textblocks_to_process": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "e6c663e1-9915-4446-9eef-f998e6e94f8f"
+              }
+            }
+          },
+          "runAfter": {
+            "Template_Project_Products": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f4d44d08-efe0-4cf8-a968-b7220800995d"
+          }
+        },
+        "Summary": {
+          "type": "Scope",
+          "actions": {
+            "Processing_successful": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@variables('varNumberOfCalculationPositions_ToProcess')",
+                      "@variables('varNumberOfCalculationPositions_Processed')"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@variables('varNumberOfCalculationProjectProducts_ToProcess')",
+                      "@variables('varNumberOfCalculationProjectProducts_Processed')"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@body('Run_a_Child_Flow_-_Group_And_Update_BOM_Project_Product_Name')?['outcome']",
+                      "OK"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Respond_to_Parent_Flow_[Success]": {
+                  "type": "Response",
+                  "kind": "PowerApp",
+                  "inputs": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "outcome": {
+                          "title": "Outcome",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        },
+                        "error_message": {
+                          "title": "Error Message",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        },
+                        "calculation_positions_to_process": {
+                          "title": "Calculation Positions to process",
+                          "x-ms-dynamically-added": true,
+                          "type": "number"
+                        },
+                        "calculation_positions_processed": {
+                          "title": "Calculation Positions processed",
+                          "x-ms-dynamically-added": true,
+                          "type": "number"
+                        },
+                        "Project_Products_to_process": {
+                          "title": "Project Products to process",
+                          "x-ms-dynamically-added": true,
+                          "type": "number"
+                        },
+                        "project_products_processed": {
+                          "title": "Project Products processed",
+                          "x-ms-dynamically-added": true,
+                          "type": "number"
+                        }
+                      },
+                      "additionalProperties": {}
+                    },
+                    "statusCode": 200,
+                    "body": {
+                      "outcome": "Success",
+                      "error_message": " ",
+                      "calculation_positions_to_process": "@{variables('varNumberOfCalculationPositions_ToProcess')}",
+                      "calculation_positions_processed": "@{variables('varNumberOfCalculationPositions_Processed')}",
+                      "Project_Products_to_process": "@{variables('varNumberOfCalculationProjectProducts_ToProcess')}",
+                      "project_products_processed": "@{variables('varNumberOfCalculationProjectProducts_Processed')}"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_Processing_Log_[Success]": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "bf439506-4473-40b2-8767-037915e20acc"
+                  }
+                },
+                "Update_Processing_Log_[Success]": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_processinglogs",
+                      "recordId": "@triggerBody()?['text_4']",
+                      "item/hso_end_datetime": "@utcNow()",
+                      "item/hso_flowrunurl": "@concat('https://emea.flow.microsoft.com/manage/environments/', workflow()?['tags']['environmentName'], '/flows/', workflow()?['name'], '/runs/', workflow()?['run']['name'])",
+                      "item/hso_log": "@variables('varLog')",
+                      "item/hso_processedrecords": "@variables('varNumberOfCalculationPositions_Processed')",
+                      "item/hso_processingstatus": 100000002
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "connectionName": "shared_commondataserviceforapps_2"
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Apply_to_each_Error_Summary": {
+                    "type": "Foreach",
+                    "foreach": "@variables('varError')",
+                    "actions": {
+                      "Append_to_Error_Message": {
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varErrorMessage",
+                          "value": "[ERROR] - Action '@{items('Apply_to_each_Error_Summary')?['Action']}' failed with error message: @{items('Apply_to_each_Error_Summary')?['Message']} (Status: @{items('Apply_to_each_Error_Summary')?['Status']} / Status Code: @{items('Apply_to_each_Error_Summary')?['StatusCode']})"
+                        },
+                        "metadata": {
+                          "operationMetadataId": "ece19e50-dbe8-4f2c-ad44-bfc1da71159a"
+                        }
+                      }
+                    },
+                    "runAfter": {
+                      "If_there_is_an_Error_from_the_Child_Flow": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "cfcc1417-ea9c-4f0f-9314-487d3ad97bae"
+                    }
+                  },
+                  "Respond_to_Parent_Flow_[Error]": {
+                    "type": "Response",
+                    "kind": "PowerApp",
+                    "inputs": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "outcome": {
+                            "title": "Outcome",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          },
+                          "error_message": {
+                            "title": "Error Message",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          },
+                          "calculation_positions_to_process": {
+                            "title": "Calculation Positions to process",
+                            "x-ms-dynamically-added": true,
+                            "type": "number"
+                          },
+                          "calculation_positions_processed": {
+                            "title": "Calculation Positions processed",
+                            "x-ms-dynamically-added": true,
+                            "type": "number"
+                          },
+                          "Project_Products_to_process": {
+                            "title": "Project Products to process",
+                            "x-ms-dynamically-added": true,
+                            "type": "number"
+                          },
+                          "project_products_processed": {
+                            "title": "Project Products processed",
+                            "x-ms-dynamically-added": true,
+                            "type": "number"
+                          }
+                        },
+                        "additionalProperties": {}
+                      },
+                      "statusCode": 200,
+                      "body": {
+                        "outcome": "Error",
+                        "error_message": "@variables('varErrorMessage')",
+                        "calculation_positions_to_process": "@{variables('varNumberOfCalculationPositions_ToProcess')}",
+                        "calculation_positions_processed": "@{variables('varNumberOfCalculationPositions_Processed')}",
+                        "Project_Products_to_process": "@{variables('varNumberOfCalculationProjectProducts_ToProcess')}",
+                        "project_products_processed": "@{variables('varNumberOfCalculationProjectProducts_Processed')}"
+                      }
+                    },
+                    "runAfter": {
+                      "Update_Processing_Log_[Error]": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "cb030410-c1c7-4703-aee0-c952e09ac98d"
+                    }
+                  },
+                  "Update_Processing_Log_[Error]": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_processinglogs",
+                        "recordId": "@triggerBody()?['text_4']",
+                        "item/hso_end_datetime": "@utcNow()",
+                        "item/hso_flowerror": "@variables('varErrorMessage')",
+                        "item/hso_flowrunurl": "@concat('https://emea.flow.microsoft.com/manage/environments/', workflow()?['tags']['environmentName'], '/flows/', workflow()?['name'], '/runs/', workflow()?['run']['name'])",
+                        "item/hso_log": "@variables('varLog')",
+                        "item/hso_processedrecords": "@variables('varNumberOfCalculationPositions_Processed')",
+                        "item/hso_processingstatus": 100000003
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateOnlyRecord",
+                        "connectionName": "shared_commondataserviceforapps_2"
+                      }
+                    },
+                    "runAfter": {
+                      "Apply_to_each_Error_Summary": [
+                        "Succeeded"
+                      ]
+                    }
+                  },
+                  "If_there_is_an_Error_from_the_Child_Flow": {
+                    "type": "If",
+                    "expression": {
+                      "and": [
+                        {
+                          "not": {
+                            "equals": [
+                              "@body('Run_a_Child_Flow_-_Group_And_Update_BOM_Project_Product_Name')?['error_message']",
+                              "@null"
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "actions": {
+                      "Append_Child_Flow_Error": {
+                        "type": "AppendToArrayVariable",
+                        "inputs": {
+                          "name": "varError",
+                          "value": "@body('Run_a_Child_Flow_-_Group_And_Update_BOM_Project_Product_Name')?['error_message']"
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {}
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "c626afa7-4c77-415c-b086-9664a313da30"
+              }
+            }
+          },
+          "runAfter": {
+            "Template_Project_Product_Textblocks": [
+              "Failed",
+              "TimedOut",
+              "Succeeded",
+              "Skipped"
+            ],
+            "Re-Numerate_Template_Positions": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e7dbd250-a131-42f3-b374-c5d2b9983030"
+          }
+        },
+        "Initialize_varOdataType": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varOdataType",
+                "type": "string",
+                "value": "@@odata.type"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "74de3681-1678-45b9-a4c3-c3d6e2a794a2"
+          }
+        },
+        "Initialize_varTextblockProjectProducts": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varTextblockProjectProducts",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varErrorMessage": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6c326bed-ad18-4c3d-b48f-41e73078f350"
+          }
+        },
+        "Initialize_varNotes": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNotes",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varTextblockProjectProducts": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b69fbe84-49ce-43ff-873e-090171bd8f59"
+          }
+        },
+        "Collect_Information": {
+          "type": "Scope",
+          "actions": {
+            "Get_Calculation_Details": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_calculationdetails",
+                  "$filter": "_hso_calculationid_value eq '@{triggerBody()['text']}' and (startswith(hso_linenumber,'@{triggerBody()['text_2']}.') or hso_linenumber eq '@{triggerBody()?['text_2']}')",
+                  "$orderby": "hso_sortinglinenumber asc",
+                  "$expand": "hso_calculationdetail_Annotations($filter=isdocument eq true;$select=annotationid,filename),\nhso_surchargegroup_calculationid($select=_hso_surchargegroupid_value),\nhso_projectproductid($select=hso_name),\nhso_billofmaterial_projectproductid($select=hso_name)"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps_2"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "70f01847-ae24-46d7-bb88-33e9d334b4a3"
+              }
+            },
+            "Set_varNumberOfCalculationPositions_ToProcess": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varNumberOfCalculationPositions_ToProcess",
+                "value": "@length(outputs('Get_Calculation_Details')?['body/value'])"
+              },
+              "runAfter": {
+                "Get_Calculation_Details": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "344df575-8122-46ac-9692-f5835a3e56e6"
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varProjectProductGUID_Mapping": [
+              "Succeeded"
+            ],
+            "Initialize_varIterationLevel": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_varLog": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varLog",
+                "type": "string",
+                "value": "@outputs('Get_Processing_Log')?['body/hso_log']"
+              }
+            ]
+          },
+          "runAfter": {
+            "Get_Processing_Log": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Get_Processing_Log": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "hso_processinglogs",
+              "recordId": "@triggerBody()?['text_4']",
+              "$select": "hso_log"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "connectionName": "shared_commondataserviceforapps_2"
+            }
+          },
+          "runAfter": {}
+        },
+        "Initialize_varTemplateDetails_Payload": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varTemplateDetails_Payload",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varNumberOfCalculationProjectProducts_Processed": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_varProjectProductGUID_Mapping": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varProjectProductGUID_Mapping",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varTemplateDetails_Payload": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Re-Numerate_Template_Positions": {
+          "type": "Scope",
+          "description": "Trigger Custom API to re-numerate the created Template Positions to ensure that the highest Template Node starts with Linenumber 1 on Level 1",
+          "actions": {
+            "Call_Custom_API_to_renumerate_Positions": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "actionName": "hso_TemplateApi",
+                  "item/hso_TemplateApiPayload": "{\n \"Records\": [\"@{triggerBody()?['text_1']}\"],\n \"OperationType\": 0\n}"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "PerformUnboundAction",
+                  "connectionName": "shared_commondataserviceforapps_2"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Template_Positions_-_Error": [
+              "Succeeded",
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ]
+          }
+        },
+        "Initialize_varIterationLevel": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varIterationLevel",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varBatchSettings": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d42750a1-245b-4984-9d2f-bcc41f914e06"
+          }
+        },
+        "Initialize_varBatchSettings": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varBatchSettings",
+                "type": "object",
+                "value": {
+                  "maxBatchSize": 10,
+                  "minBatchSize": 1,
+                  "maxParallelism": 20,
+                  "minParallelism": 1
+                }
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varNotes": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "0e971c0f-2daf-4d42-a4a1-26337ddb6af8"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

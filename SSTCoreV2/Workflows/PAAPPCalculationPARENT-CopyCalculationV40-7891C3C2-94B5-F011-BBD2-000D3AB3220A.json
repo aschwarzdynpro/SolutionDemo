@@ -1,0 +1,956 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps_1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "41025398-0559-4122-8a0b-207b0ae0ceaf"
+          },
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "CalculationGUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GUID of the source calculation that will be copied",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "title": "CalculationName",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The name of the new calculation",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text",
+                "text_1"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Processing_Log": {
+          "actions": {
+            "Create_Processing_Log": {
+              "metadata": {
+                "operationMetadataId": "2d9da109-afa4-4cd9-8479-2a3087df3a0f"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "item/hso_name": "\"@{triggerBody()['text_1']}\" als Kopie erstellen",
+                  "item/hso_processingtask": 100000000,
+                  "item/hso_flowrunurl": "@concat('https://emea.flow.microsoft.com/manage/environments/', workflow()?['tags']['environmentName'], '/flows/', workflow()?['name'], '/runs/', workflow()?['run']['name'])",
+                  "item/hso_start_datetime": "@utcNow()",
+                  "item/hso_processingstatus": 100000001
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps_1"
+                }
+              }
+            },
+            "Respond_to_a_Power_App_or_flow": {
+              "runAfter": {
+                "Create_Processing_Log": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "53c7c67c-b06f-41b6-a6d3-6f6dc7be0350"
+              },
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "processinglogguid": {
+                      "title": "ProcessingLogGUID",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "processinglogguid": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varGAEBDetails_Status": [
+              "Succeeded"
+            ],
+            "Initialize_varProjectProducts_Status": [
+              "Succeeded"
+            ],
+            "Initialize_varCalculationParameters_Status": [
+              "Succeeded"
+            ],
+            "Initialize_varCalculationPositions_Status": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "fea493ed-a631-4e77-beed-16e06a50006b"
+          },
+          "type": "Scope"
+        },
+        "Create_Calculation_as_Copy": {
+          "actions": {
+            "Get_Calculation": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_calculations",
+                  "recordId": "@triggerBody()?['text']",
+                  "$select": "hso_bottomupcalculation_ondemand, hso_bottomupcalculation_status, hso_calculationtype, hso_contributionmargintargetsalespriceper, _hso_companyid_value, hso_cost, hso_cost_date, hso_costofmaterials, hso_costprice, _hso_departmentid_value, hso_discount, hso_discountpercentage, hso_durationinminutes, hso_iscopy, hso_isgaeb, hso_istemplate, hso_language, hso_margin, hso_marginpercentage, hso_name, hso_negotiationsurchargepercentage, hso_overheadsurcharge, hso_overheadsurchargepercentage, hso_printalternateoptionalwithprice, hso_printproductimage, hso_printsummary, hso_printsummary_level2, hso_productlifecyclewarning, hso_profit, hso_profitsurchargepercentage, hso_projectextension, hso_projecttype, _hso_quoteid_value, hso_quotedprice, hso_quotedprice_new, hso_recalculatecalculation, hso_sharedquotedprice_expenses, hso_sharedquotedprice_materials, _hso_transactioncurrencyid_quote_value, _transactioncurrencyid_value,_hso_parentprojectid_value,\nhso_origincalculationid",
+                  "$expand": "hso_quoteid($select=_hso_paymentmethodid_value)"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "connectionName": "shared_commondataserviceforapps_1"
+                }
+              }
+            },
+            "Create_Calculation": {
+              "runAfter": {
+                "Get_Calculation": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "f3485f34-9413-4c14-8ce5-3edce3de2ce8"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_calculations",
+                  "item/hso_departmentid@odata.bind": "hso_departments(@{outputs('Get_Calculation')?['body/_hso_departmentid_value']})",
+                  "item/hso_quoteid@odata.bind": "quotes(@{outputs('Get_Calculation')?['body/_hso_quoteid_value']})",
+                  "item/hso_calculationtype": "@outputs('Get_Calculation')?['body/hso_calculationtype']",
+                  "item/hso_name": "@triggerBody()['text_1']",
+                  "item/hso_calculationnumber": "@{outputs('Get_Calculation')?['body/hso_calculationnumber']}",
+                  "item/hso_projectextension": "@outputs('Get_Calculation')?['body/hso_projectextension']",
+                  "item/hso_language": "@outputs('Get_Calculation')?['body/hso_language']",
+                  "item/hso_parentprojectid@odata.bind": "@if(\r\n  empty(outputs('Get_Calculation')?['body/_hso_parentprojectid_value']), \r\n  '', \r\n  concat(\r\n    'msdyn_projects(', \r\n    outputs('Get_Calculation')?['body/_hso_parentprojectid_value'], \r\n    ')'\r\n  )\r\n)",
+                  "item/hso_companyid@odata.bind": "cdm_companies(@{outputs('Get_Calculation')?['body/_hso_companyid_value']})",
+                  "item/hso_transactioncurrencyid_quote@odata.bind": "transactioncurrencies(@{outputs('Get_Calculation')?['body/_hso_transactioncurrencyid_quote_value']})",
+                  "item/transactioncurrencyid@odata.bind": "transactioncurrencies(@{outputs('Get_Calculation')?['body/_transactioncurrencyid_value']})",
+                  "item/hso_bottomupcalculation_ondemand": "@outputs('Get_Calculation')?['body/hso_bottomupcalculation_ondemand']",
+                  "item/hso_printalternateoptionalwithprice": "@outputs('Get_Calculation')?['body/hso_printalternateoptionalwithprice']",
+                  "item/hso_quotedprice": "@outputs('Get_Calculation')?['body/hso_quotedprice']",
+                  "item/hso_quotedprice_new": "@outputs('Get_Calculation')?['body/hso_quotedprice_new']",
+                  "item/hso_printproductimage": "@outputs('Get_Calculation')?['body/hso_printproductimage']",
+                  "item/hso_durationinminutes": "@outputs('Get_Calculation')?['body/hso_durationinminutes']",
+                  "item/hso_contributionmargintargetsalespriceper": "@outputs('Get_Calculation')?['body/hso_contributionmargintargetsalespriceper']",
+                  "item/hso_costprice": "@outputs('Get_Calculation')?['body/hso_costprice']",
+                  "item/hso_overheadsurcharge": "@outputs('Get_Calculation')?['body/hso_overheadsurcharge']",
+                  "item/hso_overheadsurchargepercentage": "@outputs('Get_Calculation')?['body/hso_overheadsurchargepercentage']",
+                  "item/hso_profit": "@outputs('Get_Calculation')?['body/hso_profit']",
+                  "item/hso_profitsurchargepercentage": "@outputs('Get_Calculation')?['body/hso_profitsurchargepercentage']",
+                  "item/hso_isgaeb": "@outputs('Get_Calculation')?['body/hso_isgaeb']",
+                  "item/hso_iscopy": true,
+                  "item/hso_bottomupcalculation_status": "@outputs('Get_Calculation')?['body/hso_bottomupcalculation_status']",
+                  "item/hso_margin": "@outputs('Get_Calculation')?['body/hso_margin']",
+                  "item/hso_marginpercentage": "@outputs('Get_Calculation')?['body/hso_marginpercentage']",
+                  "item/hso_origincalculationid": "@outputs('Get_Calculation')?['body/hso_origincalculationid']",
+                  "item/hso_projecttype": "@outputs('Get_Calculation')?['body/hso_projecttype']",
+                  "item/hso_costofmaterials": "@outputs('Get_Calculation')?['body/hso_costofmaterials']",
+                  "item/hso_discountpercentage": "@outputs('Get_Calculation')?['body/hso_discountpercentage']",
+                  "item/hso_discount": "@outputs('Get_Calculation')?['body/hso_discount']",
+                  "item/hso_negotiationsurchargepercentage": "@outputs('Get_Calculation')?['body/hso_negotiationsurchargepercentage']",
+                  "item/hso_targetsalesprice": "@outputs('Get_Calculation')?['body/hso_targetsalesprice']",
+                  "item/hso_printsummary": "@outputs('Get_Calculation')?['body/hso_printsummary']",
+                  "item/hso_printsummary_level2": "@outputs('Get_Calculation')?['body/hso_printsummary_level2']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps_1"
+                }
+              }
+            },
+            "Relate_Processing_Log_with_Calculation": {
+              "runAfter": {
+                "Append_new_Calculation_to_Log": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "recordId": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']",
+                  "item/hso_calculationid@odata.bind": "/hso_calculations(@{outputs('Create_Calculation')?['body/hso_calculationid']})",
+                  "item/hso_log": "@variables('varLog')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateOnlyRecord",
+                  "connectionName": "shared_commondataserviceforapps_1"
+                }
+              }
+            },
+            "Append_new_Calculation_to_Log": {
+              "runAfter": {
+                "Create_Calculation": [
+                  "Succeeded"
+                ]
+              },
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] -  New Calculation \"@{triggerBody()?['text_1']}\" created. @{decodeUriComponent('%0A')}"
+              }
+            }
+          },
+          "runAfter": {
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "type": "Scope"
+        },
+        "Copy_Calculation_Parameters": {
+          "actions": {
+            "Run_a_Child_Flow_to_copy_Calculation_Parameters": {
+              "runAfter": {
+                "Append_Copy_Calculation_Parameters_to_Log": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Workflow",
+              "inputs": {
+                "host": {
+                  "workflowReferenceName": "ec440182-30b6-f011-bbd2-7ced8d3fdc0a"
+                },
+                "body": {
+                  "text": "@outputs('Create_Calculation')?['body/hso_calculationid']",
+                  "text_1": "@triggerBody()?['text']",
+                  "text_2": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']",
+                  "text_3": "@outputs('Create_Calculation')?['body/_ownerid_value']",
+                  "text_4": "@triggerBody()?['text_1']"
+                }
+              }
+            },
+            "Set_varCalculationParameters_Status": {
+              "runAfter": {
+                "Calculation_Parameters_successfully_processed": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varCalculationParameters_Status",
+                "value": "@body('Run_a_Child_Flow_to_copy_Calculation_Parameters')?['outcome']"
+              }
+            },
+            "Append_Copy_Calculation_Parameters_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] -  Start copy Calculation Parameters. @{decodeUriComponent('%0A')}"
+              }
+            },
+            "Calculation_Parameters_successfully_processed": {
+              "actions": {
+                "Append_Calculation_Parameters_copied_to_Log": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[INF] - [@{utcNow()}] -  Copy Calculation Parameters finished. @{decodeUriComponent('%0A')}"
+                  }
+                }
+              },
+              "runAfter": {
+                "Run_a_Child_Flow_to_copy_Calculation_Parameters": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Append_Calculation_Parameters_Error_to_Log": {
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "varLog",
+                      "value": "[ERR] - [@{utcNow()}] -  Copy Calculation Parameters failed. Error Message: @{body('Run_a_Child_Flow_to_copy_Calculation_Parameters')?['errormessage']}. @{decodeUriComponent('%0A')}"
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@body('Run_a_Child_Flow_to_copy_Calculation_Parameters')?['outcome']",
+                      "Success"
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Create_Calculation_as_Copy": [
+              "Succeeded"
+            ]
+          },
+          "type": "Scope"
+        },
+        "Copy_GAEB_Details": {
+          "actions": {
+            "Check_if_Calculation_is_of_type_GAEB": {
+              "actions": {
+                "Run_a_Child_Flow_to_copy_GAEB_Details": {
+                  "runAfter": {
+                    "Append_Copy_GAEB_Details_to_Log": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Workflow",
+                  "inputs": {
+                    "host": {
+                      "workflowReferenceName": "f1111201-adb8-f011-bbd3-000d3adcc123"
+                    },
+                    "body": {
+                      "text": "@outputs('Create_Calculation')?['body/hso_calculationid']",
+                      "text_1": "@triggerBody()?['text']",
+                      "text_2": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']",
+                      "text_3": "@outputs('Create_Calculation')?['body/_ownerid_value']",
+                      "text_4": "@triggerBody()?['text_1']",
+                      "text_5": "@outputs('Get_Calculation')?['body/hso_name']"
+                    }
+                  }
+                },
+                "Set_varGAEBDetails_Status": {
+                  "runAfter": {
+                    "GAEB_Details_successfully_processed": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "varGAEBDetails_Status",
+                    "value": "@body('Run_a_Child_Flow_to_copy_GAEB_Details')?['outcome']"
+                  }
+                },
+                "Append_Copy_GAEB_Details_to_Log": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[INF] - [@{utcNow()}] -  Start copy GAEB Details. @{decodeUriComponent('%0A')}"
+                  }
+                },
+                "GAEB_Details_successfully_processed": {
+                  "actions": {
+                    "Append_GAEB_Details_copied_to_Log": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "varLog",
+                        "value": "[INF] - [@{utcNow()}] -  Copy GAEB Details finished. @{decodeUriComponent('%0A')}"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Run_a_Child_Flow_to_copy_GAEB_Details": [
+                      "Succeeded"
+                    ]
+                  },
+                  "else": {
+                    "actions": {
+                      "Append_GAEB_Details_Error_to_Log": {
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varLog",
+                          "value": "[ERR] - [@{utcNow()}] -  Copy GAEB Details failed. Error Message: @{body('Run_a_Child_Flow_to_copy_GAEB_Details')?['errormessage']}. @{decodeUriComponent('%0A')}"
+                        }
+                      }
+                    }
+                  },
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@body('Run_a_Child_Flow_to_copy_GAEB_Details')?['outcome']",
+                          "Success"
+                        ]
+                      }
+                    ]
+                  },
+                  "type": "If"
+                }
+              },
+              "else": {
+                "actions": {
+                  "Set_varGAEBDetails_Status_if_not_required": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "varGAEBDetails_Status",
+                      "value": "Success"
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@outputs('Get_Calculation')?['body/hso_isgaeb']",
+                      "@true"
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Create_Calculation_as_Copy": [
+              "Succeeded"
+            ]
+          },
+          "type": "Scope"
+        },
+        "Copy_Project_Products": {
+          "actions": {
+            "Run_a_Child_Flow_to_copy_Project_Products": {
+              "runAfter": {
+                "Append_Copy_Project_Products_to_Log": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Workflow",
+              "inputs": {
+                "host": {
+                  "workflowReferenceName": "9823bbf3-3eb6-f011-bbd3-000d3adcc123"
+                },
+                "body": {
+                  "text": "@outputs('Create_Calculation')?['body/hso_calculationid']",
+                  "text_1": "@triggerBody()?['text']",
+                  "text_2": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']",
+                  "text_3": "@outputs('Create_Calculation')?['body/_ownerid_value']",
+                  "text_4": "@triggerBody()?['text_1']"
+                }
+              }
+            },
+            "Set_varProjectProducts_Status": {
+              "runAfter": {
+                "Project_Products_successfully_processed": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varProjectProducts_Status",
+                "value": "@body('Run_a_Child_Flow_to_copy_Project_Products')?['outcome']"
+              }
+            },
+            "Append_Copy_Project_Products_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] -  Start copy Project Products. @{decodeUriComponent('%0A')}"
+              }
+            },
+            "Project_Products_successfully_processed": {
+              "actions": {
+                "Append_Project_Products_copied_to_Log": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[INF] - [@{utcNow()}] -  Copy Project Products finished. @{decodeUriComponent('%0A')}"
+                  }
+                }
+              },
+              "runAfter": {
+                "Run_a_Child_Flow_to_copy_Project_Products": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Append_Project_Products_Error_to_Log": {
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "varLog",
+                      "value": "[ERR] - [@{utcNow()}] -  Copy Project Products failed. Error Message: @{body('Run_a_Child_Flow_to_copy_Project_Products')?['errormessage']}. @{decodeUriComponent('%0A')}"
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@body('Run_a_Child_Flow_to_copy_Project_Products')?['outcome']",
+                      "Success"
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Create_Calculation_as_Copy": [
+              "Succeeded"
+            ]
+          },
+          "type": "Scope"
+        },
+        "Copy_Calculation_Positions": {
+          "actions": {
+            "Run_a_Child_Flow_to_copy_Calculation_Positions": {
+              "runAfter": {
+                "Append_Copy_Calculation_Positions_to_Log": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Workflow",
+              "inputs": {
+                "host": {
+                  "workflowReferenceName": "fcc300ca-c0b8-f011-bbd3-000d3adcc123"
+                },
+                "body": {
+                  "text": "@outputs('Create_Calculation')?['body/hso_calculationid']",
+                  "text_1": "@triggerBody()?['text']",
+                  "text_2": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']",
+                  "text_3": "@outputs('Create_Calculation')?['body/_ownerid_value']",
+                  "text_4": "@triggerBody()?['text_1']",
+                  "number": "@body('Run_a_Child_Flow_to_copy_Project_Products')?['numberofprojectproducts']",
+                  "text_5": "@body('Run_a_Child_Flow_to_copy_Project_Products')?['projectproductguidmapping']",
+                  "text_6": "@outputs('Get_Calculation')?['body/_hso_quoteid_value']",
+                  "text_7": "@outputs('Create_Calculation')?['body/_hso_companyid_value']"
+                }
+              }
+            },
+            "Set_varCalculationPositions_Status": {
+              "runAfter": {
+                "Calculation_Positions_successfully_processed": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varCalculationPositions_Status",
+                "value": "@body('Run_a_Child_Flow_to_copy_Calculation_Positions')?['outcome']"
+              }
+            },
+            "Append_Copy_Calculation_Positions_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] -  Start copy Calculation Positions. @{decodeUriComponent('%0A')}"
+              }
+            },
+            "Calculation_Positions_successfully_processed": {
+              "actions": {
+                "Append_Calculation_Positions_copied_to_Log": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[INF] - [@{utcNow()}] -  Copy Calculation Positions finished. Related Notes, GAEB Text Additions as well as Alternate Positions are copied as well. @{decodeUriComponent('%0A')}"
+                  }
+                }
+              },
+              "runAfter": {
+                "Run_a_Child_Flow_to_copy_Calculation_Positions": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Append_Calculation_Positions_Error_to_Log": {
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "varLog",
+                      "value": "[ERR] - [@{utcNow()}] -  Copy Calculation Positions failed. Error Message: @{body('Run_a_Child_Flow_to_copy_Calculation_Positions')?['errormessage']}. @{decodeUriComponent('%0A')}"
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@body('Run_a_Child_Flow_to_copy_Calculation_Positions')?['outcome']",
+                      "Success"
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Copy_GAEB_Details": [
+              "Succeeded"
+            ],
+            "Copy_Project_Products": [
+              "Succeeded"
+            ],
+            "Copy_Calculation_Parameters": [
+              "Succeeded"
+            ]
+          },
+          "type": "Scope"
+        },
+        "Summary": {
+          "actions": {
+            "Parse_JSON": {
+              "metadata": {
+                "operationMetadataId": "b769deed-a8c4-494a-a92f-2be1a1eb92c7"
+              },
+              "type": "ParseJson",
+              "inputs": {
+                "content": {
+                  "link": {
+                    "actions": [
+                      {
+                        "title": "Kalkulationsversion anzeigen",
+                        "data": {
+                          "url": "?pagetype=entityrecord&etn=hso_calculation&id=@{outputs('Create_Calculation')?['body/hso_calculationid']}",
+                          "navigationTarget": "inline"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "link": {
+                      "type": "object",
+                      "properties": {
+                        "actions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "title": {
+                                "type": "string"
+                              },
+                              "data": {
+                                "type": "object",
+                                "properties": {
+                                  "url": {
+                                    "type": "string"
+                                  },
+                                  "navigationTarget": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            },
+                            "required": [
+                              "title",
+                              "data"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "All_Calculation_data_processed_successfully": {
+              "actions": {
+                "Update_Processing_Log_[Success]": {
+                  "runAfter": {
+                    "Finish_varLog_with_Success": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "e25570b4-b57c-4c09-bb87-9092a962156b"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_processinglogs",
+                      "recordId": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']",
+                      "item/hso_end_datetime": "@utcNow()",
+                      "item/hso_log": "@variables('varLog')",
+                      "item/hso_processingstatus": 100000002
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps_1"
+                    }
+                  }
+                },
+                "Create_InApp_Notification_[Success]": {
+                  "runAfter": {
+                    "Update_Processing_Log_[Success]": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "0f108e92-6368-449e-9ad1-ff3e2748966f"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "appnotifications",
+                      "item/title": "Kalkulationsversion kopiert",
+                      "item/ttlinseconds": 200,
+                      "item/data": "@body('Parse_JSON')?['link']",
+                      "item/icontype": 100000001,
+                      "item/priority": 200000000,
+                      "item/body": "Eine neue Kalkulationsversion \"@{outputs('Create_Calculation')?['body/hso_name']}\" wurde als Kopie von \"@{outputs('Get_Calculation')?['body/hso_name']}\" erstellt."
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "CreateRecord",
+                      "connectionName": "shared_commondataserviceforapps_1"
+                    }
+                  }
+                },
+                "Finish_varLog_with_Success": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[SUC] - [@{utcNow()}] - Flow run was successful. All required components have been added to the new Calculation."
+                  }
+                }
+              },
+              "runAfter": {
+                "Parse_JSON": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Update_Processing_Log_[Error]": {
+                    "runAfter": {
+                      "Finish_varLog_with_Error": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "fc491115-1f73-4e24-ae30-a4fc5b704ab0"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_processinglogs",
+                        "recordId": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']",
+                        "item/hso_end_datetime": "@utcNow()",
+                        "item/hso_calculationid@odata.bind": "hso_calculations(@{coalesce(\r\n outputs('Create_Calculation')?['body/hso_calculationid'],\r\n triggerBody()?['text']\r\n)})",
+                        "item/hso_log": "@variables('varLog')",
+                        "item/hso_processingstatus": 100000003
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateRecord",
+                        "connectionName": "shared_commondataserviceforapps_1"
+                      }
+                    }
+                  },
+                  "Create_InApp_Notification_[Error]": {
+                    "runAfter": {
+                      "Update_Processing_Log_[Error]": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "0f108e92-6368-449e-9ad1-ff3e2748966f"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "appnotifications",
+                        "item/title": "Fehler beim Kopieren der Kalkulationsversion",
+                        "item/ttlinseconds": 200,
+                        "item/data": "@body('Parse_JSON')?['link']",
+                        "item/icontype": 100000002,
+                        "item/priority": 200000000,
+                        "item/body": "Beim Erstellen der Kalkulationsversion \"@{outputs('Create_Calculation')?['body/hso_name']}\" als Kopie von \"@{outputs('Get_Calculation')?['body/hso_name']}\" ist ein Fehler aufgetreten!"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "CreateRecord",
+                        "connectionName": "shared_commondataserviceforapps_1"
+                      }
+                    }
+                  },
+                  "Finish_varLog_with_Error": {
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "varLog",
+                      "value": "[ERR] - [@{utcNow()}] - Flow run has failed. Components may have been partially added to the new Calculation. Check the Child Logs for further details."
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@variables('varCalculationParameters_Status')",
+                      "Success"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@variables('varProjectProducts_Status')",
+                      "Success"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@variables('varGAEBDetails_Status')",
+                      "Success"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@variables('varCalculationPositions_Status')",
+                      "Success"
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Copy_Calculation_Positions": [
+              "Succeeded",
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "type": "Scope"
+        },
+        "Initialize_varGAEBDetails_Status": {
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varGAEBDetails_Status",
+                "type": "string",
+                "value": "Pending"
+              }
+            ]
+          }
+        },
+        "Initialize_varProjectProducts_Status": {
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varProjectProducts_Status",
+                "type": "string",
+                "value": "Pending"
+              }
+            ]
+          }
+        },
+        "Initialize_varCalculationParameters_Status": {
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varCalculationParameters_Status",
+                "type": "string",
+                "value": "Pending"
+              }
+            ]
+          }
+        },
+        "Initialize_varCalculationPositions_Status": {
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varCalculationPositions_Status",
+                "type": "string",
+                "value": "Pending"
+              }
+            ]
+          }
+        },
+        "Initialize_varLog": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "9282de19-6beb-4586-842f-f62383ee97e9"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varLog",
+                "type": "string",
+                "value": "[INF] - [@{utcNow()}] - Initializing Flow Run @{decodeUriComponent('%0A')}"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

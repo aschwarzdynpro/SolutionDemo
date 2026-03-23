@@ -1,0 +1,1024 @@
+if (typeof (Schulz) === "undefined") { Schulz = {}; };
+if (typeof (Schulz.CalculationRibbon) === "undefined") { Schulz.CalculationRibbon = {}; }
+
+// Define global variables
+var Quote_GUID = "";
+var Quote_Name = "";
+var Quote_Currency_GUID = "";
+var Quote_Currency_Name = "";
+var Quote_Department_GUID = "";
+var Quote_Department_Name = "";
+var Quote_Company_GUID = "";
+var Quote_Company_Name = "";
+var Quote_Language = "";
+
+Schulz.CalculationRibbon.Metadata = {
+    BottomUpStatus: {
+        Calculated: 864640000
+    },
+    StatusCode: {
+        ActivationPending: 100000003
+    }
+};
+
+// open from selected record in Subgrid
+Schulz.CalculationRibbon.openTemplateCustomPage = (selectedItems) => {
+    var selectedRecordID = selectedItems[0].Id;
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationtemplate_4c1b8",
+        entityName: "hso_calculation",
+        recordId: selectedRecordID
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 400,
+        title: "Vorlage auf Basis der Kalkulationsversion erstellen",
+    };
+    console.log("Open Custom Page to create Template for selected Calculation with Calculation GUID: " + selectedRecordID);
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+        // Called when the dialog closes
+        formContext.data.refresh();
+    }).catch(
+        function (error) {
+            // Handle error
+        });
+};
+
+// open from Main Form
+Schulz.CalculationRibbon.openTemplateCustomPageMainForm = (formContext) => {
+    //Get Calculation GUID and remove {}
+    var selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "")
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationtemplate_4c1b8",
+        entityName: "hso_calculation",
+        recordId: selectedRecordID
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 400,
+        title: "Vorlage auf Basis der Kalkulationsversion erstellen",
+    };
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(
+        function () {
+            // Called when the dialog closes
+            formContext.data.refresh();
+        }).catch(function (error) {
+            // Handle error
+        });
+};
+
+// open from selected record in Subgrid
+Schulz.CalculationRibbon.openCopyCustomPage = (selectedItems) => {
+    var selectedRecordID = selectedItems[0].Id;
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationcopy_b7bc5",
+        entityName: "hso_calculation",
+        recordId: selectedRecordID
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 400,
+        title: "Kopie der Kalkulationsversion erstellen",
+    };
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+        // Called when the dialog closes
+        formContext.data.refresh();
+    }).catch(
+        function (error) {
+            // Handle error
+        });
+};
+
+// open from Main Form
+Schulz.CalculationRibbon.openCopyCustomPageMainForm = (formContext) => {
+    //Get Calculation GUID and remove {}
+    var selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "")
+    console.log("Calculation GUID: " + selectedRecordID);
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationcopy_b7bc5",
+        entityName: "hso_calculation",
+        recordId: selectedRecordID
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 400,
+        title: "Kopie der Kalkulationsversion erstellen",
+    };
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+        // Called when the dialog closes
+        formContext.data.refresh();
+    }).catch(
+        function (error) {
+            // Handle error
+        });
+};
+
+Schulz.CalculationRibbon.showActivationButton = (formContext) => {
+    const activeVersion = formContext.getAttribute("hso_activeversion")?.getValue();
+    const processingRunning = formContext.getAttribute("hso_processingrunning")?.getValue();
+    const calcStatus = formContext.getAttribute("hso_bottomupcalculation_status")?.getValue();
+
+    return activeVersion
+        && processingRunning
+        && calcStatus === Schulz.CalculationRibbon.Metadata.BottomUpStatus.Calculated;
+}
+
+Schulz.CalculationRibbon.activate = async (formContext) => {
+    // Check if processing is running
+    const processingRunning = formContext.getAttribute("hso_processingrunning")?.getValue();
+
+    if (processingRunning === true) {
+        Xrm.Navigation.openAlertDialog({
+            text: "Für die Kalkulationsversion wird gerade eine Berechnung im Hintergrund durchgeführt. Bitte warten Sie bis dieser Vorgang abgeschlossen ist.",
+            title: "Hinweis"
+        });
+        return;
+    }
+
+    // Check calculation status
+    const calcStatus = formContext.getAttribute("hso_bottomupcalculation_status")?.getValue();
+    if (calcStatus !== Schulz.CalculationRibbon.Metadata.BottomUpStatus.Calculated) {
+        Xrm.Navigation.openAlertDialog({
+            text: "Die Kalkulationsversion kann erst aktiviert werden, wenn die Berechnung auf dem aktuellen Stand ist. Bitte führen Sie eine manuelle Bottom-Up Berechnung durch.",
+            title: "Hinweis"
+        });
+        return;
+    }
+
+    // Confirm dialog
+    const confirmResult = await Xrm.Navigation.openConfirmDialog({
+        text: "Die ausgewählte Kalkulationsversion wird aktiviert und für weitere Bearbeitungen gesperrt.",
+        title: "Kalkulationsversion aktivieren",
+        confirmButtonLabel: "Ja",
+        cancelButtonLabel: "Nein"
+    });
+    if (!confirmResult.confirmed) return;
+
+    Xrm.Utility.showProgressIndicator( "Starte Aktivierung..." );
+
+    try {
+        const calculationId = formContext.data.entity.getId().replace(/[{}]/g, "");
+        const quoteId = formContext.getAttribute("hso_quoteid")?.getValue()?.[0]?.id?.replace(/[{}]/g, "");
+
+        const createLogResponse = await Xrm.WebApi.createRecord(
+            "hso_processinglog",
+            {
+                "hso_calculationid@odata.bind": `/hso_calculations(${calculationId})`,
+                hso_name: "Validierung"
+            }
+        );
+
+        // Fetch all other active calculations for the same quote
+        const otherActiveCalcs = await Xrm.WebApi.retrieveMultipleRecords(
+            "hso_calculation",
+            `?$select=hso_calculationid&$filter=hso_activeversion eq true and _hso_quoteid_value eq ${quoteId} and hso_calculationid ne ${calculationId}`
+        );
+
+        // Deactivate all other active calculations
+        const deactivatePromises = otherActiveCalcs.entities.map(calc =>
+            Xrm.WebApi.updateRecord(
+                "hso_calculation",
+                calc.hso_calculationid,
+                {
+                    hso_activeversion: false
+                }
+            )
+        );
+        await Promise.all(deactivatePromises);
+
+        // Mark selected calculation as active and update status
+        await Xrm.WebApi.updateRecord(
+            "hso_calculation",
+            calculationId,
+            {
+                hso_activeversion: true,
+                statecode: 1,
+                statuscode: Schulz.CalculationRibbon.Metadata.StatusCode.ActivationPending
+            }
+        );
+
+        // Update quote with active calculation
+        await Xrm.WebApi.updateRecord(
+            "quote",
+            quoteId,
+            {
+                "hso_activecalculation_id@odata.bind": `/hso_calculations(${calculationId})`
+            }
+        );
+
+        const request = {
+            entity: {
+                entityType: "hso_calculation",
+                id: calculationId
+            },
+            hso_ValidationApiPayload: JSON.stringify({ ProcessingLogId: createLogResponse.id, ActivateOnSuccess: true }),
+            getMetadata: function () {
+                return {
+                    boundParameter: "entity",
+                    parameterTypes: {
+                        "entity": {
+                            typeName: "Microsoft.Dynamics.CRM.hso_calculation",
+                            structuralProperty: 5
+                        },
+                        "hso_ValidationApiPayload": {
+                            typeName: "Edm.String",
+                            structuralProperty: 1
+                        }
+                    },
+                    operationType: 0,
+                    operationName: "hso_ActionPQCInvokeValidation"
+                };
+            }
+        };
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const response = await Xrm.WebApi.execute(request);
+
+        if (!response.ok) {
+            Xrm.Navigation.openAlertDialog({
+                text: "Das Starten der Validierung ist fehlgeschlagen.",
+                title: "Hinweis"
+            });
+            return;
+        }
+
+        formContext.data.refresh(true);
+
+        var paneConfig = {
+            title: "Aktivierungsstatus Kalkulationsversion",
+            paneId: "hso_calculation.CalculationActivationStatus",
+            canClose: false,
+            // imageSrc: "WebResources/...",
+            width: 400
+        };
+
+        let pane = Xrm.App.sidePanes.getPane("hso_calculation.CalculationActivationStatus");
+
+        if (pane) {
+            pane.select();
+        }
+        else {
+            pane = await Xrm.App.sidePanes.createPane(paneConfig);
+        }
+
+        const targetReference = formContext.data.entity.getEntityReference();
+
+        await pane.navigate({
+            pageType: "control",
+            controlName: "hso_HSO.CalculationActivationStatus",
+            data: JSON.stringify({
+                targetReferenceLogicalName: targetReference != null ? targetReference.entityType : undefined,
+                targetReferenceId: targetReference != null ? targetReference.id.replace("{", "").replace("}", "") : undefined,
+                processingLogId: createLogResponse.id,
+                scenario: "activation"
+            })
+        });
+    } catch (error) {
+        console.error("Activation error:", error);
+        Xrm.Navigation.openAlertDialog({
+            text: "Ein Fehler ist beim Aktivieren der Kalkulationsversion aufgetreten. Bitte starten Sie den Vorgang erneut. Tritt der Fehler erneut auf, wenden Sie sich bitte an einen Administrator.",
+            title: "Fehler"
+        });
+    } finally {
+        Xrm.Utility.closeProgressIndicator();
+    }
+};
+
+Schulz.CalculationRibbon.validate = async (formContext) => {
+    // Check if processing is running
+    const processingRunning = formContext.getAttribute("hso_processingrunning")?.getValue();
+
+    if (processingRunning === true) {
+        Xrm.Navigation.openAlertDialog({
+            text: "Für die Kalkulationsversion wird gerade eine Berechnung im Hintergrund durchgeführt. Bitte warten Sie bis dieser Vorgang abgeschlossen ist.",
+            title: "Hinweis"
+        });
+        return;
+    }
+
+    // Check calculation status
+    const calcStatus = formContext.getAttribute("hso_bottomupcalculation_status")?.getValue();
+    if (calcStatus !== Schulz.CalculationRibbon.Metadata.BottomUpStatus.Calculated) {
+        Xrm.Navigation.openAlertDialog({
+            text: "Die Kalkulationsversion kann erst validiert werden, wenn die Berechnung auf dem aktuellen Stand ist. Bitte führen Sie eine manuelle Bottom-Up Berechnung durch.",
+            title: "Hinweis"
+        });
+        return;
+    }
+
+    Xrm.Utility.showProgressIndicator( "Starte Validierung..." );
+
+    try {
+        const calculationId = formContext.data.entity.getId().replace(/[{}]/g, "");
+        
+        const createLogResponse = await Xrm.WebApi.createRecord(
+            "hso_processinglog",
+            {
+                "hso_calculationid@odata.bind": `/hso_calculations(${calculationId})`,
+                hso_name: "Validierung"
+            }
+        );
+
+        const request = {
+            entity: {
+                entityType: "hso_calculation",
+                id: calculationId
+            },
+            hso_ValidationApiPayload: JSON.stringify({ ProcessingLogId: createLogResponse.id, ActivateOnSuccess: false }),
+            getMetadata: function () {
+                return {
+                    boundParameter: "entity",
+                    parameterTypes: {
+                        "entity": {
+                            typeName: "Microsoft.Dynamics.CRM.hso_calculation",
+                            structuralProperty: 5
+                        },
+                        "hso_ValidationApiPayload": {
+                            typeName: "Edm.String",
+                            structuralProperty: 1
+                        }
+                    },
+                    operationType: 0,
+                    operationName: "hso_ActionPQCInvokeValidation"
+                };
+            }
+        };
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const response = await Xrm.WebApi.execute(request);
+        
+        if (!response.ok) {
+            Xrm.Navigation.openAlertDialog({
+                text: "Das Starten der Validierung ist fehlgeschlagen.",
+                title: "Hinweis"
+            });
+            return;
+        }
+
+        var paneConfig = {
+            title: "Validierungsstatus Kalkulationsversion",
+            paneId: "hso_calculation.CalculationActivationStatus",
+            canClose: false,
+            // imageSrc: "WebResources/...",
+            width: 400
+        };
+
+        let pane = Xrm.App.sidePanes.getPane("hso_calculation.CalculationActivationStatus");
+        
+        if (pane) {
+            pane.select();
+        }
+        else {
+            pane = await Xrm.App.sidePanes.createPane(paneConfig);
+        }
+
+        const targetReference = formContext.data.entity.getEntityReference();
+
+        await pane.navigate({
+            pageType: "control",
+            controlName: "hso_HSO.CalculationActivationStatus",
+            data: JSON.stringify({
+                targetReferenceLogicalName: targetReference != null ? targetReference.entityType : undefined,
+                targetReferenceId: targetReference != null ? targetReference.id.replace("{", "").replace("}", "") : undefined,
+                processingLogId: createLogResponse.id,
+                scenario: "validation"
+            })
+        });
+    } catch (error) {
+        console.error("Activation error:", error);
+        Xrm.Navigation.openAlertDialog({
+            text: "Ein Fehler ist beim Aktivieren der Kalkulationsversion aufgetreten. Bitte starten Sie den Vorgang erneut. Tritt der Fehler erneut auf, wenden Sie sich bitte an einen Administrator.",
+            title: "Fehler"
+        });
+    } finally {
+        Xrm.Utility.closeProgressIndicator();
+    }
+};
+
+Schulz.CalculationRibbon.fixErrors = async (formContext) => {
+    // Check if processing is running
+    const processingRunning = formContext.getAttribute("hso_processingrunning")?.getValue();
+
+    if (processingRunning === true) {
+        Xrm.Navigation.openAlertDialog({
+            text: "Für die Kalkulationsversion wird gerade eine Berechnung im Hintergrund durchgeführt. Bitte warten Sie bis dieser Vorgang abgeschlossen ist.",
+            title: "Hinweis"
+        });
+        return;
+    }
+
+    Xrm.Utility.showProgressIndicator( "Starte Fehlerkorrektur..." );
+
+    try {
+        const calculationId = formContext.data.entity.getId().replace(/[{}]/g, "");
+              
+        const validationLogs = await Xrm.WebApi.retrieveMultipleRecords(
+            "hso_processinglog",
+            `?$select=hso_processinglogid&$filter=hso_name eq 'Validierung' and _hso_calculationid_value eq ${calculationId}&$top=1&$orderby=createdon desc`
+        );
+        
+        if (!validationLogs.entities.length) {
+            Xrm.Navigation.openAlertDialog({
+                text: "Kein Verarbeitungsprotokoll für vergangene Validierungen gefunden!",
+                title: "Fehler"
+            });
+            return;
+        }
+        
+        const processingLogId = validationLogs.entities[0].hso_processinglogid;
+
+        const paneConfig = {
+            title: "Fehlerkorrektur",
+            paneId: "hso_calculation.CalculationCorrection",
+            canClose: false,
+            // imageSrc: "WebResources/...",
+            width: 400
+        };
+
+        let pane = Xrm.App.sidePanes.getPane("hso_calculation.CalculationCorrection");
+        
+        if (pane) {
+            pane.select();
+        }
+        else {
+            pane = await Xrm.App.sidePanes.createPane(paneConfig);
+        }
+
+        const targetReference = formContext.data.entity.getEntityReference();
+        const recordStatus = formContext.getAttribute("statuscode")?.getValue();
+
+        await pane.navigate({
+            pageType: "control",
+            controlName: "hso_HSO.CalculationCorrection",
+            data: JSON.stringify({
+                targetReferenceLogicalName: targetReference != null ? targetReference.entityType : undefined,
+                targetReferenceId: targetReference != null ? targetReference.id.replace("{", "").replace("}", "") : undefined,
+                processingLogId: processingLogId,
+                scenario: recordStatus === 100000004 ? "activation" : "validation"
+            })
+        });
+    } catch (error) {
+        console.error("Activation error:", error);
+        Xrm.Navigation.openAlertDialog({
+            text: "Ein Fehler ist beim Aktivieren der Kalkulationsversion aufgetreten. Bitte starten Sie den Vorgang erneut. Tritt der Fehler erneut auf, wenden Sie sich bitte an einen Administrator.",
+            title: "Fehler"
+        });
+    } finally {
+        Xrm.Utility.closeProgressIndicator();
+    }
+};
+
+// open from Subgrid
+Schulz.CalculationRibbon.openGAEBImportCustomPage = (formContext) => {
+    // Get Quote GUID and remove {}
+    var selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "")
+    console.log("Quote GUID: " + selectedRecordID);
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationgaebimport_e35f3",
+        entityName: "quote",
+        recordId: selectedRecordID
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 653,
+        title: "GAEB-Dokument importieren",
+    };
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+        // Called when the dialog closes
+        formContext.data.refresh();
+    }).catch(
+        function (error) {
+            // Handle error
+        });
+};
+
+// Open from Main Form
+Schulz.CalculationRibbon.openGAEBExportCustomPage = (formContext) => {
+    // Get Calculation GUID and remove {}
+    var selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "");
+    console.log("Calculation GUID: " + selectedRecordID);
+
+    // Get status field value
+    var CalculationBottomUpStatus = formContext.getAttribute("hso_bottomupcalculation_status").getValue();
+    console.log("Status Value: " + CalculationBottomUpStatus);
+
+    // Check if Calculations Bottom-Up Aggregation is up to date
+    if (CalculationBottomUpStatus === 864640000) {
+        // Inline Page
+        var pageInput = {
+            pageType: "custom",
+            name: "hso_calculationgaebexport_9f16b",
+            entityName: "hso_calculation",
+            recordId: selectedRecordID
+        };
+
+        var navigationOptions = {
+            target: 2,
+            position: 1,
+            width: 700,
+            height: 353,
+            title: "GAEB-Dokument exportieren"
+        };
+
+        Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+            // Called when the dialog closes
+            formContext.data.refresh();
+        }).catch(function (error) {
+            console.error("Navigation error: " + error.message);
+        });
+    } else {
+        console.log("Custom page not opened because status is not 864640000.");
+        Xrm.Navigation.openAlertDialog({ text: "Der GAEB-Export kann erst durchgeführt werden, wenn die Berechnung auf dem aktuellen Stand ist. Bitte führen Sie eine manuelle Bottom-Up Berechnung durch." });
+    }
+};
+
+// open from Main Form
+Schulz.CalculationRibbon.openSetDefaultValuesCustomPage = (formContext) => {
+    //Get Calculation GUID and remove {}
+    var selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "")
+    console.log("Calculation GUID: " + selectedRecordID);
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationsetdefaultvaluesorrecalculatepositions_3a2a9",
+        entityName: "hso_calculation",
+        recordId: JSON.stringify({ CalculationID: selectedRecordID, OperationType: "Standardwerte setzen" })
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 400,
+        title: "Standardwerte setzen",
+    };
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+        // Called when the dialog closes
+        formContext.data.refresh();
+    }).catch(
+        function (error) {
+            // Handle error
+        });
+};
+
+// open from Main Form
+Schulz.CalculationRibbon.openRecalculatePositionsCustomPage = (formContext) => {
+    //Get Calculation GUID and remove {}
+    var selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "")
+    console.log("Calculation GUID: " + selectedRecordID);
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationsetdefaultvaluesorrecalculatepositions_3a2a9",
+        entityName: "hso_calculation",
+        recordId: JSON.stringify({ CalculationID: selectedRecordID, OperationType: "Positionen berechnen" })
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 400,
+        title: "Positionen (neu) berechnen",
+    };
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+        // Called when the dialog closes
+        formContext.data.refresh();
+    }).catch(
+        function (error) {
+            // Handle error
+        });
+};
+
+// open from Main Form
+Schulz.CalculationRibbon.openSidePanel_SearchAndReplace = (formContext) => {
+    //Get Calculation GUID and remove {}
+    let selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "")
+    // get the Search & Replace Side Panel
+    let SidePanel_SearchAndReplace_CustomPage = Xrm.App.sidePanes.getPane("CalculationSearchAndReplace_SidePanel");
+    if (SidePanel_SearchAndReplace_CustomPage != null) {
+        Xrm.App.sidePanes.getPane("CalculationSearchAndReplace_SidePanel").navigate({
+            pageType: "custom",
+            name: "hso_calculationpositionsearchreplace_aaddb",
+            recordId: selectedRecordID,
+            hidden: false
+        });
+        console.log("Side Panel 'Search & Replace' refreshed!");
+    } else {
+        Xrm.App.sidePanes.createPane({
+            title: "Suchen & Ersetzen",
+            paneId: "CalculationSearchAndReplace_SidePanel",
+            imageSrc: "WebResources/hso_searchreplace_icon",
+            hideHeader: false,
+            canClose: true,
+            width: 1200,
+            isSelected: false,
+            hidden: false
+        }).then((pane) => {
+            pane.navigate({
+                pageType: "custom",
+                name: "hso_calculationpositionsearchreplace_aaddb",
+                recordId: selectedRecordID,
+                hidden: false
+            })
+        });
+    };
+
+};
+
+// open from Main Form
+Schulz.CalculationRibbon.createNewCalculationAsEmpty = (inputParameter) => {
+    Quote_GUID = inputParameter;
+    RetrieveQuote(Quote_GUID).then(function (SelectedQuote_Name) {
+        var entityFormOptions = {};
+        entityFormOptions["entityName"] = "hso_calculation";
+        entityFormOptions["useQuickCreateForm"] = true;
+        entityFormOptions["formId"] = "8519fee7-8787-ed11-81ac-000d3a204410"; //default quick create form without possibility to select a template
+        // Set default values for the Calculation form
+        var formParameters = {};
+        //formParameters["hso_name"] = "Template abc";
+        // Set lookup column for Parent Quote
+        formParameters["hso_quoteid"] = Quote_GUID;
+        formParameters["hso_quoteidname"] = Quote_Name;
+        formParameters["hso_quoteididtype"] = "quote";
+        // Set lookup column for Currency
+        formParameters["transactioncurrencyid"] = Quote_Currency_GUID;
+        formParameters["transactioncurrencyidname"] = Quote_Currency_Name;
+        formParameters["transactioncurrencyididtype"] = "transactioncurrency";
+        // Set lookup column for Department
+        formParameters["hso_departmentid"] = Quote_Department_GUID;
+        formParameters["hso_departmentidname"] = Quote_Department_Name;
+        formParameters["hso_departmentidtype"] = "hso_department";
+        // Open the form.
+        Xrm.Navigation.openForm(entityFormOptions, formParameters).then(function (success) {
+            console.log(success);
+        },
+            function (error) {
+                console.log(error);
+            });
+    });
+};
+
+// open from Main Form
+Schulz.CalculationRibbon.createNewCalculationFromTemplate = (inputParameter) => {
+    Quote_GUID = inputParameter;
+    Schulz.CalculationRibbon.RetrieveQuote(Quote_GUID).then(function (SelectedQuote_Name) {
+        var entityFormOptions = {};
+        entityFormOptions["entityName"] = "hso_calculation";
+        entityFormOptions["useQuickCreateForm"] = true;
+        entityFormOptions["formId"] = "2b84eb47-800e-ee11-8f6d-000d3a204410"; //specific quick create form with additional fields to select a template
+        // Set default values for the Calculation form
+        var formParameters = {};
+        //formParameters["hso_name"] = "Template abc";
+        // Set lookup column for Parent Quote
+        formParameters["hso_quoteid"] = Quote_GUID;
+        formParameters["hso_quoteidname"] = Quote_Name;
+        formParameters["hso_quoteididtype"] = "quote";
+        // Set lookup column for Currency
+        formParameters["transactioncurrencyid"] = Quote_Currency_GUID;
+        formParameters["transactioncurrencyidname"] = Quote_Currency_Name;
+        formParameters["transactioncurrencyididtype"] = "transactioncurrency";
+        // Set lookup column for Department
+        formParameters["hso_departmentid"] = Quote_Department_GUID;
+        formParameters["hso_departmentidname"] = Quote_Department_Name;
+        formParameters["hso_departmentidtype"] = "hso_department";
+        // Set lookup column for Company
+        formParameters["hso_companyid"] = Quote_Company_GUID;
+        formParameters["hso_companyidname"] = Quote_Company_Name;
+        formParameters["hso_companyidtype"] = "cdm_company";
+        // Set Language
+        formParameters["hso_language"] = Quote_Language;
+        // Open the form.
+        Xrm.Navigation.openForm(entityFormOptions, formParameters).then(function (success) {
+            console.log(success);
+        },
+            function (error) {
+                console.log(error);
+            });
+    });
+};
+
+// Fetch Quote Information
+// Function called by other function from within this library
+Schulz.CalculationRibbon.RetrieveQuote = (SelectedQuote) => {
+    return new Promise(function (resolve, reject) {
+        // Get Quote
+        Xrm.WebApi.retrieveRecord("quote", SelectedQuote, "?$select=name,_transactioncurrencyid_value,_hso_departmentid_value,_msdyn_company_value,msdyn_language&$expand=transactioncurrencyid($select=currencyname),hso_departmentid($select=hso_name),msdyn_Company($select=cdm_companycode)").then(
+            function success(result) {
+                Quote_Name = result.name;
+                Quote_Currency_GUID = result._transactioncurrencyid_value;
+                Quote_Currency_Name = result.transactioncurrencyid.currencyname;
+                Quote_Department_GUID = result._hso_departmentid_value;
+                Quote_Department_Name = result.hso_departmentid.hso_name;
+                Quote_Company_GUID = result._msdyn_company_value;
+                Quote_Company_Name = result.msdyn_Company.cdm_companycode;
+                Quote_Language = result.msdyn_language;
+                resolve(result.name);
+            },
+            function error(error) {
+                reject(error);
+            });
+    })
+};
+
+Schulz.CalculationRibbon.callCustomAPIExecuteOperation = (PrimaryControl, FirstPrimaryItemId, OperationName, OperationType) => {
+    // Format Calculation GUID by removing "{" and "}"
+    let CalculationGUID = FirstPrimaryItemId.replace(/[{}]/g, "")
+    console.log("Operation: " + OperationName + " (" + OperationType + ")");
+    // Operation Types
+    // 0 - SingleDelete
+    // 1 - SingleSetDefaultValues
+    // 2 - SingleRecalculateNode
+    // 3 - BulkDelete
+    // 4 - BulkSetDefaultValues
+    // 5 - BulkRecalculateNode
+
+    // Confirm action with the user
+    let confirmTitle = "";
+    let confirmMessage = "";
+    switch (OperationType) {
+        case 4:
+            confirmTitle = "Standardwerte setzen";
+            confirmMessage = "Die Standardwerte werden für alle Kalkulationspositionen gesetzt. Anschließend wird eine komplette Neu-Berechnung der Kalkulationsversion durchgeführt.";
+            break;
+        case 5:
+            confirmTitle = "Neu-Berechnung durchführen";
+            confirmMessage = "Für die komplette Kalkulationsversion wird eine Neu-Berechnung durchgeführt.";
+            break;
+    };
+    var confirmStrings = { text: confirmMessage, title: confirmTitle };
+    var confirmOptions = { height: 200, width: 450 };
+    Xrm.Navigation.openConfirmDialog(confirmStrings, confirmOptions).then(
+        function (success) {
+            if (success.confirmed) {
+                // Search for Top Level Nodes of respective Calculation
+                Xrm.WebApi.retrieveMultipleRecords("hso_calculationdetail", "?$select=hso_calculationdetailid,hso_name,hso_linenumber&$filter=_hso_calculationid_value eq '" + CalculationGUID + "' and hso_level eq 1").then(result => {
+                    let records = [];
+                    if (result && result.entities.length > 0) {
+                        for (let i = 0; i < result.entities.length; i++) {
+                            records.push(result.entities[i].hso_calculationdetailid);
+                            console.log("Record Found: ", result.entities[i]);
+                        }
+                    } else {
+                        console.log("No top-level records found for the calculation.");
+                    }
+
+                    // Display Progress Indicator (and block UI)
+                    switch (OperationType) {
+                        case 4:
+                            Xrm.Utility.showProgressIndicator("Standardwerte setzen...");
+                            break;
+                        case 5:
+                            Xrm.Utility.showProgressIndicator("Neu-Berechnung durchführen...");
+                            break;
+                    }
+
+                    // Prepare the payload
+                    const payload = {
+                        OperationType: OperationType,
+                        Records: records
+                    };
+
+                    const payloadString = JSON.stringify(payload);
+                    console.log("Payload to send:", payloadString);
+
+                    // Create the API request
+                    let request = new Schulz.CalculationRibbon.hso_CalculationdetailExecuteOperation(payloadString);
+
+                    // Call the Custom API
+                    Xrm.WebApi.online.execute(request).then(
+                        result => {
+                            result.json().then(response => {
+                                console.log("Custom API successfully called.", response);
+
+                                // Parse JSON safely
+                                let parsedResponse = JSON.parse(response.hso_CalculationdetailApiResponseProperty);
+
+                                // Map operation type to readable title
+                                const operationTitles = {
+                                    0: "Position löschen",
+                                    1: "Standardwerte setzen",
+                                    2: "Neu-Berechnung durchführen",
+                                    3: "Positionen löschen",
+                                    4: "Standardwerte setzen",
+                                    5: "Neu-Berechnung durchführen"
+                                };
+
+                                const alertTitle = operationTitles[OperationType] || "Aktion ausführen";
+                                const alertText = parsedResponse.Message || "Keine Nachricht vom Server erhalten.";
+
+                                // Build alert dialog
+                                const alertStrings = {
+                                    confirmButtonLabel: "OK",
+                                    text: alertText,
+                                    title: alertTitle
+                                };
+
+                                // Pull Processing Log State in 15sec intervalls until completed
+
+                                // Show the alert dialog
+                                Schulz.CalculationRibbon.openAlertDialog(alertStrings);
+                                // Close Progress Indicator
+                                Xrm.Utility.closeProgressIndicator();
+                                // Refresh the Form
+                                PrimaryControl.data.refresh(false).then(() => {
+                                    console.log("Form data refreshed.");
+                                    // Trigger function in Form_Calculation.js to refresh Form Notifications
+                                    Schulz.CalculationForm.displayFormNotification(PrimaryControl);
+                                });
+                            },
+                                error => {
+                                    console.error("Error calling the Custom API:", error);
+                                    Xrm.Utility.closeProgressIndicator();
+                                    Xrm.Navigation.openErrorDialog({
+                                        details: error.message,
+                                        message: "An error occurred while calling the hso_CalculationdetailApi Custom API."
+                                    });
+                                }
+                            );
+
+                        },
+                        error => {
+                            console.error("Error retrieving records: ", error);
+                        }
+                    );
+                })
+            };
+        });
+};
+
+// Custom API to execute several plug-ins for a list of records
+Schulz.CalculationRibbon.hso_CalculationdetailExecuteOperation = function (hso_CalculationdetailApiPayload) {
+    this.hso_CalculationdetailApiPayload = hso_CalculationdetailApiPayload;
+};
+
+// Attach metadata to the prototype
+Schulz.CalculationRibbon.hso_CalculationdetailExecuteOperation.prototype.getMetadata = function () {
+    return {
+        boundParameter: null,
+        parameterTypes: {
+            'hso_CalculationdetailApiPayload': {
+                'typeName': 'Edm.String',
+                'structuralProperty': 1 // Primitive Type
+            }
+        },
+        operationType: 0, // Action (0 = Action, 1 = Function, 2 = CRUD)
+        operationName: 'hso_CalculationdetailApi',
+    };
+};
+
+Schulz.CalculationRibbon.callCustomAPICalculation = (PrimaryControl, FirstPrimaryItemId, OperationName, OperationType) => {
+    console.log("Operation: " + OperationName + " (" + OperationType + ")");
+    // Operation Types
+    // 0 - RenumberCalculation
+    // 1 - CalculateUnitPriceRatio
+    // 2 - CalculateBottomUp
+
+    // Confirm action with the user
+    let confirmTitle = "";
+    let confirmMessage = "";
+    let progessIndicatorMessage = "";
+    switch (OperationType) {
+        case 0:
+            confirmTitle = "Neu-Nummerierung durchführen";
+            confirmMessage = "Eine Neu-Nummerierung aller Positionen der Kalkulationsversion wird durchgeführt.";
+            progessIndicatorMessage = "Neu-Nummerierung wird durchgeführt";
+            ResultDialogMessage_Success = "Die Neu-Nummerierung wurde erfolgreich durchgeführt.";
+            ResultDialogMessage_Error = "Bei der Neu-Nummerierung ist ein Fehler aufgetreten.";
+            break;
+        case 1:
+            confirmTitle = "EP-Anteile berechnen";
+            confirmMessage = "Die Berechnung der EP-Anteile wird für alle erforderlichen Positionen durchgeführt.";
+            progessIndicatorMessage = "EP-Anteile werden berechnet";
+            ResultDialogMessage_Success = "Die Berechnung der EP-Anteile wurde erfolgreich durchgeführt.";
+            ResultDialogMessage_Error = "Bei der Berechnung der EP-Anteile ist ein Fehler aufgetreten.";
+            break;
+        case 2:
+            confirmTitle = "Bottom-Up Berechnung durchführen";
+            confirmMessage = "Die Bottom-Up Berechnung wird für alle Positionen der Kalkulationsversion durchgeführt.";
+            progessIndicatorMessage = "Bottom-Up Berechnung wird durchgeführt";
+            ResultDialogMessage_Success = "Die Bottom-Up Berechnung wurde erfolgreich durchgeführt.";
+            ResultDialogMessage_Error = "Bei der Bottom-Up Berechnung ist ein Fehler aufgetreten.";
+    };
+    var confirmStrings = { text: confirmMessage, title: confirmTitle };
+    var confirmOptions = { height: 200, width: 450 };
+    Xrm.Navigation.openConfirmDialog(confirmStrings, confirmOptions).then(
+        function (success) {
+            if (success.confirmed) {
+                // Show Progress Indicator
+                Xrm.Utility.showProgressIndicator(progessIndicatorMessage);
+
+                // Prepare the payload
+                let CalculationGUID = FirstPrimaryItemId.replace(/[{}]/g, "");
+                const payload = {
+                    OperationType: OperationType,
+                    Records: [CalculationGUID]
+                };
+                const payloadString = JSON.stringify(payload);
+                console.log("Payload to send:", payloadString);
+
+                // Create the API request
+                let hso_CalculationAPIRequest = new Schulz.CalculationRibbon.hso_CalculationAPI(payloadString);
+
+                // Call the Custom API
+                Xrm.WebApi.online.execute(hso_CalculationAPIRequest).then(
+                    function (result) {
+                        result.json().then(
+                            function (response) {
+                                console.log("Custom API successfully called with operation: " + OperationName);
+                                console.log("Response from API:", response);
+
+                                // Parse the JSON string property
+                                let parsedResponse = JSON.parse(response.hso_CalculationApiResponseProperty);
+
+                                // Show alert based on success/failure
+                                let alertStrings;
+                                if (parsedResponse.Success === true) {
+                                    alertStrings = {
+                                        confirmButtonLabel: "OK",
+                                        text: parsedResponse.Message,
+                                        title: confirmTitle
+                                    };
+                                } else {
+                                    alertStrings = {
+                                        confirmButtonLabel: "OK",
+                                        text: parsedResponse.Message,
+                                        title: ResultDialogMessage_Error
+                                    };
+                                }
+
+                                Schulz.CalculationRibbon.openAlertDialog(alertStrings);
+                                // Close Progress Indicator
+                                Xrm.Utility.closeProgressIndicator();
+                                // Refresh the Form
+                                PrimaryControl.data.refresh(false).then(() => {
+                                    console.log("Form data refreshed.");
+                                    // Trigger function in Form_Calculation.js to refresh Form Notifications 
+                                    Schulz.CalculationForm.displayFormNotification(PrimaryControl);
+                                });
+                            }
+                        );
+                    },
+                    function (error) {
+                        console.error("Error calling the Custom API:", error);
+                        Xrm.Utility.closeProgressIndicator();
+                        Xrm.Navigation.openErrorDialog({
+                            details: error.message,
+                            message: "An error occurred while calling the hso_CalculationAPI Custom API."
+                        });
+                    }
+                );
+
+            }
+        });
+};
+
+// Custom API to execute several plug-ins for a list of records
+Schulz.CalculationRibbon.hso_CalculationAPI = function (hso_CalculationApiPayload) {
+    this.hso_CalculationApiPayload = hso_CalculationApiPayload;
+};
+
+// Attach metadata to the prototype
+Schulz.CalculationRibbon.hso_CalculationAPI.prototype.getMetadata = function () {
+    return {
+        boundParameter: null,
+        parameterTypes: {
+            'hso_CalculationApiPayload': {
+                'typeName': 'Edm.String',
+                'structuralProperty': 1 // Primitive Type
+            }
+        },
+        operationType: 0, // Action (0 = Action, 1 = Function, 2 = CRUD)
+        operationName: 'hso_CalculationApi',
+    };
+};
+
+Schulz.CalculationRibbon.openAlertDialog = function (alertStrings) {
+    var alertOptions = { height: 200, width: 450 };
+    Xrm.Navigation.openAlertDialog(alertStrings, alertOptions).then(
+        function (success) {
+            console.log("Alert dialog closed");
+        },
+        function (error) {
+            console.log(error.message);
+        }
+    );
+}

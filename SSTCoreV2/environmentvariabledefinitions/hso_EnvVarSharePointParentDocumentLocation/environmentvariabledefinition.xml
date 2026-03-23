@@ -1,0 +1,14 @@
+<environmentvariabledefinition schemaname="hso_EnvVarSharePointParentDocumentLocation">
+  <defaultvalue>9bff0874-d5ab-ef11-b8e9-000d3adf95e4</defaultvalue>
+  <description default="Dataverse GUID of the SharePoint Document Location for Service Requests">
+    <label description="Dataverse GUID of the SharePoint Document Location for Service Requests" languagecode="1031" />
+  </description>
+  <displayname default="[DEPRECATED] EnvVar | SharePoint Parent Document Location">
+    <label description="[DEPRECATED] EnvVar | SharePoint Parent Document Location" languagecode="1031" />
+  </displayname>
+  <introducedversion>1.0.0.0</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000000</type>
+</environmentvariabledefinition>

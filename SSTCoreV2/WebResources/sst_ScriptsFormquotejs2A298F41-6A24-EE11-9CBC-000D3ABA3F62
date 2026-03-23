@@ -1,0 +1,921 @@
+/**
+ * Schulz Quote Form Script - Optimized and Reordered Version
+ * 
+ * Structure:
+ * 1. Namespace and Constants
+ * 2. Main Event Handlers (onLoad, onSave, registerEvents)
+ * 3. Core Business Logic Functions
+ * 4. Debitor and ERP Role Management
+ * 5. UI Management and Filtering
+ * 6. Location and Address Management
+ * 7. Contact and Textblock Management
+ * 8. Project and Calculation Management
+ * 9. Utility Functions
+ */
+
+if (typeof (Schulz) === "undefined") { Schulz = {}; };
+if (typeof (Schulz.QuoteForm) === "undefined") { Schulz.QuoteForm = {}; }
+
+// ========================================
+// CONSTANTS AND CONFIGURATION
+// ========================================
+
+// Constants for quote types
+Schulz.QuoteForm.QUOTE_TYPES = {
+    ARTIKEL: 867520000,
+    PROJEKT: 867520001
+};
+
+// Constants for state codes
+Schulz.QuoteForm.STATE_CODES = {
+    DRAFT: 0,
+    ACTIVE: 1,
+    WON: 2
+};
+
+// Constants for customer type codes
+Schulz.QuoteForm.CUSTOMER_TYPE_CODES = {
+    COMPETITOR: 1,
+    CUSTOMER: 2,
+    DEBITOR: 3,
+    INVESTOR: 4,
+    PARTNER: 5,
+    PRESS: 6,
+    PROSPECT: 7,
+    RESELLER: 8,
+    SUPPLIER: 9,
+    VENDOR: 10,
+    OTHER: 11
+};
+
+// UI configuration for different quote types
+Schulz.QuoteForm.UI_CONFIGURATIONS = {
+    [Schulz.QuoteForm.QUOTE_TYPES.ARTIKEL]: {
+        sections: {
+            "Summary_tab": {
+                "products": true,
+                "totals": true,
+                "calculation_section": false,
+                "section_quoteclosure": false,
+                "description_section": false
+            }
+        },
+        tabs: {
+            "tab_calculation": false
+        },
+        controls: {
+            "sst_paymentgoal_txt": false,
+            "hso_departmentid": false,
+            "revisionnumber": true,
+            "hso_printtype_opt": true,
+            "hso_activecalculation_id": false,
+            "sst_previewprint_opt": true,
+            "sst_projektleitung_id": false,
+            "hso_paymentmethodid": false,
+            "sst_noabsend_bit": false,
+            "sst_noquotesend_bit": false,
+            "msdyn_defaultshippingwarehouse": false,
+            // Added 05.02.26 according to CR 12226
+            "salesorder_subgrid": true
+            // End of Added 05.02.26 according to CR 12226
+        },
+        requiredLevels: {
+            "hso_departmentid": "none",
+            "msdyn_defaultshippingsite": "none",
+            "msdyn_defaultshippingwarehouse": "none"
+        }
+    },
+    [Schulz.QuoteForm.QUOTE_TYPES.PROJEKT]: {
+        sections: {
+            "Summary_tab": {
+                "products": false,
+                "totals": false,
+                "calculation_section": true,
+                "section_quoteclosure": true,
+                "description_section": true
+            }
+        },
+        tabs: {
+            "tab_calculation": true
+        },
+        controls: {
+            "sst_paymentgoal_txt": false,
+            "hso_departmentid": true,
+            "sst_projektleitung_id": true,
+            "revisionnumber": false,
+            "hso_printtype_opt": false,
+            "sst_previewprint_opt": false,
+            "hso_activecalculation_id": true,
+            "hso_paymentmethodid": true,
+            "sst_noabsend_bit": true,
+            "sst_noquotesend_bit": true,
+            // Added 05.02.26 according to CR 12226
+            "salesorder_subgrid": false
+            // End of Added 05.02.26 according to CR 12226
+        },
+        requiredLevels: {
+            "hso_departmentid": "required",
+            "msdyn_defaultshippingsite": "required",
+            "msdyn_defaultshippingwarehouse": "required"
+        }
+    },
+    default: {
+        sections: {
+            "Summary_tab": {
+                "products": true,
+                "totals": true,
+                "calculation_section": false,
+                "description_section": false
+            }
+        },
+        tabs: {
+            "tab_calculation": false
+        },
+        controls: {
+            "sst_paymentgoal_txt": false,
+            "hso_departmentid": false,
+            "hso_printtype_opt": false,
+            "sst_previewprint_opt": false,
+            "hso_activecalculation_id": false,
+            "sst_noabsend_bit": true,
+            "sst_noquotesend_bit": true,
+            // Added 05.02.26 according to CR 12226
+            "salesorder_subgrid": false
+            // End ofAdded 05.02.26 according to CR 12226
+        },
+        requiredLevels: {
+            "hso_departmentid": "none",
+            "msdyn_defaultshippingsite": "none",
+            "msdyn_defaultshippingwarehouse": "none"
+        }
+    }
+};
+
+// Delivery address fields configuration
+Schulz.QuoteForm.deliveryAdressfields = [
+    "shipto_line1",
+    "shipto_line2",
+    "shipto_city",
+    "shipto_postalcode",
+    "sst_country_id",
+    "shipto_name"
+];
+
+// ========================================
+// MAIN EVENT HANDLERS
+// ========================================
+
+Schulz.QuoteForm.onLoad = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+
+    Schulz.QuoteForm.registerEvents(formContext);
+    Schulz.QuoteForm.requiredFieldsCheck(executionContext);
+    Schulz.QuoteForm.debitorCheck(executionContext);
+    //Schulz.QuoteForm.filterContact(executionContext);
+    Schulz.QuoteForm.filterTextblocks(executionContext);
+    Schulz.QuoteForm.hideTypespecificElements(executionContext);
+    Schulz.QuoteForm.fillERPRoleFields(executionContext);
+    Schulz.QuoteForm.setLocationIDtoDeliveryadress(executionContext);
+    Schulz.QuoteForm.useAlternateAddress(executionContext);
+    Schulz.QuoteForm.filterCustomerIdLookup(executionContext);
+    //Schulz.QuoteForm.printPreviewLogicArticelsales(executionContext);
+    Schulz.QuoteForm.notifyUserIfQuoteIsActiveAndWriteInProductsExist(executionContext);
+    Schulz.QuoteForm.notifyUserIfProjectQuoteIsWon(formContext);
+};
+
+Schulz.QuoteForm.onSave = (executionContext) => {
+    Schulz.QuoteForm.setTypeReadOnly(executionContext);
+};
+
+Schulz.QuoteForm.registerEvents = (formContext) => {
+    formContext.getAttribute("msdyn_company")?.addOnChange(Schulz.QuoteForm.debitorCheck);
+    formContext.getAttribute("customerid")?.addOnChange(Schulz.QuoteForm.validateCustomerTypeOnChange);
+    formContext.getAttribute("customerid")?.addOnChange(Schulz.QuoteForm.debitorCheck);
+    formContext.getAttribute("customerid")?.addOnChange(Schulz.QuoteForm.setLocationIDtoDeliveryadress);
+    formContext.getAttribute("sst_debitor_id")?.addOnChange(Schulz.QuoteForm.fillERPRoleFields);
+    formContext.getAttribute("sst_contactperson_id")?.addOnChange(Schulz.QuoteForm.prefilAccount);
+    formContext.getAttribute("sst_footertextblock_id")?.addOnChange(Schulz.QuoteForm.setTextblockFooter);
+    formContext.getAttribute("sst_headertextblock_id")?.addOnChange(Schulz.QuoteForm.setTextblockHeader);
+    formContext.getAttribute("sst_angebotstyp_opt")?.addOnChange(Schulz.QuoteForm.hideTypespecificElements);
+    //formContext.getAttribute("sst_angebotstyp_opt")?.addOnChange(Schulz.QuoteForm.printPreviewLogicArticelsales);
+    //formContext.getAttribute("statecode")?.addOnChange(Schulz.QuoteForm.printPreviewLogicArticelsales);
+    formContext.getAttribute("sst_alternativdelivery_opt")?.addOnChange(Schulz.QuoteForm.useAlternateAddress);
+    formContext.getAttribute("sst_alternativdelivery_opt")?.addOnChange(Schulz.QuoteForm.setLocationIDtoDeliveryadress);
+    formContext.getAttribute("msdyn_defaultshippingwarehouse").addOnChange(Schulz.QuoteForm.requiredFieldsCheck);
+    formContext.getAttribute("msdyn_defaultshippingsite").addOnChange(Schulz.QuoteForm.requiredFieldsCheck);
+    formContext.getAttribute("statecode").addOnChange(Schulz.QuoteForm.notifyUserIfQuoteIsActiveAndWriteInProductsExist);
+    formContext.getAttribute("statecode").addOnChange(Schulz.QuoteForm.setPrintTypeToQuoteIfQuoteIsActive);
+    formContext.getAttribute("hso_activecalculation_id").addOnChange(Schulz.QuoteForm.setStatusForActiveCalculation);
+    formContext.getAttribute("sst_hasdebitor_opt")?.addOnChange(Schulz.QuoteForm.filterCustomerIdLookup);
+};
+
+// ========================================
+// CORE BUSINESS LOGIC FUNCTIONS
+// ========================================
+
+Schulz.QuoteForm.requiredFieldsCheck = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+    // Only on update form (not on create) and for project quote
+    if (formContext.ui.getFormType() === 2 && formContext.getAttribute("sst_angebotstyp_opt").getValue() === Schulz.QuoteForm.QUOTE_TYPES.PROJEKT) {
+        var warehouseLookupValue = formContext.getAttribute("msdyn_defaultshippingwarehouse").getValue();
+        var operationalSiteLookupValue = formContext.getAttribute("msdyn_defaultshippingsite").getValue();
+        var requiredFieldsMissingNotification = "requiredFieldsMissingNotification";
+
+        if (warehouseLookupValue == null || warehouseLookupValue[0] == null || operationalSiteLookupValue == null || operationalSiteLookupValue[0] == null) {
+            formContext.ui.setFormNotification("Lagerort und Standort müssen zwingend angegeben werden, bevor die Angebotskalkulation zum Projekt gewandelt wird!", "ERROR", requiredFieldsMissingNotification);
+        }
+        else
+            formContext.ui.clearFormNotification(requiredFieldsMissingNotification);
+    }
+};
+
+Schulz.QuoteForm.notifyUserIfQuoteIsActiveAndWriteInProductsExist = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+    var notificationIDWriteInProductWarning = "write-in-product-warning";
+    var stateCodeValue = formContext.getAttribute("statecode").getValue();
+    var quoteTypeValue = formContext.getAttribute("sst_angebotstyp_opt").getValue();
+    var writeInProductsExistValue = formContext.getAttribute("sst_containswriteinproduct").getValue();
+
+    if (stateCodeValue === Schulz.QuoteForm.STATE_CODES.ACTIVE && quoteTypeValue === Schulz.QuoteForm.QUOTE_TYPES.ARTIKEL && writeInProductsExistValue === true)
+        formContext.ui.setFormNotification("Es befinden sich noch Write-In Produkte in diesem Angebot. Bitte ersetzen Sie diese zunächst, bevor Sie den Auftrag erstellen können.", "WARNING", notificationIDWriteInProductWarning);
+};
+
+Schulz.QuoteForm.setStatusForActiveCalculation = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+    if (formContext.getAttribute("hso_activecalculation_id").getValue() !== null)
+        formContext.getAttribute("statuscode").setValue(867520002);
+};
+
+Schulz.QuoteForm.setTypeReadOnly = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+    if (formContext.getAttribute("sst_angebotstyp_opt").getValue() != null)
+        formContext.getControl("sst_angebotstyp_opt").setDisabled(true);
+};
+
+Schulz.QuoteForm.setPrintTypeToQuoteIfQuoteIsActive = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+    var stateCodeValue = formContext.getAttribute("statecode").getValue();
+    var printTypeValue = formContext.getAttribute("hso_printtype_opt").getValue();
+    var quoteTypeValue = formContext.getAttribute("sst_angebotstyp_opt").getValue();
+
+    if (stateCodeValue === Schulz.QuoteForm.STATE_CODES.ACTIVE && quoteTypeValue === Schulz.QuoteForm.QUOTE_TYPES.ARTIKEL)
+        formContext.getAttribute("hso_printtype_opt").setValue(100000001);
+};
+
+Schulz.QuoteForm.printPreviewLogicArticelsales = (executionContext) => {
+    const formContext = executionContext.getFormContext();
+    const stateCode = formContext.getAttribute("statecode").getValue();
+    const quoteType = formContext.getAttribute("sst_angebotstyp_opt").getValue();
+
+    // Only process for article quotes (Artikelangebot)
+    if (quoteType === Schulz.QuoteForm.QUOTE_TYPES.ARTIKEL) {
+        const previewPrintValue = stateCode === Schulz.QuoteForm.STATE_CODES.DRAFT;
+        formContext.getAttribute("sst_previewprint_opt").setValue(previewPrintValue);
+    }
+};
+
+// ========================================
+// DEBITOR AND ERP ROLE MANAGEMENT
+// ========================================
+
+Schulz.QuoteForm.validateCustomerTypeOnChange = async (executionContext) => {
+    const formContext = executionContext.getFormContext();
+
+    // Check if debitor is required
+    const hasDebitor = formContext.getAttribute("sst_hasdebitor_opt").getValue();
+    if (hasDebitor !== true) return;
+
+    // Get customer information
+    const customerLookup = formContext.getAttribute("customerid").getValue();
+    if (!customerLookup) return;
+
+    const customerType = customerLookup[0].entityType;
+
+    // Only validate if customer is an account
+    if (customerType !== 'account') return;
+
+    const customerId = Schulz.QuoteForm.extractId(customerLookup);
+    if (!customerId) return;
+
+    try {
+        // Retrieve the account's customer type code
+        const result = await Xrm.WebApi.retrieveRecord("account", customerId, "?$select=customertypecode");
+
+        // Check if the customer type code is not Debitor (3)
+        if (result.customertypecode !== Schulz.QuoteForm.CUSTOMER_TYPE_CODES.DEBITOR) {
+            // Show alert dialog
+            await Xrm.Navigation.openAlertDialog({
+                title: "Ungültiger Kundentyp",
+                text: "Änderung auf einen Interessenten nicht möglich. Bitte Interessenten zum Debitor entwickeln oder eine neue Verkaufschance anlegen."
+            });
+
+            // Clear the customerid field
+            formContext.getAttribute("customerid").setValue(null);
+        }
+    } catch (error) {
+        console.error("Error validating customer type:", error);
+    }
+};
+
+Schulz.QuoteForm.debitorCheck = (executionContext) => {
+    const formContext = executionContext.getFormContext();
+
+    // Get company ID
+    const companyLookup = formContext.getAttribute("msdyn_company").getValue();
+    const companyId = Schulz.QuoteForm.extractId(companyLookup);
+
+    // Get customer info
+    const customerLookup = formContext.getAttribute("customerid").getValue();
+    if (!customerLookup) return;
+
+    const customerType = customerLookup[0].entityType;
+    const customerId = Schulz.QuoteForm.extractId(customerLookup);
+
+    if (!companyId || !customerId) return;
+
+    // Process based on customer type
+    switch (customerType) {
+        case 'account':
+            Schulz.QuoteForm.processAccountDebitor(formContext, executionContext, customerId, companyId);
+            break;
+        case 'contact':
+            Schulz.QuoteForm.processContactDebitor(formContext, executionContext, customerId, companyId);
+            break;
+    }
+};
+
+// Helper function to process account debitor
+Schulz.QuoteForm.processAccountDebitor = (formContext, executionContext, accountId, companyId) => {
+    const query = `?$select=_sst_account_ref_value,_sst_company_ref_value,sst_name_str,sst_erproleid,sst_invoicedeliveryonhold_opt,_sst_taxgroup_ref_value&$filter=_sst_account_ref_value eq '${accountId}' and _sst_company_ref_value eq '${companyId}'`;
+
+    Schulz.QuoteForm.processDebitorQuery(formContext, executionContext, "sst_erprole", query);
+};
+
+// Helper function to process contact debitor
+Schulz.QuoteForm.processContactDebitor = (formContext, executionContext, contactId, companyId) => {
+    const query = `?$select=_sst_account_ref_value,_sst_company_ref_value,sst_name_str,sst_erproleid,sst_invoicedeliveryonhold_opt,_sst_taxgroup_ref_value&$filter=_sst_contact_id_value eq '${contactId}' and _sst_company_ref_value eq '${companyId}'`;
+
+    Schulz.QuoteForm.processDebitorQuery(formContext, executionContext, "sst_erprole", query);
+};
+
+// Consolidated function to process debitor query results
+Schulz.QuoteForm.processDebitorQuery = (formContext, executionContext, entityName, query) => {
+    Xrm.WebApi.retrieveMultipleRecords(entityName, query).then(
+        (results) => {
+            if (results.entities && results.entities.length > 0) {
+                Schulz.QuoteForm.handleDebitorFound(formContext, results.entities[0]);
+            } else {
+                Schulz.QuoteForm.handleDebitorNotFound(formContext);
+            }
+            Schulz.QuoteForm.fillERPRoleFields(executionContext);
+        },
+        (error) => {
+            console.error("Error retrieving ERP role:", error);
+        }
+    );
+};
+
+// Handle case when debitor is found
+Schulz.QuoteForm.handleDebitorFound = (formContext, erpRole) => {
+    const erpRoleRef = {
+        id: erpRole["sst_erproleid"],
+        entityType: "sst_erprole",
+        name: erpRole["sst_name_str"]
+    };
+
+    // Set debitor if not already set
+    if (formContext.getAttribute("sst_debitor_id").getValue() === null) {
+        formContext.getAttribute("sst_debitor_id").setValue([erpRoleRef]);
+    }
+
+    // Handle debitor approval status
+    const isOnHold = erpRole["sst_invoicedeliveryonhold_opt"] === 806380000;
+    const hasDebitor = formContext.getAttribute("sst_hasdebitor_opt").getValue();
+    const previousHasDebitor = hasDebitor;
+
+    if (isOnHold && !hasDebitor) {
+        formContext.getAttribute("sst_hasdebitor_opt").setValue(true);
+        formContext.ui.clearFormNotification("MissingDebitorNotification");
+    } else if (!hasDebitor) {
+        formContext.getAttribute("sst_hasdebitor_opt").setValue(false);
+        formContext.ui.setFormNotification("Der Debitor in diesem Mandanten ist noch nicht freigegeben.", "WARNING", "MissingDebitorNotification");
+    }
+
+    // Update customer filter if hasDebitor status changed
+    const currentHasDebitor = formContext.getAttribute("sst_hasdebitor_opt").getValue();
+    if (previousHasDebitor !== currentHasDebitor) {
+        const mockExecutionContext = { getFormContext: () => formContext };
+        Schulz.QuoteForm.filterCustomerIdLookup(mockExecutionContext);
+    }
+
+    Schulz.QuoteForm.fillDefaultSalesTaxPercentage(formContext, erpRole["_sst_taxgroup_ref_value"]);
+};
+
+// Handle case when debitor is not found
+Schulz.QuoteForm.handleDebitorNotFound = (formContext) => {
+    if (formContext.getAttribute("sst_debitor_id").getValue() !== null) {
+        formContext.getAttribute("sst_debitor_id").setValue(null);
+    }
+
+    const hasDebitorAttribute = formContext.getAttribute("sst_hasdebitor_opt");
+    const previousHasDebitor = hasDebitorAttribute.getValue();
+    const initialHasDebitor = hasDebitorAttribute.getInitialValue();
+
+    // Only set to false if it was never saved as true
+    // If it was previously saved as true, keep it as true
+    if (!previousHasDebitor && initialHasDebitor !== true) {
+        hasDebitorAttribute.setValue(false);
+    }
+
+    // Update customer filter if hasDebitor status changed
+    const currentHasDebitor = hasDebitorAttribute.getValue();
+    if (previousHasDebitor !== currentHasDebitor) {
+        const mockExecutionContext = { getFormContext: () => formContext };
+        Schulz.QuoteForm.filterCustomerIdLookup(mockExecutionContext);
+    }
+
+    // Only show notification if sst_hasdebitor_opt is false
+    if (currentHasDebitor === false) {
+        formContext.ui.setFormNotification("In diesem Mandanten gibt es keinen Debitor für diese Firma.", "WARNING", "MissingDebitorNotification");
+    }
+
+    Schulz.QuoteForm.clearDefaultSalesTaxPercentage(formContext);
+};
+
+Schulz.QuoteForm.fillERPRoleFields = (executionContext) => {
+    const formContext = executionContext.getFormContext();
+
+    const debitorLookup = formContext.getAttribute("sst_debitor_id").getValue();
+    if (!debitorLookup) return;
+
+    const erpRoleId = Schulz.QuoteForm.extractId(debitorLookup);
+    if (!erpRoleId) return;
+
+    // Check if we need to fill payment terms or delivery terms
+    const needsPaymentTerms = formContext.getAttribute("msdyn_paymentterms").getValue() === null;
+    const needsDeliveryTerms = formContext.getAttribute("sst_termsofdelivery_id").getValue() === null;
+
+    if (!needsPaymentTerms && !needsDeliveryTerms) return;
+
+    const query = `?$select=sst_paymentterms_id,sst_termsofdelivery_id,sst_erproleid&$top=1&$filter=sst_erproleid eq '${erpRoleId}'&$expand=sst_paymentterms_id($select=msdyn_paymenttermid,msdyn_name),sst_termsofdelivery_id($select=msdyn_termscode,msdyn_termsofdeliveryid)`;
+
+    Xrm.WebApi.retrieveMultipleRecords("sst_erprole", query)
+        .then(result => {
+            if (result.entities?.length > 0) {
+                const erpRole = result.entities[0];
+
+                // Set payment terms if needed and available
+                if (needsPaymentTerms && erpRole.sst_paymentterms_id) {
+                    const paymentTerms = {
+                        id: erpRole.sst_paymentterms_id.msdyn_paymenttermid,
+                        entityType: "msdyn_paymentterm",
+                        name: erpRole.sst_paymentterms_id.msdyn_name
+                    };
+                    formContext.getAttribute("msdyn_paymentterms").setValue([paymentTerms]);
+                }
+
+                // Set delivery terms if needed and available
+                if (needsDeliveryTerms && erpRole.sst_termsofdelivery_id) {
+                    const deliveryTerms = {
+                        id: erpRole.sst_termsofdelivery_id.msdyn_termsofdeliveryid,
+                        entityType: "msdyn_termsofdelivery",
+                        name: erpRole.sst_termsofdelivery_id.msdyn_termscode
+                    };
+                    formContext.getAttribute("sst_termsofdelivery_id").setValue([deliveryTerms]);
+                }
+            }
+        })
+        .catch(error => {
+            console.error("Error filling ERP role fields:", error);
+        });
+};
+
+Schulz.QuoteForm.fillDefaultSalesTaxPercentage = (formContext, salesTaxGroupRef) => {
+    if (salesTaxGroupRef) {
+        Xrm.WebApi.retrieveRecord("msdyn_taxgroup", salesTaxGroupRef, "?$select=hso_defaultsalestaxcodepercentage")
+            .then(result => {
+                formContext.getAttribute("hso_salestaxcodepercentage").setValue(result["hso_defaultsalestaxcodepercentage"]);
+            }, error => {
+                console.log(error.message);
+            });
+    }
+    else {
+        Schulz.QuoteForm.clearDefaultSalesTaxPercentage(formContext);
+    }
+};
+
+Schulz.QuoteForm.clearDefaultSalesTaxPercentage = (formContext) => {
+    formContext.getAttribute("hso_salestaxcodepercentage").setValue(null);
+};
+
+// ========================================
+// UI MANAGEMENT AND FILTERING
+// ========================================
+
+Schulz.QuoteForm.hideTypespecificElements = (executionContext) => {
+    const formContext = executionContext.getFormContext();
+    const quoteType = formContext.getAttribute("sst_angebotstyp_opt").getValue();
+
+    // Get configuration for the quote type
+    const config = Schulz.QuoteForm.UI_CONFIGURATIONS[quoteType] || Schulz.QuoteForm.UI_CONFIGURATIONS.default;
+
+    // Apply section visibility
+    Schulz.QuoteForm.applySectionVisibility(formContext, config.sections);
+
+    // Apply tab visibility
+    Schulz.QuoteForm.applyTabVisibility(formContext, config.tabs);
+
+    // Apply control visibility
+    Schulz.QuoteForm.applyControlVisibility(formContext, config.controls);
+
+    // Apply required levels
+    Schulz.QuoteForm.applyRequiredLevels(formContext, config.requiredLevels);
+};
+
+// Helper function to apply section visibility
+Schulz.QuoteForm.applySectionVisibility = (formContext, sectionsConfig) => {
+    Object.entries(sectionsConfig).forEach(([tabName, sections]) => {
+        const tab = formContext.ui.tabs.get(tabName);
+        if (tab) {
+            Object.entries(sections).forEach(([sectionName, isVisible]) => {
+                const section = tab.sections.get(sectionName);
+                if (section) {
+                    section.setVisible(isVisible);
+                }
+            });
+        }
+    });
+};
+
+// Helper function to apply tab visibility
+Schulz.QuoteForm.applyTabVisibility = (formContext, tabsConfig) => {
+    Object.entries(tabsConfig).forEach(([tabName, isVisible]) => {
+        const tab = formContext.ui.tabs.get(tabName);
+        if (tab) {
+            tab.setVisible(isVisible);
+        }
+    });
+};
+
+// Helper function to apply control visibility
+Schulz.QuoteForm.applyControlVisibility = (formContext, controlsConfig) => {
+    Object.entries(controlsConfig).forEach(([controlName, isVisible]) => {
+        const control = formContext.getControl(controlName);
+        if (control) {
+            control.setVisible(isVisible);
+        }
+    });
+};
+
+// Helper function to apply required levels
+Schulz.QuoteForm.applyRequiredLevels = (formContext, requiredLevelsConfig) => {
+    Object.entries(requiredLevelsConfig).forEach(([attributeName, requiredLevel]) => {
+        const attribute = formContext.getAttribute(attributeName);
+        if (attribute) {
+            attribute.setRequiredLevel(requiredLevel);
+        }
+    });
+};
+
+// Filter customerid lookup based on sst_hasdebitor_opt field
+Schulz.QuoteForm.filterCustomerIdLookup = (executionContext) => {
+    const formContext = executionContext.getFormContext();
+    const hasDebitor = formContext.getAttribute("sst_hasdebitor_opt").getValue();
+    const customerAttribute = formContext.getAttribute("customerid");
+    const notificationId = "CustomerFilterNotification";
+
+    if (!customerAttribute) return;
+
+    customerAttribute.controls.forEach(control => {
+        // Note: There's no direct way to remove pre-search in Dynamics 365
+        // The filter will be reapplied on next pre-search event
+        control.addPreSearch(() => {
+            Schulz.QuoteForm.addCustomerTypeFilter(customerAttribute, null);
+        });
+    });
+};
+
+// Helper function to add customer type filter
+Schulz.QuoteForm.addCustomerTypeFilter = (customerAttribute, customerTypeCode) => {
+    if (customerTypeCode) {
+        // Filter for accounts with specific customer type code
+        const accountFilter = `<filter type="and"><condition attribute="customertypecode" operator="eq" value="${customerTypeCode}" /></filter>`;
+
+        customerAttribute.controls.forEach(control => {
+            control.addCustomFilter(accountFilter, "account");
+            // Remove contacts from the lookup completely
+            control.addCustomFilter("<filter type='and'><condition attribute='contactid' operator='null' /></filter>", "contact");
+        });
+    } else {
+        // Allow all accounts but always exclude contacts
+        const permissiveFilter = "<filter type='or'><condition attribute='accountid' operator='not-null' /><condition attribute='accountid' operator='null' /></filter>";
+
+        customerAttribute.controls.forEach(control => {
+            control.addCustomFilter(permissiveFilter, "account");
+            // Always remove contacts from the lookup
+            control.addCustomFilter("<filter type='and'><condition attribute='contactid' operator='null' /></filter>", "contact");
+        });
+    }
+};
+
+// ========================================
+// LOCATION AND ADDRESS MANAGEMENT
+// ========================================
+
+Schulz.QuoteForm.setLocationIDtoDeliveryadress = (executionContext) => {
+    const formContext = executionContext.getFormContext();
+
+    // Skip if alternative delivery is selected
+    const altAddress = formContext.getAttribute("sst_alternativdelivery_opt").getValue();
+    if (altAddress) return;
+
+    // Get customer information
+    const customerLookup = formContext.getAttribute("customerid").getValue();
+    if (!customerLookup) return;
+
+    const customerType = customerLookup[0].entityType;
+    const customerId = Schulz.QuoteForm.extractId(customerLookup);
+    if (!customerId) return;
+
+    // Process based on customer type
+    switch (customerType) {
+        case 'account':
+            Schulz.QuoteForm.processAccountLocationId(formContext, customerId);
+            break;
+        case 'contact':
+            Schulz.QuoteForm.processContactLocationId(formContext, customerId);
+            break;
+    }
+};
+
+// Helper function to process account location IDs
+Schulz.QuoteForm.processAccountLocationId = (formContext, accountId) => {
+    const query = `?$select=accountid,sst_adresse1_locationid,sst_adresse2_locationid&$top=1&$filter=accountid eq '${accountId}'`;
+
+    Xrm.WebApi.retrieveMultipleRecords("account", query)
+        .then(result => {
+            if (result.entities?.length > 0) {
+                const account = result.entities[0];
+                Schulz.QuoteForm.setLocationIds(formContext, account.sst_adresse1_locationid, account.sst_adresse2_locationid);
+            }
+        })
+        .catch(error => {
+            console.error("Error retrieving account location:", error);
+        });
+};
+
+// Helper function to process contact location IDs
+Schulz.QuoteForm.processContactLocationId = (formContext, contactId) => {
+    const query = `?$select=contactid,sst_adress1locationid_txt,sst_adress2locationid_txt&$top=1&$filter=contactid eq '${contactId}'`;
+
+    Xrm.WebApi.retrieveMultipleRecords("contact", query)
+        .then(result => {
+            if (result.entities?.length > 0) {
+                const contact = result.entities[0];
+                Schulz.QuoteForm.setLocationIds(formContext, contact.sst_adress1locationid_txt, contact.sst_adress2locationid_txt);
+            }
+        })
+        .catch(error => {
+            console.error("Error retrieving contact location:", error);
+        });
+};
+
+// Helper function to set location IDs with fallback logic
+Schulz.QuoteForm.setLocationIds = (formContext, address1Id, address2Id) => {
+    const invoiceAttribute = formContext.getAttribute("sst_invoiceadresslocationid_txt");
+    const deliveryAttribute = formContext.getAttribute("msdyn_deliveryaddresslocationid");
+
+    // Set invoice address location ID (prefer address2, fallback to address1)
+    const currentInvoiceId = invoiceAttribute.getValue();
+    if (currentInvoiceId !== address2Id) {
+        invoiceAttribute.setValue(address2Id);
+    } else if (currentInvoiceId === null && address2Id === null && address1Id !== null) {
+        invoiceAttribute.setValue(address1Id);
+    }
+
+    // Set delivery address location ID (prefer address1, fallback to address2)
+    const currentDeliveryId = deliveryAttribute.getValue();
+    if (currentDeliveryId !== address1Id) {
+        deliveryAttribute.setValue(address1Id);
+    } else if (currentDeliveryId === null && address2Id !== null && address1Id === null) {
+        deliveryAttribute.setValue(address2Id);
+    }
+};
+
+Schulz.QuoteForm.useAlternateAddress = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    let altadress = formContext.getAttribute("sst_alternativdelivery_opt").getValue();
+    let status = formContext.getAttribute("statecode").getValue();
+    if (altadress) {
+        if (status === Schulz.QuoteForm.STATE_CODES.DRAFT) { // Draft and Alternate Address selected
+            formContext.getAttribute("sst_address_delivery_ref").setRequiredLevel("required");
+            formContext.getControl("sst_address_delivery_ref").setVisible(true);
+
+                    Schulz.QuoteForm.deliveryAdressfields.forEach(field => {
+            let attribute = formContext.getAttribute(field);
+            Schulz.QuoteForm.controlVisible(attribute, false);
+        });
+        }
+        else { // Not Draft and Alternate Address selected
+            formContext.getAttribute("sst_address_delivery_ref").setRequiredLevel("none");
+            formContext.getAttribute("sst_address_delivery_ref").setValue(null);
+            formContext.getControl("sst_address_delivery_ref").setVisible(false);
+
+                    Schulz.QuoteForm.deliveryAdressfields.forEach(field => {
+            let attribute = formContext.getAttribute(field);
+            Schulz.QuoteForm.controlVisible(attribute, true);
+        });
+        }
+    }
+    else { // No Alternate Address selected
+        formContext.getAttribute("sst_address_delivery_ref").setRequiredLevel("none");
+        formContext.getControl("sst_address_delivery_ref").setVisible(false);
+    };
+}
+
+// ========================================
+// CONTACT AND TEXTBLOCK MANAGEMENT
+// ========================================
+
+Schulz.QuoteForm.prefilAccount = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+
+    if (formContext.getAttribute("sst_contactperson_id").getValue() != null) {
+        var contactid = formContext.getAttribute("sst_contactperson_id").getValue()[0].id;
+        contactid = contactid.substring(1, contactid.length - 1);
+    }
+    let accountAttribute = formContext.getAttribute("customerid");
+    if (contactid != null && formContext.getAttribute("customerid").getValue() == null) {
+        Xrm.WebApi.retrieveRecord("contact", contactid, "?$select=_parentcustomerid_value&$expand=parentcustomerid_account($select=accountid,name)")
+            .then(result => {
+                if (result?.parentcustomerid_account?.accountid && result?.parentcustomerid_account?.name) {
+                    accountAttribute?.setValue([{
+                        entityType: "account",
+                        id: result.parentcustomerid_account.accountid,
+                        name: result.parentcustomerid_account.name
+                    }]);
+                    accountAttribute.fireOnChange();
+                }
+            }, error => {
+                console.log(error.message); // TODO: implement better error approach.
+            });
+    }
+};
+
+Schulz.QuoteForm.filterContact = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    let contactAttribute = formContext.getAttribute("sst_contactperson_id");
+
+    contactAttribute?.controls.forEach(control => {
+        control.addPreSearch(Schulz.QuoteForm.setContactPreSearch)
+    });
+};
+
+Schulz.QuoteForm.setContactPreSearch = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+
+    let accountLookup = formContext.getAttribute("customerid")?.getValue();
+    let contactAttribute = formContext.getAttribute("sst_contactperson_id");
+
+    if (accountLookup) {
+        let accountId = accountLookup[0].id;
+        let filter = `<filter type="and"><condition attribute="parentcustomerid" operator="eq" uitype="account" value="${accountId}" /></filter>`;
+
+        contactAttribute?.controls.forEach(control => {
+            control.addCustomFilter(filter, "contact");
+        });
+    }
+};
+
+Schulz.QuoteForm.setTextblockHeader = (executionContext) => {
+    Schulz.QuoteForm.setTextblock(executionContext, "sst_headertextblock_id", "sst_headtext_txt");
+};
+
+Schulz.QuoteForm.setTextblockFooter = (executionContext) => {
+    Schulz.QuoteForm.setTextblock(executionContext, "sst_footertextblock_id", "sst_foottext_txt");
+};
+
+Schulz.QuoteForm.setTextblock = (executionContext, lookupname, txtname) => {
+    let formContext = executionContext.getFormContext();
+
+    if (formContext.getAttribute(lookupname).getValue()) {
+        let textblock = formContext.getAttribute(lookupname).getValue()[0].id;
+        Xrm.WebApi.retrieveRecord("sst_textblocks", textblock, "?$select=sst_textblock_txt")
+            .then(result => {
+                if (result?.sst_textblock_txt) {
+                    if (!formContext.getAttribute(txtname).getValue()) {
+                        formContext.getAttribute(txtname).setValue(result.sst_textblock_txt);
+                    } else {
+                        let txt = formContext.getAttribute(txtname).getValue();
+                        txt += "\n";
+                        txt += result.sst_textblock_txt;
+                        formContext.getAttribute(txtname).setValue(txt);
+                    }
+                }
+            }, error => {
+                console.log(error.message); // TODO: implement better error approach.
+            });
+    }
+};
+
+Schulz.QuoteForm.filterTextblocks = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    let headerAttribute = formContext.getAttribute("sst_headertextblock_id");
+    let footerAttribute = formContext.getAttribute("sst_footertextblock_id");
+
+    headerAttribute?.controls.forEach(control => {
+        control.addPreSearch(Schulz.QuoteForm.setTextblocksPreSearch);
+    });
+    footerAttribute?.controls.forEach(control => {
+        control.addPreSearch(Schulz.QuoteForm.setTextblocksPreSearch);
+    });
+};
+
+Schulz.QuoteForm.setTextblocksPreSearch = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+
+    let headertextblock = formContext.getAttribute("sst_headertextblock_id");
+    let footertextblock = formContext.getAttribute("sst_footertextblock_id");
+    let companyAttribute = formContext.getAttribute("msdyn_company")?.getValue();
+    let language = formContext.getAttribute("msdyn_language")?.getValue();
+
+    if (companyAttribute) {
+        let companyId = companyAttribute[0].id;
+        let filterheader = `<filter type="and"><condition attribute="sst_language_opt" operator="eq" value="${language}" /><condition attribute="sst_type_opt" operator="eq" value="${Schulz.QuoteForm.QUOTE_TYPES.ARTIKEL}" /><filter type="or"><condition attribute="sst_company_id" operator="eq" uitype="msdyn_company" value="${companyId}" /><condition attribute="sst_company_id" operator="null" /></filter></filter>`;
+        let filterfooter = `<filter type="and"><condition attribute="sst_language_opt" operator="eq" value="${language}" /><condition attribute="sst_type_opt" operator="eq" value="${Schulz.QuoteForm.QUOTE_TYPES.PROJEKT}" /><filter type="or"><condition attribute="sst_company_id" operator="eq" uitype="msdyn_company" value="${companyId}" /><condition attribute="sst_company_id" operator="null" /></filter></filter>`;
+        headertextblock?.controls.forEach(control => {
+            control.addCustomFilter(filterheader, "sst_textblocks");
+        });
+        footertextblock?.controls.forEach(control => {
+            control.addCustomFilter(filterfooter, "sst_textblocks");
+        });
+    }
+};
+
+// ========================================
+// PROJECT AND CALCULATION MANAGEMENT
+// ========================================
+
+Schulz.QuoteForm.notifyUserIfProjectQuoteIsWon = (formContext) => {
+    if (formContext.getAttribute("statecode").getValue() === Schulz.QuoteForm.STATE_CODES.WON && formContext.getAttribute("sst_angebotstyp_opt").getValue() === Schulz.QuoteForm.QUOTE_TYPES.PROJEKT) {// only for Project Quote that is won
+        if (formContext.getAttribute("hso_activecalculation_id").getValue() != null) {
+            // get active Calculation
+            let ActiveCalculationGUID = formContext.getAttribute("hso_activecalculation_id").getValue()[0].id;
+            // display Form Notification depending on the Status of the Project Creation process
+            Schulz.QuoteForm.retrieveActiveCalculation(formContext, ActiveCalculationGUID).then(function (RetrievedProjectStatus) {
+                console.log("Active Calculation Project Status: " + RetrievedProjectStatus);
+            }).catch(function (error) {
+                alert(error.message);
+            });
+        }
+    }
+};
+
+// Set Quote Currency for new Calculation
+// Function called by formOnLoad  -  but only for Quick Create Forms
+Schulz.QuoteForm.retrieveActiveCalculation = (formContext, ActiveCalculationGUID) => {
+    return new Promise(function (resolve, reject) {
+        // Search for Quote currency
+        Xrm.WebApi.retrieveRecord("hso_calculation", ActiveCalculationGUID, "?$select=hso_name,hso_createproject,hso_projectstatus").then(
+            function success(result) {
+                if (result != null) {
+                    let CreateProject = result.hso_createproject;
+                    let ProjectStatus = result.hso_projectstatus;
+
+                    // show Form Notification for Project Status
+                    if (CreateProject == true && ProjectStatus == 100000001) {// Processing Status Project = In Progress
+                        formContext.ui.setFormNotification("Für die ausgewählte Kalkulationsversion wird in FinOps ein Projekt sowie ggfs. Unterprojekte erstellt. Sie werden benachrichtigt, sobald die Verarbeitung abgeschlossen ist.", "INFO", "CreateFinOps_InformationNotification");
+                    } else if (ProjectStatus == 100000000) {// Processing Status Project = Waiting
+                        formContext.ui.setFormNotification("Der Prozess der Projekterstellung kann erst gestartet werden sobald alle Projektartikel einem Artikelstamm zugeordnet sind. Bitte warten Sie bis die entsprechenden Freigaben für die Artikel-Anfrage erteilt und die entsprechenden Projektartikel vervollständigt wurden. Anschließend kann der Projekterstellungsprozess manuell gestartet werden.", "INFO", "CreateFinOps_WaitingNotification");
+                    } else if (ProjectStatus == 100000003) {// Processing Status Project = Error
+                        formContext.ui.setFormNotification("Beim Erstellen des FinOps Projekts sowie ggfs. Unterprojekten für die ausgewählte Kalkulationsversion ist ein Fehler aufgetreten. Weitere Informationen können dem Verarbeitungsprotokoll entnommen werden. Für den Fall, dass ein strukturelles Problem vorliegt, wenden Sie sich bitte an einen Administrator.", "ERROR", "CreateFinOps_ErrorNotification");
+                    };
+                    resolve(result.hso_projectstatus);
+                }
+            },
+            function error(error) {
+                reject(error);
+            });
+    })
+};
+
+// ========================================
+// UTILITY FUNCTIONS
+// ========================================
+
+// Utility function to clean GUID
+Schulz.QuoteForm.cleanGuid = (guid) => {
+    return guid ? guid.replace(/[{}]/g, '') : null;
+};
+
+// Utility function to extract ID from lookup
+Schulz.QuoteForm.extractId = (lookupValue) => {
+    if (!lookupValue || !lookupValue[0]) return null;
+    return Schulz.QuoteForm.cleanGuid(lookupValue[0].id);
+};
+
+Schulz.QuoteForm.controlVisible = (attribute, visible) => {
+    attribute?.controls.forEach(control => {
+        control.setVisible(visible);
+    });
+};

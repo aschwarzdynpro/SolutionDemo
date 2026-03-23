@@ -1,0 +1,932 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_webcontents": {
+        "api": {
+          "name": "shared_webcontents"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverseHTTPwithAzureAD"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)": {
+          "defaultValue": "operations-d365-schulz-int-11.crm4.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarDataverseInstance",
+            "description": "The Dataverse Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "Payload",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The array of Calculation Metalprices to update",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "c0250ef2-e7e5-45b6-bb3b-b8158a97c3b6"
+          }
+        }
+      },
+      "actions": {
+        "ParseJSON_Calculation_Metalprices": {
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@triggerBody()['text']",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "KalkulationsversionGUID": {
+                    "type": "string"
+                  },
+                  "hso_calculationmetalpriceid": {
+                    "type": "string"
+                  },
+                  "hso_currentcost": {
+                    "type": "number"
+                  },
+                  "hso_name": {
+                    "type": "string"
+                  },
+                  "hso_quantity": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "KalkulationsversionGUID",
+                  "hso_calculationmetalpriceid",
+                  "hso_currentcost",
+                  "hso_name",
+                  "hso_quantity"
+                ]
+              }
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "8f9b47c4-fa90-43e4-9877-d6913722cb06"
+          }
+        },
+        "Initialize_varNumberOfCalculationPrices_ToProcess": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfCalculationPrices_ToProcess",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "4312bc38-11c5-43f1-9531-0da095f947f1"
+          }
+        },
+        "Initialize_varNumberOfCalculationPrices_Processed": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfCalculationPrices_Processed",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varNumberOfCalculationPrices_ToProcess": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f6d1ed3c-ce2b-4136-8f1a-67020f502fb8"
+          }
+        },
+        "Initialize_varErrorMessage": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorMessage",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varError": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "8787756e-69f5-40e2-a756-345af5e18a40"
+          }
+        },
+        "Initialize_varError": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varError",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "eed278cb-0b03-4e74-a461-5346e9267c39"
+          }
+        },
+        "Calculation_Metalprices": {
+          "type": "Scope",
+          "actions": {
+            "Select_Calculation_Metalprices": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('ParseJSON_Calculation_Metalprices')",
+                "select": {
+                  "@variables('varOdataType')": "#Microsoft.Dynamics.CRM.hso_calculationmetalprice",
+                  "hso_calculationmetalpriceid": "@item()['hso_calculationmetalpriceid']",
+                  "hso_currentcost": "@item()['hso_currentcost']"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "24d0f5a0-58de-4536-ad05-048622f596b8"
+              }
+            },
+            "Update_Calculation_Metalprices": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "request/method": "POST",
+                  "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_calculationmetalprices/Microsoft.Dynamics.CRM.UpdateMultiple",
+                  "request/headers": {
+                    "OData-MaxVersion": "4.0",
+                    "OData-Version": "4.0",
+                    "If-None-Match": "null",
+                    "Accept": "application/json",
+                    "Content-Type": "application/json; charset=utf-8"
+                  },
+                  "request/body": "{\n \"Targets\": @{body('Select_Calculation_Metalprices')}\n}"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                  "operationId": "InvokeHttp",
+                  "connectionName": "shared_webcontents"
+                },
+                "retryPolicy": {
+                  "type": "none"
+                }
+              },
+              "runAfter": {
+                "Set_varNumberOfCalculationPrices_ToProcess": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c375d3e6-34bc-412d-8362-4cf35c5faa73"
+              }
+            },
+            "Set_varNumberOfCalculationPrices_ToProcess": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varNumberOfCalculationPrices_ToProcess",
+                "value": "@length(body('Select_Calculation_Metalprices'))"
+              },
+              "runAfter": {
+                "Select_Calculation_Metalprices": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "bf75371a-f2c3-42a6-8726-b5ff8804b4fa"
+              }
+            },
+            "Set_varNumberOfCalculationPrices_Processed": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varNumberOfCalculationPrices_Processed",
+                "value": "@variables('varNumberOfCalculationPrices_ToProcess')"
+              },
+              "runAfter": {
+                "Update_Calculation_Metalprices": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "28c6b94f-4035-4bd4-a434-30c4488e164f"
+              }
+            }
+          },
+          "runAfter": {
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3bbf14b2-4305-4e5a-bb74-aeb377cbf486"
+          }
+        },
+        "Calculation_Metalprices_-_Error": {
+          "type": "Scope",
+          "actions": {
+            "Filter_Results_for_failed_actions_[Calculation_Metalprices]": {
+              "type": "Query",
+              "inputs": {
+                "from": "@result('Calculation_Metalprices')",
+                "where": "@equals(item()?['status'], 'Failed')"
+              },
+              "metadata": {
+                "operationMetadataId": "97d44aca-3b0e-43b1-bfec-994ea8d8b763"
+              }
+            },
+            "Select_Error_Summary_[Calculation_Metalprices]": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Filter_Results_for_failed_actions_[Calculation_Metalprices]')",
+                "select": {
+                  "Action": "@item()?['name']",
+                  "Code": "@item()?['code']",
+                  "Status": "@item()?['status']",
+                  "StatusCode": "@item()?['outputs']?['statusCode']",
+                  "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                }
+              },
+              "runAfter": {
+                "Filter_Results_for_failed_actions_[Calculation_Metalprices]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "fdb0d444-044b-499c-be77-7920fe283ed0"
+              }
+            },
+            "Apply_to_each_Error_Summary_[Calculation_Metalprices]": {
+              "type": "Foreach",
+              "foreach": "@body('Select_Error_Summary_[Calculation_Metalprices]')",
+              "actions": {
+                "Append_Error_Summary_[Calculation_Metalprices]": {
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "varError",
+                    "value": "@items('Apply_to_each_Error_Summary_[Calculation_Metalprices]')"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "993c5d88-2ddd-40b6-a797-d332683a1c8d"
+                  }
+                }
+              },
+              "runAfter": {
+                "Select_Error_Summary_[Calculation_Metalprices]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c72068d6-2d3e-4b3e-be28-138936b681e7"
+              }
+            }
+          },
+          "runAfter": {
+            "Calculation_Metalprices": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "ee88cd1b-2c1a-4c3c-8a92-69c00afc81b3"
+          }
+        },
+        "Calculation_Positions": {
+          "type": "Scope",
+          "actions": {
+            "Related_Calculation_Positions_to_process": {
+              "type": "If",
+              "expression": {
+                "greater": [
+                  "@variables('varNumberOfCalculationPositions_ToProcess')",
+                  0
+                ]
+              },
+              "actions": {
+                "Set_varNumberOfCalculationPositions_Processed": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "varNumberOfCalculationPositions_Processed",
+                    "value": "@variables('varNumberOfCalculationPositions_ToProcess')"
+                  },
+                  "runAfter": {
+                    "Re-Calculate_Calculation_Positions": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "d7038ff8-5c4f-4521-9cb5-e004dd66bde5"
+                  }
+                },
+                "Re-Calculate_Calculation_Positions": {
+                  "type": "Scope",
+                  "actions": {
+                    "CalculationDetail_API_Payload_(Position)": {
+                      "type": "Compose",
+                      "inputs": {
+                        "OperationType": 5,
+                        "Records": "@body('Select_Calculation_Positions_to_Re-Calculate_(Position)')"
+                      },
+                      "runAfter": {
+                        "Select_Calculation_Positions_to_Re-Calculate_(Position)": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "287c0e30-ef47-46c3-9945-37b8c12f4b32"
+                      }
+                    },
+                    "Call_hso_CalculationdetailApi_(Position)": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "actionName": "hso_CalculationdetailApi",
+                          "item/hso_CalculationdetailApiPayload": "@outputs('CalculationDetail_API_Payload_(Position)')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "PerformUnboundAction",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "runAfter": {
+                        "CalculationDetail_API_Payload_(Position)": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "402ea801-8e03-4aca-aab3-e7290fd4f7a2"
+                      }
+                    },
+                    "Select_Calculation_Positions_to_Re-Calculate_(Position)": {
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@outputs('List_related_Calculation_Positions')?['body/value']",
+                        "select": "@item()?['hso_calculationdetailid']"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "89ce2d2b-48b5-4a34-a692-a27761e899ea"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "69fbabd4-745e-4fe1-aeec-f7469e086819"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "metadata": {
+                "operationMetadataId": "f32ebea0-add5-435b-854b-14fbc10aa768"
+              }
+            }
+          },
+          "runAfter": {
+            "Calculation_Metalprices": [
+              "Succeeded"
+            ],
+            "Prepare_Positions": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "81ab6115-8abe-46a4-ac7d-f4f5ea050466"
+          }
+        },
+        "Calculation_Positions_-_Error": {
+          "type": "Scope",
+          "actions": {
+            "Filter_Results_for_failed_actions_[Calculation_Positions]": {
+              "type": "Query",
+              "inputs": {
+                "from": "@result('Calculation_Positions')",
+                "where": "@equals(item()?['status'], 'Failed')"
+              },
+              "metadata": {
+                "operationMetadataId": "6f994ea6-5ea4-4cb0-82b2-82e964676318"
+              }
+            },
+            "Select_Error_Summary_[Calculation_Positions]": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Filter_Results_for_failed_actions_[Calculation_Positions]')",
+                "select": {
+                  "Action": "@item()?['name']",
+                  "Code": "@item()?['code']",
+                  "Status": "@item()?['status']",
+                  "StatusCode": "@item()?['outputs']?['statusCode']",
+                  "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                }
+              },
+              "runAfter": {
+                "Filter_Results_for_failed_actions_[Calculation_Positions]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "60b0dfbb-8651-4cef-a5c9-3bdfec64277d"
+              }
+            },
+            "Apply_to_each_Error_Summary_[Calculation_Positions]": {
+              "type": "Foreach",
+              "foreach": "@body('Select_Error_Summary_[Calculation_Positions]')",
+              "actions": {
+                "Append_Error_Summary_[Calculation_Positions]": {
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "varError",
+                    "value": "@items('Apply_to_each_Error_Summary_[Calculation_Positions]')"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "651cd798-481a-419b-85d2-122c7bdc0644"
+                  }
+                }
+              },
+              "runAfter": {
+                "Select_Error_Summary_[Calculation_Positions]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "1bb3c04c-c2cc-49c0-bcb9-6cacdd9ca5ba"
+              }
+            }
+          },
+          "runAfter": {
+            "Calculation_Positions": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "83e55b6d-d5e2-4a68-b65d-f9005119a1bf"
+          }
+        },
+        "Summary": {
+          "type": "Scope",
+          "actions": {
+            "Everything_processed_successfully": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@variables('varNumberOfCalculationPrices_ToProcess')",
+                      "@variables('varNumberOfCalculationPrices_Processed')"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@variables('varNumberOfCalculationPositions_ToProcess')",
+                      "@variables('varNumberOfCalculationPositions_Processed')"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Respond_to_App_[Success]": {
+                  "type": "Response",
+                  "kind": "PowerApp",
+                  "inputs": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "outcome": {
+                          "title": "Outcome",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        },
+                        "error_message": {
+                          "title": "Error Message",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": {}
+                    },
+                    "statusCode": 200,
+                    "body": {
+                      "outcome": "Success"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "e1d711a5-3603-4bea-b6eb-9dca092d3627"
+                  }
+                },
+                "Update_Processing_Log_[Success]": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_processinglogs",
+                      "recordId": "@body('Create_Processing_Log')?['hso_processinglogid']",
+                      "item/hso_end_datetime": "@{utcNow()}",
+                      "item/hso_processingstatus": 100000002
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "runAfter": {
+                    "Respond_to_App_[Success]": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "d554b995-e80a-4483-a2aa-796997861b19"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Apply_to_each_Error_Summary": {
+                    "type": "Foreach",
+                    "foreach": "@variables('varError')",
+                    "actions": {
+                      "Append_Error_Message": {
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varErrorMessage",
+                          "value": "[ERROR] - Action '@{items('Apply_to_each_Error_Summary')?['Action']}' failed with error message: @{items('Apply_to_each_Error_Summary')?['Message']} (Status: @{items('Apply_to_each_Error_Summary')?['Status']} / Status Code: @{items('Apply_to_each_Error_Summary')?['StatusCode']})"
+                        },
+                        "metadata": {
+                          "operationMetadataId": "8be49b8d-a70d-4dea-b7ee-aef01c8b42c3"
+                        }
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "df5b0788-a905-4c66-965d-4e35e27e8132"
+                    }
+                  },
+                  "Respond_to_App_[Error]": {
+                    "type": "Response",
+                    "kind": "PowerApp",
+                    "inputs": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "outcome": {
+                            "title": "Outcome",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          },
+                          "error_message": {
+                            "title": "Error Message",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": {}
+                      },
+                      "statusCode": 200,
+                      "body": {
+                        "outcome": "Error",
+                        "error_message": "@variables('varErrorMessage')"
+                      }
+                    },
+                    "runAfter": {
+                      "Apply_to_each_Error_Summary": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "93f34f7b-69e8-4b4e-9e69-9be3bfc8daa7"
+                    }
+                  },
+                  "Update_Processing_Log_[Error]": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_processinglogs",
+                        "recordId": "@body('Create_Processing_Log')?['hso_processinglogid']",
+                        "item/hso_end_datetime": "@{utcNow()}",
+                        "item/hso_flowerror": "@variables('varErrorMessage')",
+                        "item/hso_processingstatus": 100000003
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    },
+                    "runAfter": {
+                      "Respond_to_App_[Error]": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "30f77156-d06d-4077-b5d9-a3a4e2cc6b40"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "eee4472b-9bd8-47da-a140-9e382640d54e"
+              }
+            }
+          },
+          "runAfter": {
+            "Calculation_Positions_-_Error": [
+              "Succeeded",
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ],
+            "Calculation_Metalprices_-_Error": [
+              "Succeeded",
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "ca411d7d-d697-4034-b950-45945143ce8e"
+          }
+        },
+        "Initialize_varOdataType": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varOdataType",
+                "type": "string",
+                "value": "@{string('@')}odata.type"
+              }
+            ]
+          },
+          "runAfter": {
+            "ParseJSON_Calculation_Metalprices": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "ee82de33-2f56-4b4a-affc-bf548649a0d0"
+          }
+        },
+        "Initialize_varNumberOfCalculationPositions_ToProcess": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfCalculationPositions_ToProcess",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "24026337-deb5-4780-8947-5c7059b67911"
+          }
+        },
+        "Initialize_varNumberOfCalculationPositions_Processed": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfCalculationPositions_Processed",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varNumberOfCalculationPositions_ToProcess": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b669b02a-c134-4019-9ab0-3e1b640e34e0"
+          }
+        },
+        "Processing_Log": {
+          "type": "Scope",
+          "actions": {
+            "Create_Processing_Log": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "item/hso_name": "Kalkulations-Metallpreise aktualisieren - @{body('Convert_time_zone')}",
+                  "item/hso_processingtask": 100000003,
+                  "item/hso_flowrunurl": "@{concat('https://emea.flow.microsoft.com/manage/environments/', workflow()?['tags']['environmentName'], '/flows/', workflow()?['name'], '/runs/', workflow()?['run']['name'])}",
+                  "item/hso_calculationid@odata.bind": "hso_calculations(@{outputs('Select_Calculation_GUID_for_Log')})",
+                  "item/hso_start_datetime": "@{utcNow()}",
+                  "item/hso_processingstatus": 100000001
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "Select_Calculation_GUID_for_Log": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "def7640e-e05c-4813-a13b-4f1c4a42c6d3"
+              }
+            },
+            "Convert_time_zone": {
+              "type": "Expression",
+              "kind": "ConvertTimeZone",
+              "inputs": {
+                "baseTime": "@utcNow()",
+                "sourceTimeZone": "UTC",
+                "destinationTimeZone": "W. Europe Standard Time",
+                "formatString": "u"
+              },
+              "metadata": {
+                "operationMetadataId": "c4facce8-ed9c-4448-ade9-827fd5bc0b1b"
+              }
+            },
+            "Select_Calculation_GUID_for_Log": {
+              "type": "Compose",
+              "inputs": "@body('ParseJSON_Calculation_Metalprices')?[0]['KalkulationsversionGUID']",
+              "runAfter": {
+                "Convert_time_zone": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "30cd0b74-4e0d-4ce6-83cd-842e23b79fa9"
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varErrorMessage": [
+              "Succeeded"
+            ],
+            "Initialize_varOdataType": [
+              "Succeeded"
+            ],
+            "Initialize_varNumberOfCalculationPrices_Processed": [
+              "Succeeded"
+            ],
+            "Initialize_varNumberOfCalculationPositions_Processed": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "796e999b-b4aa-451f-b876-3f4373301c3d"
+          }
+        },
+        "Prepare_Positions": {
+          "type": "Scope",
+          "actions": {
+            "Select_Calculation_Metalprice_GUIDs": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('ParseJSON_Calculation_Metalprices')",
+                "select": "@item()['hso_calculationmetalpriceid']"
+              },
+              "metadata": {
+                "operationMetadataId": "7dc6fe5e-5b19-40bb-9191-08f7ad91d307"
+              }
+            },
+            "Compose_fetchXML_Filter_Condition_1": {
+              "type": "Compose",
+              "inputs": "@concat(\n    '<condition attribute=\"hso_calculationmetalpriceid\" operator=\"eq\" value=\"', \n    join(\n        body('Select_Calculation_Metalprice_GUIDs'), \n        '\" /><condition attribute=\"hso_calculationmetalpriceid\" operator=\"eq\" value=\"'\n    ),\n    '\"/>'\n)",
+              "runAfter": {
+                "Select_Calculation_Metalprice_GUIDs": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "12818f9c-d295-4ee0-8f59-3e851f23321a"
+              }
+            },
+            "Compose_fetchXML_Filter_Condition_2": {
+              "type": "Compose",
+              "inputs": "@concat(\n    '<condition attribute=\"hso_calculationmetalpriceid_2\" operator=\"eq\" value=\"', \n    join(\n        body('Select_Calculation_Metalprice_GUIDs'), \n        '\" /><condition attribute=\"hso_calculationmetalpriceid_2\" operator=\"eq\" value=\"'\n    ),\n    '\"/>'\n)",
+              "runAfter": {
+                "Select_Calculation_Metalprice_GUIDs": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "0e5cb9cd-c0ce-434c-bf51-9a4d63a1510b"
+              }
+            },
+            "Compose_fetchXML_Filter_Condition_3": {
+              "type": "Compose",
+              "inputs": "@concat(\n    '<condition attribute=\"hso_calculationmetalpriceid_3\" operator=\"eq\" value=\"', \n    join(\n        body('Select_Calculation_Metalprice_GUIDs'), \n        '\" /><condition attribute=\"hso_calculationmetalpriceid_3\" operator=\"eq\" value=\"'\n    ),\n    '\"/>'\n)",
+              "runAfter": {
+                "Select_Calculation_Metalprice_GUIDs": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "0854b139-0f61-43d4-b581-61302be524ed"
+              }
+            },
+            "List_related_Calculation_Positions": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_calculationdetails",
+                  "fetchXml": "<fetch version=\"1.0\" mapping=\"logical\" distinct=\"true\" no-lock=\"false\">\n\t<entity name=\"hso_calculationdetail\">\n\t\t<attribute name=\"statecode\" />\n\t\t<attribute name=\"hso_calculationdetailid\" />\n  <filter type=\"or\">\n\t\t@{outputs('Compose_fetchXML_Filter_Condition_1')}@{outputs('Compose_fetchXML_Filter_Condition_2')}@{outputs('Compose_fetchXML_Filter_Condition_3')}\n  </filter>\n\t</entity>\n</fetch>"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "Compose_fetchXML_Filter_Condition_3": [
+                  "Succeeded"
+                ],
+                "Compose_fetchXML_Filter_Condition_2": [
+                  "Succeeded"
+                ],
+                "Compose_fetchXML_Filter_Condition_1": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "4390f55c-526a-4eca-8dd0-009f973de23c"
+              }
+            },
+            "Set_varNumberOfCalculationPositions_ToProcess": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varNumberOfCalculationPositions_ToProcess",
+                "value": "@length(outputs('List_related_Calculation_Positions')?['body/value'])"
+              },
+              "runAfter": {
+                "List_related_Calculation_Positions": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "2d1b6055-fff3-4d2a-86e7-ecd6dde1947e"
+              }
+            }
+          },
+          "runAfter": {
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "46575234-f4cb-41ba-8f12-c7256560ac48"
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

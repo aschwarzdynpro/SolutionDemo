@@ -1,0 +1,469 @@
+{
+  "properties": {
+    "connectionReferences": {},
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)": {
+          "defaultValue": "d365-schulz-int-11b9dbaf056743afd3devaos.axcloud.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarUnifiedOperationsInstance",
+            "description": "The Unified Operations Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "8330c122-87ad-46eb-a5e1-8262c86141d4"
+          },
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "strItemNumber",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Please enter your input",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "title": "strTenant",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Please enter your input",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_2": {
+                  "title": "strClient",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Please enter your input",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_3": {
+                  "title": "strSecret",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Please enter your input",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_4": {
+                  "title": "JSONOrderSettings",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Please enter your input",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "text_3",
+                "text_4"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Compose": {
+          "runAfter": {
+            "Respond_to_flow_on_success": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "778417df-16bd-4469-9603-1dc3c49df253"
+          },
+          "type": "Compose",
+          "inputs": 123
+        },
+        "Init_strResponseMsg": {
+          "runAfter": {
+            "Init_strInlineFinOpsURL": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "13505fef-dc98-4121-a092-2f1cf5c09362"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strResponseMsg",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "arrDefaultOrderSettings": {
+          "runAfter": {
+            "Init_strResponseMsg": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a653de3b-6692-49c7-b173-057ac1091b3a"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "arrDefaultOrderSettings",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "Init_strStatus": {
+          "runAfter": {
+            "arrDefaultOrderSettings": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "12fdfa48-45e6-45ad-94a8-14771b1f3393"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strStatus",
+                "type": "string",
+                "value": "200"
+              }
+            ]
+          }
+        },
+        "Product_default_order_settings": {
+          "actions": {
+            "Fetch_companies_by_default_order_settings": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "2fe59aa3-50d5-4843-a36a-19f69f01e9a6"
+              },
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "@{variables('strInlineFinOpsURL')}/data/ProductDefaultOrderSettings?$filter=%20ItemNumber eq '@{triggerBody()['text']}'&$select=dataAreaId&cross-company=true",
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "tenant": "@triggerBody()['text_1']",
+                  "audience": "@variables('strInlineFinOpsURL')",
+                  "clientId": "@triggerBody()['text_2']",
+                  "secret": "@triggerBody()['text_3']"
+                }
+              }
+            },
+            "Product_default_order_settings_exist": {
+              "actions": {
+                "Set_strResponseMsg_on_updated": {
+                  "runAfter": {
+                    "Apply_to_each_company": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "1e4808a7-40c6-4ba8-9020-83417a66b7d0"
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "strResponseMsg",
+                    "value": "Default order settings updated for @{triggerBody()['text']}."
+                  }
+                },
+                "Apply_to_each_company": {
+                  "foreach": "@body('Fetch_companies_by_default_order_settings')?['value']",
+                  "actions": {
+                    "Update_Product_default_order_setting": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "a8d27b91-6904-4b31-9131-7054ef964ee7"
+                      },
+                      "type": "Http",
+                      "inputs": {
+                        "method": "PATCH",
+                        "uri": "@{variables('strInlineFinOpsURL')}/data/ProductDefaultOrderSettings(dataAreaId='@{items('Apply_to_each_company')?['dataAreaId']}',ItemNumber='@{triggerBody()['text']}')?cross-company=true",
+                        "headers": {
+                          "Content-Type": "application/json"
+                        },
+                        "body": "@triggerBody()['text_4']",
+                        "authentication": {
+                          "type": "ActiveDirectoryOAuth",
+                          "tenant": "@triggerBody()['text_1']",
+                          "audience": "@variables('strInlineFinOpsURL')",
+                          "clientId": "@triggerBody()['text_2']",
+                          "secret": "@triggerBody()['text_3']"
+                        }
+                      }
+                    },
+                    "Append_strResponseMsg_on_innererror": {
+                      "runAfter": {
+                        "Update_Product_default_order_setting": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "8fffd90e-d9c5-4d1c-ae3e-3cd1df3efbfc"
+                      },
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "strResponseMsg",
+                        "value": "@{items('Apply_to_each_company')?['dataAreaId']}: @{coalesce(body('Update_Product_default_order_setting')?['error']?['innererror']?['message'], 'Something went wrong...')}\n"
+                      }
+                    },
+                    "Append_DefaultOrderSettings": {
+                      "runAfter": {
+                        "Update_Product_default_order_setting": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "ea0dcf28-4a78-46f3-b02b-752e6f407aa6"
+                      },
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "arrDefaultOrderSettings",
+                        "value": {
+                          "ItemNumber": "@{triggerBody()['text']}",
+                          "dataAreaId": "@{items('Apply_to_each_company')?['dataAreaId']}",
+                          "settings": "@triggerBody()['text_4']"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "8798c87b-ea4b-4b4a-a1e9-63906a7b9e03"
+                  },
+                  "type": "Foreach"
+                }
+              },
+              "runAfter": {
+                "Fetch_companies_by_default_order_settings": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Set_strResponseMsg_not_existing": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "1e4808a7-40c6-4ba8-9020-83417a66b7d0"
+                    },
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "strResponseMsg",
+                      "value": "Updated not triggered, because no default order setting record found. Please check, if released product exists."
+                    }
+                  },
+                  "Set_strStatus_on_not_existing": {
+                    "runAfter": {
+                      "Set_strResponseMsg_not_existing": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "567dab68-139d-41c0-8b42-f74236cc7335"
+                    },
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "strStatus",
+                      "value": "400"
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "greater": [
+                  "@length(body('Fetch_companies_by_default_order_settings')?['value'])",
+                  0
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "001f1a2e-9749-45ee-ba6b-8bbea325b462"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Init_strStatus": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f661246a-ab2f-4ec8-9f05-2587e8641de6"
+          },
+          "type": "Scope"
+        },
+        "Init_strInlineFinOpsURL": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "284e1ceb-899d-4f12-9a59-ad34242f1f2b"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strInlineFinOpsURL",
+                "type": "string",
+                "value": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}"
+              }
+            ]
+          }
+        },
+        "Respond_to_flow_on_success": {
+          "runAfter": {
+            "Product_default_order_settings_[CATCH]": [
+              "Skipped"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "4a279cae-e003-4f4e-b6df-620df3f9e9c1"
+          },
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "statusCode": 200,
+            "body": {
+              "status": "@variables('strStatus')",
+              "message": "@variables('strResponseMsg')",
+              "defaultordersettings": "@{replace(string(variables('arrDefaultOrderSettings')),'\\','')}"
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "title": "Status",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                },
+                "message": {
+                  "title": "Message",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                },
+                "defaultordersettings": {
+                  "title": "DefaultOrderSettings",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "Product_default_order_settings_[CATCH]": {
+          "actions": {
+            "Set_strStatus_on_global_error": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "4fbcf6f6-67dc-49b8-b111-db6e323175c9"
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "strStatus",
+                "value": "400"
+              }
+            },
+            "Set_strResponseMsg_on_global_error": {
+              "runAfter": {
+                "Set_strStatus_on_global_error": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "1e4808a7-40c6-4ba8-9020-83417a66b7d0"
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "strResponseMsg",
+                "value": "There was an global error while updating the default order settings for @{triggerBody()['text']}."
+              }
+            },
+            "Respond_to_flow_on_error": {
+              "runAfter": {
+                "Set_strResponseMsg_on_global_error": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "4a279cae-e003-4f4e-b6df-620df3f9e9c1"
+              },
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "statusCode": 200,
+                "body": {
+                  "status": "@variables('strStatus')",
+                  "message": "@variables('strResponseMsg')",
+                  "defaultordersettings": "@{replace(string(variables('arrDefaultOrderSettings')),'\\','')}"
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "title": "Status",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "message": {
+                      "title": "Message",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "defaultordersettings": {
+                      "title": "DefaultOrderSettings",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "Terminate": {
+              "runAfter": {
+                "Respond_to_flow_on_error": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "bbf54125-19d8-414e-b452-2b66eede0dd8"
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              }
+            }
+          },
+          "runAfter": {
+            "Product_default_order_settings": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "cb321f22-cd9a-4705-83bf-f6a4445a4299"
+          },
+          "type": "Scope"
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

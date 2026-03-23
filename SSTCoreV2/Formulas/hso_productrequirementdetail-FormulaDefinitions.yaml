@@ -1,0 +1,43 @@
+hso_purchaseoverdeliverypercentage_fx: |-
+    =If(
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000000' && hso_storagedimensiongroup_id.msdyn_groupname = "AWHS", 5000,
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000000' && hso_storagedimensiongroup_id.msdyn_groupname = "Service", 1000000,
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000001', 1000000,
+        0
+    )
+hso_purchaseunderdeliverypercentage_fx: |-
+    =If(
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000000' && hso_storagedimensiongroup_id.msdyn_groupname = "AWHS", 100,
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000000' && hso_storagedimensiongroup_id.msdyn_groupname = "Service", 100,
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000001', 100,
+        0
+    )
+hso_salesoverdeliverypercentage_fx: |-
+    =If(
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000000' && hso_storagedimensiongroup_id.msdyn_groupname = "AWHS", 1000,
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000000' && hso_storagedimensiongroup_id.msdyn_groupname = "Service", 1000000,
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000001', 1000000,
+        0
+    )
+hso_salespercentmarkup: =hso_productcategory_id.hso_salespercentmarkup
+hso_salesunderdeliverypercentage_fx: |-
+    =If(
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000000' && hso_storagedimensiongroup_id.msdyn_groupname = "AWHS", 100,
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000000' && hso_storagedimensiongroup_id.msdyn_groupname = "Service", 100,
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000001', 100,
+        0
+    )
+hso_transferorderoverdeliverypercentage_f: |-
+    =If(
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000000' && hso_storagedimensiongroup_id.msdyn_groupname = "AWHS", 1000,
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000000' && hso_storagedimensiongroup_id.msdyn_groupname = "Service", 1000000,
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000001', 1000000,
+        0
+    )
+hso_transferorderunderdeliverypercentage_: |-
+    =If(
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000000' && hso_storagedimensiongroup_id.msdyn_groupname = "AWHS", 100,
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000000' && hso_storagedimensiongroup_id.msdyn_groupname = "Service", 100,
+        hso_producttype_opt = hso_productrequirementdetail_hso_productrequirementdetail_hso_producttype_opt.'100000001', 100,
+        0
+    )

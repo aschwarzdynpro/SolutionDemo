@@ -1,0 +1,41 @@
+<appaction uniquename="hso__GAEBexportieren!229a366d8e2e40308ab4b8878780aa50!msdynce_saleshub!hso_calculation!0">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="GAEB exportieren">
+    <label description="GAEB exportieren" languagecode="1031" />
+    <label description="GAEB exportieren" languagecode="1033" />
+  </buttonlabeltext>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculation</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculation</contextvalue>
+  <fonticon>$clientsvg:TextDocument</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>0</location>
+  <name>GAEBexportieren!229a366d8e2e40308ab4b8878780aa50</name>
+  <onclickeventjavascriptfunctionname>Schulz.CalculationRibbon.openGAEBExportCustomPage</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":5}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>d24a8f32-ce5e-ee11-be6f-000d3ab3cbd3</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <parentappactionid>
+    <uniquename>hso__GAEB!82a4091f6be14e3191bb04e51f5a061d!msdynce_saleshub!hso_calculation!0</uniquename>
+  </parentappactionid>
+  <sequence>10000.0000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>sst_saleshubdefaultcommandlibrary_a87a9</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>f1fe81ceb92d4db98104f9c38ecbd84d</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

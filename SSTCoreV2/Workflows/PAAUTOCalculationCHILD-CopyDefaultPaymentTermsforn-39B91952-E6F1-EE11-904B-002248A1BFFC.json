@@ -1,0 +1,956 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_webcontents": {
+        "api": {
+          "name": "shared_webcontents"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverseHTTPwithAzureAD"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)": {
+          "defaultValue": "operations-d365-schulz-int-11.crm4.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarDataverseInstance",
+            "description": "The Dataverse Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "The GUID of the Calculation that has been created",
+                  "title": "Calculation",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "The GUID of the Processing Log for the Parent Flow",
+                  "title": "Processing Log",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "The GUID of the Quote of the Calculation",
+                  "title": "Quote",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_3": {
+                  "description": "The Name of the Calculation",
+                  "title": "Calculation Name",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_4": {
+                  "description": "The User that initiated the process",
+                  "title": "Process Owner",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_5": {
+                  "description": "The GUID of the Payment Method set for the Quote",
+                  "title": "Payment Method",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "text_3",
+                "text_4",
+                "text_5"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "380e6400-9f84-4833-9724-b2ea28f82c49"
+          }
+        }
+      },
+      "actions": {
+        "Initialize_varNumberOfCalculationPaymentTerms_ToProcess": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfCalculationPaymentTerms_ToProcess",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varError": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "99dd8e6c-e9f0-49b7-a0f4-f76515b6ff6d"
+          }
+        },
+        "Initialize_varNumberOfCalculationPaymentTerms_Processed": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfCalculationPaymentTerms_Processed",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varNumberOfCalculationPaymentTerms_ToProcess": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "658ed88f-d779-4efa-839f-73c4a5a98782"
+          }
+        },
+        "Create_Payment_Terms": {
+          "type": "Scope",
+          "actions": {
+            "Select_required_fields_from_Payment_Terms": {
+              "type": "Select",
+              "inputs": {
+                "from": "@outputs('List_Payment_Terms_for_selected_Payment_Method_')?['body/value']",
+                "select": {
+                  "@{variables('varOdataType')}": "#Microsoft.Dynamics.CRM.hso_paymentterm_calculation",
+                  "hso_name": "@item()?['hso_name']",
+                  "hso_calculationid@odata.bind": "/hso_calculations(@{triggerBody()?['text']})",
+                  "hso_paymenttermid@odata.bind": "/hso_paymentterms(@{item()?['hso_paymenttermid']})",
+                  "hso_sortorder": "@item()?['hso_sortorder']",
+                  "hso_paymenttermpercentage": "@item()?['hso_paymenttermpercentage']"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "b729b1c5-0b01-4946-a43d-8b85a11c90b9"
+              }
+            },
+            "Payment_Terms_to_process": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@length(body('Select_required_fields_from_Payment_Terms'))",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Create_Calculation_Payment_Terms": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "request/method": "POST",
+                      "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_paymentterm_calculations/Microsoft.Dynamics.CRM.CreateMultiple",
+                      "request/headers": {
+                        "OData-MaxVersion": "4.0",
+                        "OData-Version": "4.0",
+                        "If-None-Match": "null",
+                        "Accept": "application/json",
+                        "Content-Type": "application/json; charset=utf-8"
+                      },
+                      "request/body": "{\n \"Targets\": @{body('Select_required_fields_from_Payment_Terms')}\n}"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                      "operationId": "InvokeHttp",
+                      "connectionName": "shared_webcontents"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "4438185f-03c8-4577-adbe-8605de27e523"
+                  }
+                },
+                "Set_varNumberOfCalculationPaymentTerms_Processed_[Succes]": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "varNumberOfCalculationPaymentTerms_Processed",
+                    "value": "@length(body('Create_Calculation_Payment_Terms')?['Ids'])"
+                  },
+                  "runAfter": {
+                    "Create_Calculation_Payment_Terms": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "45224d07-8896-4df3-9ddf-74707077f0c7"
+                  }
+                },
+                "Append_Create_Calculation_Payment_Terms_to_varLog_[Success]": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[INF] - [@{utcNow()}] - @{length(body('Create_Calculation_Payment_Terms')?['Ids'])} Payment Terms successfully added to Calculation @{decodeUriComponent('%0A')}"
+                  },
+                  "runAfter": {
+                    "Create_Calculation_Payment_Terms": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Select_required_fields_from_Payment_Terms": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "095e8d55-3363-437c-bc9b-9c863e660018"
+              }
+            }
+          },
+          "runAfter": {
+            "Fetch_Information": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "cf5e2b12-3bba-49ca-9fd0-ab186bae6859"
+          }
+        },
+        "Create_Payment_Terms_-_Error": {
+          "type": "Scope",
+          "actions": {
+            "Filter_Results_for_failed_actions": {
+              "type": "Query",
+              "inputs": {
+                "from": "@result('Create_Payment_Terms')",
+                "where": "@equals(item()['status'], 'Failed')"
+              },
+              "metadata": {
+                "operationMetadataId": "0ab2afbf-64ea-418d-bd9d-65a6863a7bc8"
+              }
+            },
+            "Select_Error_Summary": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Filter_Results_for_failed_actions')",
+                "select": {
+                  "Action": "@item()?['name']",
+                  "Code": "@item()?['code']",
+                  "Status": "@item()?['status']",
+                  "StatusCode": "@item()?['outputs']?['statusCode']",
+                  "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                }
+              },
+              "runAfter": {
+                "Filter_Results_for_failed_actions": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "2822f992-45ab-4420-9e3d-d0fa0fd973eb"
+              }
+            },
+            "Apply_to_each_Error_Summary_[Create_Payment_Terms]": {
+              "type": "Foreach",
+              "foreach": "@body('Select_Error_Summary')",
+              "actions": {
+                "Append_Error_Summary": {
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "varError",
+                    "value": "@items('Apply_to_each_Error_Summary_[Create_Payment_Terms]')"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "3469f5c1-3721-49c6-9282-101e18f85d47"
+                  }
+                }
+              },
+              "runAfter": {
+                "Select_Error_Summary": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "11651d04-deed-4450-9f4d-c1cc2e8adda5"
+              }
+            },
+            "List_Created_Calculation_Payment_Terms": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_paymentterm_calculations",
+                  "$filter": "_hso_calculationid_value eq @{triggerBody()?['text']}"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "Apply_to_each_Error_Summary_[Create_Payment_Terms]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "07b0aa44-5f09-42a2-b6ac-ecd1089a9389"
+              }
+            },
+            "Set_varNumberOfCalculationPaymentTerms_Processed_[Error]": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varNumberOfCalculationPaymentTerms_Processed",
+                "value": "@length(outputs('List_Created_Calculation_Payment_Terms')?['body/value'])"
+              },
+              "runAfter": {
+                "List_Created_Calculation_Payment_Terms": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "45224d07-8896-4df3-9ddf-74707077f0c7"
+              }
+            },
+            "Append_Create_Calculation_Payment_Terms_to_varLog_[Error]": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - Error when creating the Calculation Payment Terms. @{length(outputs('List_Created_Calculation_Payment_Terms')?['body/value'])} of @{variables('varNumberOfCalculationPaymentTerms_ToProcess')} Payment Terms created.\n[ERR] - [@{utcNow()}] - Error: @{variables('varErrorMessage')} @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "List_Created_Calculation_Payment_Terms": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Create_Payment_Terms": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "492a4dae-5e78-465d-86dc-fb093d5f7426"
+          }
+        },
+        "Summary": {
+          "type": "Scope",
+          "actions": {
+            "Parse_JSON": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": {
+                  "link": {
+                    "actions": [
+                      {
+                        "title": "Kalkulationsversion anzeigen",
+                        "data": {
+                          "url": "?pagetype=entityrecord&etn=hso_calculation&id=@{triggerOutputs()?['body/hso_calculationid']}",
+                          "navigationTarget": "inline"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "link": {
+                      "type": "object",
+                      "properties": {
+                        "actions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "title": {
+                                "type": "string"
+                              },
+                              "data": {
+                                "type": "object",
+                                "properties": {
+                                  "url": {
+                                    "type": "string"
+                                  },
+                                  "navigationTarget": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            },
+                            "required": [
+                              "title",
+                              "data"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "b769deed-a8c4-494a-a92f-2be1a1eb92c7"
+              }
+            },
+            "All_Payment_Terms_for_Calculation_created": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@variables('varNumberOfCalculationPaymentTerms_ToProcess')",
+                  "@variables('varNumberOfCalculationPaymentTerms_Processed')"
+                ]
+              },
+              "actions": {
+                "Update_Processing_Log_[Success]": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_processinglogs",
+                      "recordId": "@outputs('Create_ProcessingLog')?['body/hso_processinglogid']",
+                      "item/hso_end_datetime": "@utcNow()",
+                      "item/hso_calculationpaymentterm_actual": "@variables('varNumberOfCalculationPaymentTerms_Processed')",
+                      "item/hso_calculationpaymentterm_target": "@variables('varNumberOfCalculationPaymentTerms_ToProcess')",
+                      "item/hso_log": "@variables('varLog')",
+                      "item/hso_processingstatus": 100000002
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "runAfter": {
+                    "Finish_varLog_with_Success": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "dfa8137d-a012-4ba8-97ee-11968a11a8be"
+                  }
+                },
+                "Respond_to_Parent_Flow_[Success]": {
+                  "type": "Response",
+                  "kind": "PowerApp",
+                  "inputs": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "outcome": {
+                          "title": "Outcome",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        },
+                        "payment_terms to process": {
+                          "title": "Payment Terms To Process",
+                          "x-ms-dynamically-added": true,
+                          "type": "number"
+                        },
+                        "payment_terms processed": {
+                          "title": "Payment Terms Processed",
+                          "x-ms-dynamically-added": true,
+                          "type": "number"
+                        },
+                        "error_message": {
+                          "title": "Error Message",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": {}
+                    },
+                    "statusCode": 200,
+                    "body": {
+                      "outcome": "Success",
+                      "payment_terms to process": "@variables('varNumberOfCalculationPaymentTerms_ToProcess')",
+                      "payment_terms processed": "@variables('varNumberOfCalculationPaymentTerms_Processed')",
+                      "error_message": "@{variables('varErrorMessage')}"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "6a653752-9bbb-4f93-bd99-07765f655be7"
+                  }
+                },
+                "Send_inApp_Notification_[Success]": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          1,
+                          2
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Create_inApp_Notification_[Succes]": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "appnotifications",
+                          "item/title": "Zahlungsziele erstellt",
+                          "item/ttlinseconds": 200,
+                          "item/ownerid@odata.bind": "systemusers(@{triggerBody()?['text_4']})",
+                          "item/data": "@body('Parse_JSON')?['link']",
+                          "item/icontype": 100000001,
+                          "item/priority": 200000000,
+                          "item/body": "Die Kalkulations-Zahlungsziele für die Kalkulationsversion \"@{triggerBody()?['text_3']}\" wurden erfolgreich erstellt."
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "CreateRecord",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "d3c66f90-c2c7-4215-9a89-1c1f6cb872c5"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Update_Processing_Log_[Success]": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Finish_varLog_with_Success": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[SUC] - [@{utcNow()}] - Flow run was successful. All required Calculation Payment Terms have been added to the Calculation."
+                  },
+                  "runAfter": {
+                    "Respond_to_Parent_Flow_[Success]": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Apply_to_each_Error_Summary": {
+                    "type": "Foreach",
+                    "foreach": "@variables('varError')",
+                    "actions": {
+                      "Append_Error_Message": {
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varErrorMessage",
+                          "value": "[ERROR] - Action '@{items('Apply_to_each_Error_Summary')?['Action']}' failed with error message: @{items('Apply_to_each_Error_Summary')?['Message']} (Status: @{items('Apply_to_each_Error_Summary')?['Status']} / Status Code: @{items('Apply_to_each_Error_Summary')?['StatusCode']})"
+                        },
+                        "metadata": {
+                          "operationMetadataId": "a7a17c59-dd66-4433-8461-2e1dca2400c9"
+                        }
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "6a29090f-1834-448f-826f-f33d425b3dcf"
+                    }
+                  },
+                  "Create_inApp_Notification_[Error]": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "appnotifications",
+                        "item/title": "Zahlungsziele-Fehler",
+                        "item/ttlinseconds": 200,
+                        "item/ownerid@odata.bind": "systemusers(@{triggerBody()?['text_4']})",
+                        "item/data": "@body('Parse_JSON')?['link']",
+                        "item/icontype": 100000002,
+                        "item/priority": 200000001,
+                        "item/body": "Beim Erstellen der Kalkulations-Zahlungsziele für die Kalkulationsversion \"@{triggerBody()?['text_3']}\" ist ein Fehler aufgetreten."
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "CreateRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    },
+                    "runAfter": {
+                      "Update_Processing_Log_[Error]": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "a019b54a-34ea-48d7-9064-9eb2f842948a"
+                    }
+                  },
+                  "Update_Processing_Log_[Error]": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_processinglogs",
+                        "recordId": "@outputs('Create_ProcessingLog')?['body/hso_processinglogid']",
+                        "item/hso_end_datetime": "@utcNow()",
+                        "item/hso_flowerror": "@variables('varError')",
+                        "item/hso_calculationpaymentterm_actual": "@variables('varNumberOfCalculationPaymentTerms_Processed')",
+                        "item/hso_calculationpaymentterm_target": "@variables('varNumberOfCalculationPaymentTerms_ToProcess')",
+                        "item/hso_log": "@variables('varLog')",
+                        "item/hso_processingstatus": 100000003
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    },
+                    "runAfter": {
+                      "Finish_varLog_with_Error": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "dfa8137d-a012-4ba8-97ee-11968a11a8be"
+                    }
+                  },
+                  "Respond_to_Parent_Flow_[Error]": {
+                    "type": "Response",
+                    "kind": "PowerApp",
+                    "inputs": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "outcome": {
+                            "title": "Outcome",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          },
+                          "payment_terms to process": {
+                            "title": "Payment Terms To Process",
+                            "x-ms-dynamically-added": true,
+                            "type": "number"
+                          },
+                          "payment_terms processed": {
+                            "title": "Payment Terms Processed",
+                            "x-ms-dynamically-added": true,
+                            "type": "number"
+                          },
+                          "error_message": {
+                            "title": "Error Message",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": {}
+                      },
+                      "statusCode": 200,
+                      "body": {
+                        "outcome": "Error",
+                        "payment_terms to process": "@variables('varNumberOfCalculationPaymentTerms_ToProcess')",
+                        "payment_terms processed": "@variables('varNumberOfCalculationPaymentTerms_Processed')",
+                        "error_message": "@{variables('varErrorMessage')}"
+                      }
+                    },
+                    "runAfter": {
+                      "Apply_to_each_Error_Summary": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "e1b4f0b2-e9c2-4572-baba-7ad3de140b73"
+                    }
+                  },
+                  "Finish_varLog_with_Error": {
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "varLog",
+                      "value": "[ERR] - [@{utcNow()}] - Flow run has failed. Payment Terms may have been partially added to Calculation. Check Log for further details."
+                    },
+                    "runAfter": {
+                      "Respond_to_Parent_Flow_[Error]": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Parse_JSON": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "893e2b5f-6b42-4e37-9539-1e8a60b854ad"
+              }
+            }
+          },
+          "runAfter": {
+            "Create_Payment_Terms_-_Error": [
+              "Succeeded",
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ],
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "4fefb6e8-9991-490d-a705-530519cb3a36"
+          }
+        },
+        "Initialize_varProcessingStatus": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varProcessingStatus",
+                "type": "string",
+                "value": "Pending"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varErrorMessage": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d9778e51-3398-4861-8a53-96a310365863"
+          }
+        },
+        "Initialize_varErrorMessage": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorMessage",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varError": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b4ebf231-4b62-467b-9a38-a2e6c3aabb02"
+          }
+        },
+        "Fetch_Information": {
+          "type": "Scope",
+          "actions": {
+            "List_Payment_Terms_for_selected_Payment_Method_": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_paymentterms",
+                  "$filter": "_hso_paymentmethodid_value eq '@{triggerBody()?['text_5']}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "Append_Fetch_Payment_Terms_to_varLog": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "3d372c49-ba36-4e1d-9cf6-9b2f15bf7a7f"
+              }
+            },
+            "Set_varNumberOfCalculationPaymentTerms_ToProcess": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varNumberOfCalculationPaymentTerms_ToProcess",
+                "value": "@length(outputs('List_Payment_Terms_for_selected_Payment_Method_')?['body/value'])"
+              },
+              "runAfter": {
+                "List_Payment_Terms_for_selected_Payment_Method_": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "45224d07-8896-4df3-9ddf-74707077f0c7"
+              }
+            },
+            "Append_Fetch_Payment_Terms_to_varLog": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - Fetch Payment Terms for selected Payment Method of Quote @{decodeUriComponent('%0A')}"
+              }
+            },
+            "Append_retrieved_Payment_Terms_to_varLog": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - @{length(outputs('List_Payment_Terms_for_selected_Payment_Method_')?['body/value'])} Payment Terms retrieved \n[INF] - [@{utcNow()}] - Start adding the Payment Terms to Calculation @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "List_Payment_Terms_for_selected_Payment_Method_": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varOdataType": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1e8b6c7c-abfb-4b18-8b12-bd7c3a8a7d5d"
+          }
+        },
+        "Processing_Log": {
+          "type": "Scope",
+          "actions": {
+            "Convert_time_zone": {
+              "type": "Expression",
+              "kind": "ConvertTimeZone",
+              "inputs": {
+                "baseTime": "@{utcNow()}",
+                "sourceTimeZone": "UTC",
+                "destinationTimeZone": "W. Europe Standard Time",
+                "formatString": "u"
+              },
+              "metadata": {
+                "operationMetadataId": "1d7e37f7-559a-4f50-bc57-01f763122a7d"
+              }
+            },
+            "Create_ProcessingLog": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "item/hso_name": "Kalkulation Zahlungsziele erstellen - @{body('Convert_time_zone')}",
+                  "item/hso_processingtask": 100000010,
+                  "item/ownerid@odata.bind": "systemusers(@{triggerBody()?['text_4']})",
+                  "item/hso_flowrunurl": "@concat('https://emea.flow.microsoft.com/manage/environments/', workflow()?['tags']['environmentName'], '/flows/', workflow()?['name'], '/runs/', workflow()?['run']['name'])\r\n",
+                  "item/hso_start_datetime": "@utcNow()",
+                  "item/hso_parentprocessinglogid@odata.bind": "hso_processinglogs(@{triggerBody()?['text_1']})",
+                  "item/hso_processingstatus": 100000001
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "Convert_time_zone": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "19102256-ab43-4323-b8b2-8c6535b22369"
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varProcessingStatus": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "5b1e070f-3286-483e-afac-12f045718831"
+          }
+        },
+        "Initialize_varOdataType": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varOdataType",
+                "type": "string",
+                "value": "@{string('@')}odata.type"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varNumberOfCalculationPaymentTerms_Processed": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b55f9086-5bc2-42d3-b045-19fb1ca43941"
+          }
+        },
+        "Initialize_varError": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varError",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "eed278cb-0b03-4e74-a461-5346e9267c39"
+          }
+        },
+        "Initialize_varLog": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varLog",
+                "type": "string",
+                "value": "[INF] - [@{utcNow()}] - Initializing Flow Run @{decodeUriComponent('%0A')}"
+              }
+            ]
+          },
+          "runAfter": {}
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

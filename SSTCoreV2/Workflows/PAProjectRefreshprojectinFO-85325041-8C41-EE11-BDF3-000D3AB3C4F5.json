@@ -1,0 +1,180 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataversewithPSA"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_dynamicsax": {
+        "api": {
+          "name": "shared_dynamicsax"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRFinOps"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)": {
+          "defaultValue": "d365-schulz-int-11b9dbaf056743afd3devaos.axcloud.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarUnifiedOperationsInstance",
+            "description": "The Unified Operations Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "When_a_row_is_added,_modified_or_deleted": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "msdyn_project",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "sst_lastpsprefresh_dat"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "c30f6a09-48af-4bd8-8fa1-08b606fc21e6"
+          }
+        }
+      },
+      "actions": {
+        "Aktion_ausführen": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "@parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')",
+              "procedure": "CEProjectTasks/Microsoft.Dynamics.DataEntities.transferWbsToProject",
+              "parameters/_projId": "@triggerOutputs()?['body/sst_projectnumber']",
+              "parameters/_dataAreaId": "@outputs('Get_the_company')?['body/cdm_companycode']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicsax",
+              "operationId": "ExecuteProcedure",
+              "connectionName": "shared_dynamicsax"
+            }
+          },
+          "runAfter": {
+            "Get_the_company": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "67ce232f-39bf-46c3-aff5-8f85ea8d89be"
+          }
+        },
+        "Bedingung": {
+          "type": "If",
+          "expression": {
+            "equals": [
+              "@outputs('Aktion_ausführen')?['body/value']",
+              "OK"
+            ]
+          },
+          "actions": {
+            "Add_success_notification": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "appnotifications",
+                  "item/title": "Der Projektstrukturplan wurde erfolgreich aktualisiert.",
+                  "item/ownerid@odata.bind": "systemusers(@{triggerOutputs()?['body/_modifiedby_value']})",
+                  "item/icontype": 100000001,
+                  "item/toasttype": 200000000,
+                  "item/priority": 200000000
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "e85d46c1-2764-4403-9e71-3fab6b51af04"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Add_failure_notification": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "entityName": "appnotifications",
+                    "item/title": "Der Projektstruktuplan konnte nicht aktualisiert werden.",
+                    "item/ownerid@odata.bind": "systemusers(@{triggerOutputs()?['body/_modifiedby_value']})",
+                    "item/icontype": 100000002,
+                    "item/toasttype": 200000000,
+                    "item/priority": 200000001,
+                    "item/body": "@outputs('Aktion_ausführen')?['body/value']"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                    "operationId": "CreateRecord",
+                    "connectionName": "shared_commondataserviceforapps"
+                  }
+                },
+                "metadata": {
+                  "operationMetadataId": "4cb20d8f-b169-4b62-a27f-7a0323100d3b"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Aktion_ausführen": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "fc49d50a-8d99-4821-a138-41cfa1e72775"
+          }
+        },
+        "Get_the_company": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "cdm_companies",
+              "recordId": "@triggerOutputs()?['body/_sst_owningcompany_value']",
+              "$select": "cdm_companycode"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "e7dc4c47-0260-46c8-9cd9-e44c25077bcd"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,738 @@
+{
+  "properties": {
+    "connectionReferences": {},
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)": {
+          "defaultValue": "d365-schulz-int-11b9dbaf056743afd3devaos.axcloud.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarUnifiedOperationsInstance",
+            "description": "The Unified Operations Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "arrReleasingCompanies",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Array of CompanyCodes (example: [\"HSV\", \"HB\"])",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "title": "strRequestId",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "RequestID as a text value (example: \"PR-1240\")",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "boolean": {
+                  "title": "boolResponse",
+                  "type": "boolean",
+                  "x-ms-dynamically-added": true,
+                  "description": "Control if flow will send response. \"Yes\", if response should be send.",
+                  "x-ms-content-hint": "BOOLEAN"
+                },
+                "text_2": {
+                  "title": "strItemNumber",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Itemnumber for creaion of trade agreement journal line.",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_3": {
+                  "title": "strTenant",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Tenant ID",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_4": {
+                  "title": "strClient",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Client ID",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_5": {
+                  "title": "strSecret",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Secret",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "number": {
+                  "title": "intPurchasePriceQuantity",
+                  "type": "number",
+                  "x-ms-dynamically-added": true,
+                  "description": "PurchasePriceQuantity",
+                  "x-ms-content-hint": "NUMBER"
+                },
+                "number_1": {
+                  "title": "intPrice",
+                  "type": "number",
+                  "x-ms-dynamically-added": true,
+                  "description": "Price",
+                  "x-ms-content-hint": "NUMBER"
+                },
+                "text_6": {
+                  "title": "strVendorAccountNumber",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "VendorAccountNumber",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "boolean",
+                "text_2",
+                "text_3",
+                "text_4",
+                "text_5",
+                "number",
+                "number_1",
+                "text_6"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "4ab9d322-deaf-4a9a-9696-11b25e13257d"
+          }
+        }
+      },
+      "actions": {
+        "Check_and_Process_Trade_Agreement_Journal_Header": {
+          "type": "Workflow",
+          "inputs": {
+            "host": {
+              "workflowReferenceName": "681864cf-62c7-ee11-9079-000d3ab1b3e1"
+            },
+            "body": {
+              "text": "@triggerBody()['text']",
+              "text_1": "@triggerBody()['text_1']",
+              "boolean": true
+            }
+          },
+          "runAfter": {
+            "Init_strInlineFinOpsURL": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2dc620e5-28fe-4cac-8769-a2051ef2ef82"
+          }
+        },
+        "BatchGUID": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "BatchGUID_txt",
+                "type": "string",
+                "value": "@{guid()}"
+              }
+            ]
+          },
+          "runAfter": {
+            "Init_arrReleasingCompanies": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "05c49f43-b00e-4e60-bf96-0207b7932ce8"
+          }
+        },
+        "ChangesetGUID": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ChangesetGUID_txt",
+                "type": "string",
+                "value": "@{guid()}"
+              }
+            ]
+          },
+          "runAfter": {
+            "BatchGUID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d15060e1-d059-4486-8920-3c1c5592bffa"
+          }
+        },
+        "BatchDocumentJSON": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "BatchDocumentJSON_str",
+                "type": "string",
+                "value": "--batch_@{variables('BatchGUID_txt')}\nContent-Type: multipart/mixed; boundary=changeset_@{variables('ChangesetGUID_txt')}\n@{decodeUriComponent('%0A')}"
+              }
+            ]
+          },
+          "runAfter": {
+            "ChangesetGUID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c6f0d948-ee47-4b8f-ad2b-5ff1f213c3c2"
+          }
+        },
+        "Trade_Agreement_Journal_Line": {
+          "type": "Scope",
+          "actions": {
+            "Trade_Agreement_Journal_Header_success": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@body('Check_and_Process_Trade_Agreement_Journal_Header')?['status']",
+                  "200"
+                ]
+              },
+              "actions": {
+                "Apply_to_each_Releasing_Company": {
+                  "type": "Foreach",
+                  "foreach": "@variables('arrReleasingCompanies')",
+                  "actions": {
+                    "Increment_BatchContentID": {
+                      "type": "IncrementVariable",
+                      "inputs": {
+                        "name": "BatchContentID_int",
+                        "value": 1
+                      },
+                      "metadata": {
+                        "operationMetadataId": "0a382560-09e1-4e9a-804f-bdc5214f9c3a"
+                      }
+                    },
+                    "Append_to_BatchDocumentJSON": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "BatchDocumentJSON_str",
+                        "value": "--changeset_@{variables('ChangesetGUID_txt')}\nContent-Type: application/http\nContent-Transfer-Encoding: binary\nContent-ID: @{variables('BatchContentID_int')}\n\nPOST OpenPurchasePriceJournalLinesV2?cross-company=true HTTP/1.1\nContent-Type: application/json\n\n{\n  \"dataAreaId\":\"@{items('Apply_to_each_Releasing_Company')?['dataAreaId']}\",\n  \"TradeAgreementJournalNumber\":\"@{items('Apply_to_each_Releasing_Company')?['JournalNumber']}\",\n  \"WillSearchContinue\":\"No\",\n  \"ItemNumber\":\"@{triggerBody()['text_2']}\",\n  \"ToQuantity\":0,\n  \"PurchasePriceQuantity\":@{triggerBody()['number']},\n  \"Price\":@{triggerBody()['number_1']},\n  \"VendorAccountNumber\":\"@{triggerBody()['text_6']}\",\n  \"PriceApplicableFromDate\": \"@{utcNow()}\"\n}\n@{decodeUriComponent('%0A')}"
+                      },
+                      "runAfter": {
+                        "Increment_BatchContentID": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "7d1c177f-da53-459c-853a-56cc8a2217f8"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "fc052424-2331-43d8-a2d8-5349d34a1fd2"
+                  }
+                },
+                "Close_BatchDocumentJSON": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "BatchDocumentJSON_str",
+                    "value": "--changeset_@{variables('ChangesetGUID_txt')}--\n--batch_@{variables('BatchGUID_txt')}--"
+                  },
+                  "runAfter": {
+                    "Apply_to_each_Releasing_Company": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "367aa7f8-b3bd-4412-b034-f90ae97ea88f"
+                  }
+                },
+                "Batch_create_Trade_Agreement_Journal_Lines": {
+                  "type": "Http",
+                  "inputs": {
+                    "uri": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/data/$batch",
+                    "method": "POST",
+                    "headers": {
+                      "OData-MaxVersion": "4.0",
+                      "OData-Version": "4.0",
+                      "Accept": "application/json",
+                      "Content-Type": "multipart/mixed;boundary=batch_@{variables('BatchGUID_txt')}"
+                    },
+                    "body": "@variables('BatchDocumentJSON_str')",
+                    "authentication": {
+                      "type": "ActiveDirectoryOAuth",
+                      "tenant": "@triggerBody()['text_3']",
+                      "audience": "@variables('strInlineFinOpsURL')",
+                      "clientId": "@triggerBody()['text_4']",
+                      "secret": "@triggerBody()['text_5']"
+                    }
+                  },
+                  "runAfter": {
+                    "Close_BatchDocumentJSON": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "a8d27b91-6904-4b31-9131-7054ef964ee7"
+                  }
+                },
+                "statusCode": {
+                  "type": "Compose",
+                  "inputs": "@Coalesce(body('Batch_create_Trade_Agreement_Journal_Lines')?['$multipart']?[0]?['body']?['$multipart']?[0]?['body']?['$applicationHttp']?['statusCode'], 200)",
+                  "runAfter": {
+                    "Batch_create_Trade_Agreement_Journal_Lines": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "0521db24-cb9d-4e85-a6ec-fbb6dc4635f5"
+                  }
+                },
+                "Inline_error": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@outputs('statusCode')",
+                            200
+                          ]
+                        }
+                      },
+                      {
+                        "not": {
+                          "equals": [
+                            "@outputs('statusCode')",
+                            201
+                          ]
+                        }
+                      },
+                      {
+                        "not": {
+                          "equals": [
+                            "@outputs('statusCode')",
+                            204
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "innererror_message": {
+                      "type": "Compose",
+                      "inputs": "@Coalesce(body('Batch_create_Trade_Agreement_Journal_Lines')?['$multipart']?[0]?['body']?['$multipart']?[0]?['body']?['$applicationHttp']?['body']?['error']?['innererror']?['message'], '')",
+                      "metadata": {
+                        "operationMetadataId": "f6000069-6221-4325-9e60-532999739e44"
+                      }
+                    },
+                    "Error_inline_error": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "Error_bool",
+                        "value": true
+                      },
+                      "runAfter": {
+                        "ResponseMsg_journal_line_inline_error": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "41b070da-ec0b-4ae9-98a0-cdafc1aa7cea"
+                      }
+                    },
+                    "ResponseMsg_journal_line_inline_error": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "strResponseMsg",
+                        "value": "@{Coalesce(body('Batch_create_Trade_Agreement_Journal_Lines')?['$multipart']?[0]?['body']?['$multipart']?[0]?['body']?['$applicationHttp']?['body']?['error']?['innererror']?['message'], '')}"
+                      },
+                      "runAfter": {
+                        "innererror_message": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "d58124d6-dda8-44cc-b845-ce4e0eb3c2ac"
+                      }
+                    },
+                    "Respond_to_a_PowerApp_or_flow_on_inline_error": {
+                      "type": "Response",
+                      "kind": "PowerApp",
+                      "inputs": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "strstatus": {
+                              "title": "strStatus",
+                              "x-ms-dynamically-added": true,
+                              "type": "string"
+                            },
+                            "responsemsg": {
+                              "title": "ResponseMsg",
+                              "x-ms-dynamically-added": true,
+                              "type": "string"
+                            },
+                            "journalnumbers": {
+                              "title": "JournalNumbers",
+                              "x-ms-dynamically-added": true,
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": {}
+                        },
+                        "statusCode": 200,
+                        "body": {
+                          "strstatus": "400",
+                          "responsemsg": "@variables('strResponseMsg')",
+                          "journalnumbers": "@{string(variables('arrReleasingCompanies'))}"
+                        }
+                      },
+                      "runAfter": {
+                        "Error_inline_error": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "1411d0d8-5fc4-44bf-a970-d35cddd5a4e9"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "statusCode": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "0b5be4bc-da9b-4a87-a4dc-8e7bbcee42a0"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "ResponseMsg_journal_header": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "strResponseMsg",
+                      "value": "Error during creation of trade agreement journal headers."
+                    },
+                    "metadata": {
+                      "operationMetadataId": "6c8c3b16-1fa7-48a9-8ea7-e7aeb3396778"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "042b218f-e07a-4246-9ecb-5da64ee3be19"
+              }
+            }
+          },
+          "runAfter": {
+            "Init_strResponseMsg": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f661246a-ab2f-4ec8-9f05-2587e8641de6"
+          }
+        },
+        "Trade_Agreement_Journal_Line_[CATCH]": {
+          "type": "Scope",
+          "actions": {
+            "Terminate__in_FinOps_External_Item_Descriptions": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              },
+              "runAfter": {
+                "Respond_to_a_PowerApp_or_flow_on_error": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "391cf5a6-e000-4977-95b7-67fb84095ee4"
+              }
+            },
+            "Error_bool_to_true": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "Error_bool",
+                "value": true
+              },
+              "metadata": {
+                "operationMetadataId": "41b070da-ec0b-4ae9-98a0-cdafc1aa7cea"
+              }
+            },
+            "Filter_array_scope_to_be_catched": {
+              "type": "Query",
+              "inputs": {
+                "from": "@result('Trade_Agreement_Journal_Line')",
+                "where": "@equals(item()?['status'], 'Failed')"
+              },
+              "runAfter": {
+                "Error_bool_to_true": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9420e9bd-9d2b-439b-b441-7c77cccc620b"
+              }
+            },
+            "Respond_to_a_PowerApp_or_flow_on_error": {
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "strstatus": {
+                      "title": "strStatus",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "responsemsg": {
+                      "title": "ResponseMsg",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "journalnumbers": {
+                      "title": "JournalNumbers",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": {}
+                },
+                "statusCode": 200,
+                "body": {
+                  "strstatus": "400",
+                  "responsemsg": "@variables('strResponseMsg')",
+                  "journalnumbers": "@{string(variables('arrReleasingCompanies'))}"
+                }
+              },
+              "runAfter": {
+                "Filter_array_scope_to_be_catched": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "1411d0d8-5fc4-44bf-a970-d35cddd5a4e9"
+              }
+            }
+          },
+          "runAfter": {
+            "Trade_Agreement_Journal_Line": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "dcc89b3c-3cbb-40c8-9818-b103539870e6"
+          }
+        },
+        "BatchContentID": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "BatchContentID_int",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "BatchDocumentJSON": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6932902f-1bb6-49be-ae77-e43b28fa66fe"
+          }
+        },
+        "Init_strInlineFinOpsURL": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strInlineFinOpsURL",
+                "type": "string",
+                "value": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "284e1ceb-899d-4f12-9a59-ad34242f1f2b"
+          }
+        },
+        "Init_Error_bool": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Error_bool",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "BatchContentID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "8cb12a39-d076-4d10-920a-b1bc9c716c29"
+          }
+        },
+        "Respond_to_a_PowerApp_or_flow": {
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "strstatus": {
+                  "title": "strStatus",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                },
+                "responsemsg": {
+                  "title": "ResponseMsg",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                },
+                "journalnumbers": {
+                  "title": "JournalNumbers",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                }
+              },
+              "additionalProperties": {}
+            },
+            "statusCode": 200,
+            "body": {
+              "strstatus": "200",
+              "responsemsg": "@variables('strResponseMsg')",
+              "journalnumbers": "@{string(variables('arrReleasingCompanies'))}"
+            }
+          },
+          "runAfter": {
+            "Trade_Agreement_Journal_Line_[CATCH]": [
+              "Skipped"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1411d0d8-5fc4-44bf-a970-d35cddd5a4e9"
+          }
+        },
+        "Compose": {
+          "type": "Compose",
+          "inputs": "@replace(outputs('Check_and_Process_Trade_Agreement_Journal_Header')?['Body']?['journalnumbers'], '\\', '')",
+          "runAfter": {
+            "Check_and_Process_Trade_Agreement_Journal_Header": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "62a158cc-184e-4093-bcc6-7747a5abc391"
+          }
+        },
+        "Parse_arrReleasingCompanies": {
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@replace(outputs('Check_and_Process_Trade_Agreement_Journal_Header')?['Body']?['journalnumbers'], '\\', '')",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "dataAreaId": {
+                    "type": "string"
+                  },
+                  "JournalNumber": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "dataAreaId",
+                  "JournalNumber"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Compose": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00ce9d66-c8c1-41be-b2f8-08b4fe79df0b"
+          }
+        },
+        "Init_arrReleasingCompanies": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "arrReleasingCompanies",
+                "type": "array",
+                "value": "@body('Parse_arrReleasingCompanies')"
+              }
+            ]
+          },
+          "runAfter": {
+            "Parse_arrReleasingCompanies": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "516e2db8-552f-4b80-9682-76abbe906c77"
+          }
+        },
+        "Init_strResponseMsg": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strResponseMsg",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Init_Error_bool": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "13505fef-dc98-4121-a092-2f1cf5c09362"
+          }
+        }
+      },
+      "description": "Creates new trade agreement journal entries based on article detail level."
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

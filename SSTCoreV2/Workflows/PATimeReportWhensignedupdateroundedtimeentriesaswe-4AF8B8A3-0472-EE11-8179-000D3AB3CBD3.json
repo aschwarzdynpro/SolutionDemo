@@ -1,0 +1,133 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps_1": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_a_Time_Report_is_signed": {
+          "metadata": {
+            "operationMetadataId": "6a225b6e-cf29-44e9-9c9c-e5669f8c2ee9"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps_1",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "sst_timereports",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "sst_signature"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "List_related_round_time_entries": {
+          "runAfter": {
+            "Set_Signed_for_INterface": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "73f3fb86-a610-460b-83e7-a6788ad0da52"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps_1",
+              "operationId": "ListRecords",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "sst_roundedtimeentrieses",
+              "$filter": "_sst_timereport_value eq '@{triggerOutputs()?['body/sst_timereportsid']}'"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Apply_to_each_rounded_time_entry": {
+          "foreach": "@outputs('List_related_round_time_entries')?['body/value']",
+          "actions": {
+            "Update_the_rounded_time_entry_with_status_signed": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "1863e683-de9d-429f-8af2-01bab5cba3f8"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps_1",
+                  "operationId": "UpdateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "sst_roundedtimeentrieses",
+                  "recordId": "@items('Apply_to_each_rounded_time_entry')?['sst_roundedtimeentriesid']",
+                  "item/sst_signed": true
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "runAfter": {
+            "List_related_round_time_entries": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "aac9daf9-a9e6-44f4-bdc2-cde51b51c34e"
+          },
+          "type": "Foreach"
+        },
+        "Set_Signed_for_INterface": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "6e7d2280-4c72-4086-8f17-9b96752957ea"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps_1",
+              "operationId": "UpdateOnlyRecord",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "sst_timereportses",
+              "recordId": "@triggerOutputs()?['body/sst_timereportsid']",
+              "item/sst_signed_interface_bol": true
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

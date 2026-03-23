@@ -1,0 +1,4 @@
+sst_bookingstatus_fieldservicestatus_fx: =BookingStatus.msdyn_fieldservicestatus
+sst_rolle: =msdyn_workorder.sst_Projektaufgabe_ref.msdyn_ResourceCategoryPricingDimension.name
+sst_systemuserid_fx: =Text(Resource.UserId.systemuserid)
+sst_workordertype_str: =msdyn_workorder.msdyn_workordertype.msdyn_name

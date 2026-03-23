@@ -1,0 +1,155 @@
+if (typeof (Schulz) === "undefined") { Schulz = {}; };
+if (typeof (Schulz.WorkOrderForm) === "undefined") { Schulz.WorkOrderForm = {}; }
+
+Schulz.WorkOrderForm.onLoad = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    //Schulz.WorkOrderForm.registerEvents(formContext);
+
+    if (formContext.ui.getFormType() > 2) // Skip if form is not create or update
+        return;
+
+    if (formContext.getAttribute("msdyn_systemstatus").getValue() >= 690970003)
+    {
+        Schulz.Common.disableAllFields(formContext);
+        formContext.getControl("msdyn_systemstatus")?.setDisabled(false);
+        formContext.getControl("sst_targetworkorder_id")?.setDisabled(false);
+        formContext.getControl("workorderproductsgrid")?.setDisabled(false);
+        formContext.ui.setFormNotification("Die Work Order ist abgeschlossen. Änderungen sind nicht mehr möglich.", "INFO", "wo_readonly");
+        return;
+    }
+
+    Schulz.WorkOrderForm.setWorkorderDefaults(executionContext);
+
+    const currentForm = formContext.ui.formSelector.getCurrentItem();
+
+    if (currentForm.getId() === "adada18b-44a1-ed11-aad1-0022489de585") // Work Order Main Form
+    {
+        Schulz.WorkOrderForm.checkParentWorkOrder(executionContext);
+        Schulz.WorkOrderForm.prefilterTargetWorkOrder(executionContext);
+    }
+    
+    formContext.getAttribute("msdyn_billingaccount").addOnChange(Schulz.WorkOrderForm.loadPaymentTerms);
+    formContext.getAttribute("msdyn_parentworkorder").addOnChange(Schulz.WorkOrderForm.checkParentWorkOrder);
+};
+
+
+Schulz.WorkOrderForm.onQuickCreateLoad = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+
+    Schulz.WorkOrderForm.setWorkorderDefaults(executionContext);
+
+    formContext.getAttribute("msdyn_billingaccount").addOnChange(Schulz.WorkOrderForm.loadPaymentTerms);
+};
+//Schulz.WorkOrderForm.registerEvents = (formContext) => {   
+//    formContext.getAttribute("sst_opportunityprocessstage_opt")?.addOnChange(Schulz.WorkOrderForm.setDebitorDefaults);
+//};
+
+Schulz.WorkOrderForm.checkParentWorkOrder = (context) => {
+    var formContext = context.getFormContext();
+    var parentWorkOrderId = formContext.getAttribute("msdyn_parentworkorder").getValue();
+
+    if (parentWorkOrderId) {
+        Xrm.WebApi.retrieveMultipleRecords("msdyn_workorderproduct", "?$filter=_msdyn_workorder_value eq " + parentWorkOrderId[0].id)
+            .then(function (result) {
+                var hasUnusedProducts = result.entities.some(function (product) {
+                    return product.msdyn_estimatequantity !== product.msdyn_quantity;
+                });
+
+                if (hasUnusedProducts) {
+                    formContext.ui.setFormNotification(
+                        "Es befinden sich nicht verwendete Produkte auf dem übergeordneten Arbeitsauftrag. Bitte prüfen und ggf. Produkte übertragen.",
+                        "WARNING",
+                        "unusedProductsWarning"
+                    );
+                }
+            })
+            .catch(function (error) {
+                console.error(error.message);
+            });
+    }
+};
+
+Schulz.WorkOrderForm.setWorkorderDefaults = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    let companyAttribute = formContext.getAttribute("sst_unternehmen_ref");
+    let costcenterAttribute = formContext.getAttribute("sst_organisationseinheit_ref")
+
+    if (!companyAttribute?.getValue()) {
+        let userId = Xrm.Utility.getGlobalContext().userSettings?.userId;
+        userId = userId.substring(1, userId.length - 1);
+
+        Xrm.WebApi.retrieveRecord("systemuser", userId, "?$select=cdm_Company&$expand=cdm_Company($select=cdm_companyid,cdm_name)")
+            .then(result => {
+                if (result?.cdm_Company?.cdm_companyid && result?.cdm_Company?.cdm_name) {
+                    companyAttribute?.setValue([{
+                        entityType: "cdm_company",
+                        id: result.cdm_Company.cdm_companyid,
+                        name: result.cdm_Company.cdm_name
+                    }]);
+                }
+            }, error => {
+                console.log(error.message); // TODO: implement better error approach.
+        });
+        Xrm.WebApi.retrieveRecord("systemuser", userId, "?$select=sst_organizationalunit_ref&$expand=sst_organizationalunit_ref($select=msdyn_organizationalunitid,msdyn_name)")
+            .then(result => {
+                if (result?.sst_organizationalunit_ref?.msdyn_organizationalunitid && result?.sst_organizationalunit_ref?.msdyn_name) {
+                    costcenterAttribute?.setValue([{
+                        entityType: "msdyn_organizationalunit",
+                        id: result.sst_organizationalunit_ref.msdyn_organizationalunitid,
+                        name: result.sst_organizationalunit_ref.msdyn_name
+                    }]);
+                }
+            }, error => {
+                console.log(error.message); // TODO: implement better error approach.
+        });
+    }
+    
+};
+
+Schulz.WorkOrderForm.prefilterTargetWorkOrder = (executionContext) => {
+	    // Hol das Formularkontext
+    var formContext = executionContext.getFormContext();
+
+    // Aktuelle Work Order ID
+    var currentWorkOrderId = formContext.data.entity.getId();
+
+    // Entferne geschweifte Klammern von der ID, falls vorhanden
+    currentWorkOrderId = currentWorkOrderId ? currentWorkOrderId.replace(/[{}]/g, "") : null;
+
+    if (!currentWorkOrderId) {
+        console.error("Work Order ID konnte nicht abgerufen werden.");
+        return;
+    }
+
+    // Setze einen Filter auf das Lookup-Feld
+    formContext.getControl("sst_targetworkorder_id").addPreSearch(function () {
+        var filter = 
+            `<filter type="and">
+                <condition attribute="msdyn_parentworkorder" operator="eq" value="${currentWorkOrderId}" />
+            </filter>`;
+        formContext.getControl("sst_targetworkorder_id").addCustomFilter(filter, "msdyn_workorder");
+    });
+};
+
+Schulz.WorkOrderForm.loadPaymentTerms = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    let billingAccountValue = formContext.getAttribute("msdyn_billingaccount").getValue();
+    let companyValue = formContext.getAttribute("sst_unternehmen_ref").getValue();
+    let paymentTermsAttribute = formContext.getAttribute("sst_paymentterms_ref");
+
+    if (billingAccountValue === null || companyValue === null) return;
+
+            Xrm.WebApi.retrieveMultipleRecords("sst_erprole", "?$select=sst_erproleid&$filter=(_sst_account_ref_value%20eq%20%27" + billingAccountValue[0].id + "%27%20and%20_sst_company_ref_value%20eq%20%27" + companyValue[0].id + "%27)&$expand=sst_paymentterms_id($select=msdyn_name,msdyn_paymenttermid)")
+            .then(result => {
+                if (result?.entities.length > 0) {
+                    var foundErpRole = result.entities[0];
+                    paymentTermsAttribute?.setValue([{
+                        entityType: "msdyn_paymentterm",
+                        id: foundErpRole.sst_paymentterms_id.msdyn_paymenttermid,
+                        name: foundErpRole.sst_paymentterms_id.msdyn_name
+                    }]);
+                }
+            }, error => {
+                console.log(error.message); // TODO: implement better error approach.
+        });
+}

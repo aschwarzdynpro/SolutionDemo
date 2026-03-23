@@ -1,0 +1,351 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataverse"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_azureblob": {
+        "api": {
+          "name": "shared_azureblob"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "qdr_BlobStorage"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_servicebus": {
+        "api": {
+          "name": "shared_servicebus"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "qdr_ServiceBus"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Advanced Forms | Container Name (sst_adf_containername)": {
+          "defaultValue": "scschulzafdevce",
+          "type": "String",
+          "metadata": {
+            "schemaName": "sst_adf_containername"
+          }
+        }
+      },
+      "triggers": {
+        "When_a_booking_has_been_updated": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "sst_timereports",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "sst_printreport_bol",
+              "subscriptionRequest/filterexpression": "sst_printreport_bol eq true",
+              "subscriptionRequest/name": "922314f0-a7d9-ef11-a72f-002248a3592c"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "19d9b440-4a4c-4d17-a310-f89665c124c7"
+          }
+        }
+      },
+      "actions": {
+        "Init_varSessionID": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varSessionID",
+                "type": "string",
+                "value": "@{guid()}"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "5cc77f2b-9710-4cd6-8716-7a7f78a92dfd"
+          }
+        },
+        "Init_varFileName": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varFileName",
+                "type": "string",
+                "value": "@{concat('Montage_', formatDateTime(utcNow(), 'yyyyMMddTHHmmss'), '.xml')}"
+              }
+            ]
+          },
+          "runAfter": {
+            "Init_varSessionID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "873528fe-483e-48f1-8580-f508003f4b1d"
+          }
+        },
+        "Init_varPDFRetrieved": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varPDFRetrieved",
+                "type": "boolean",
+                "value": "@false"
+              }
+            ]
+          },
+          "runAfter": {
+            "Init_varFileName": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "db548b20-780d-4819-9f42-4798aa5231b2"
+          }
+        },
+        "Init_varPDFContent": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varPDFContent",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Init_varPDFRetrieved": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c95aea57-015b-47b1-a486-b98fc07e333e"
+          }
+        },
+        "Init_varDocumentType": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varDocumentType",
+                "type": "string",
+                "value": "Montagebericht 2.0"
+              }
+            ]
+          },
+          "runAfter": {
+            "Init_varPDFContent": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "de7578b0-cc31-49ba-ab07-1968f7a0ddfd"
+          }
+        },
+        "Init_varAction": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varAction",
+                "type": "string",
+                "value": "run"
+              }
+            ]
+          },
+          "runAfter": {
+            "Init_varDocumentType": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b847e0fb-8d09-4d11-afe7-62ffa6ca15ba"
+          }
+        },
+        "Try": {
+          "type": "Scope",
+          "actions": {
+            "Create_file_on_blob_storage": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "AccountNameFromSettings",
+                  "folderPath": "@parameters('EnvVar | Advanced Forms | Container Name (sst_adf_containername)')",
+                  "name": "@variables('varFileName')",
+                  "body": "@outputs('Compose_transformed_XML')",
+                  "Content-Type": "text/plain; charset=UTF-8"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_azureblob",
+                  "operationId": "CreateFile_V2",
+                  "connectionName": "shared_azureblob"
+                }
+              },
+              "runAfter": {
+                "Compose_transformed_XML": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9dd05576-7cb8-4d8e-98f8-912e87f88bb6"
+              }
+            },
+            "Send_XML_to_ASB": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "request-queue",
+                  "message/SessionId": "@variables('varSessionID')",
+                  "systemProperties": "None",
+                  "message/Properties": {
+                    "Action": "@{variables('varAction')}",
+                    "FileName": "@{variables('varFileName')}",
+                    "ContainerName": "@{parameters('EnvVar | Advanced Forms | Container Name (sst_adf_containername)')}",
+                    "SessionId": "@{variables('varSessionID')}"
+                  }
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_servicebus",
+                  "operationId": "SendMessage",
+                  "connectionName": "shared_servicebus"
+                }
+              },
+              "runAfter": {
+                "Create_file_on_blob_storage": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "d070b512-b8bd-4ce1-b62a-7a8cfe936071"
+              }
+            },
+            "Get_Inner_XML": {
+              "type": "Compose",
+              "inputs": "@xpath(xml(body('Generate_XML_Child_Flow')?['xml']), 'Report')",
+              "runAfter": {
+                "Generate_XML_Child_Flow": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "42b07b0c-f03a-4340-a9d8-49a73421c922"
+              }
+            },
+            "Compose_transformed_XML": {
+              "type": "Compose",
+              "inputs": "@xml(first(outputs('Get_Inner_XML')))",
+              "runAfter": {
+                "Get_Inner_XML": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ff6d4904-b82c-4d83-9917-1b9ccee143a6"
+              }
+            },
+            "Generate_XML_Child_Flow": {
+              "type": "Workflow",
+              "inputs": {
+                "host": {
+                  "workflowReferenceName": "67384583-5b8a-f011-b4cc-000d3aaf4533"
+                },
+                "body": {
+                  "text": "@variables('varDocumentType')",
+                  "text_1": "Convert Numbers",
+                  "text_2": "@triggerOutputs()?['body/sst_timereportsid']",
+                  "text_3": "@variables('varAction')"
+                }
+              },
+              "runAfter": {
+                "Parking_Lot": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ed3a9270-90e8-4dbe-b73f-4890f63524ec"
+              }
+            },
+            "Parking_Lot": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      1,
+                      1
+                    ]
+                  }
+                ]
+              },
+              "actions": {},
+              "else": {
+                "actions": {
+                  "Generate_XML": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "actionName": "qdr_GenerateFileAction",
+                        "item/TargetRecordId": "@triggerOutputs()?['body/sst_timereportsid']",
+                        "item/SettingName": "@variables('varDocumentType')",
+                        "item/ParameterName": "Convert Numbers",
+                        "item/Action": "@variables('varAction')"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "PerformUnboundAction",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "e728b77b-2a3e-4ccd-9178-53d764f0f110"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "027e595b-ea38-4932-be25-292e1d19aca5"
+              }
+            }
+          },
+          "runAfter": {
+            "Init_varAction": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "74d05181-fa48-47d2-8f0a-3cfd467c4abb"
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

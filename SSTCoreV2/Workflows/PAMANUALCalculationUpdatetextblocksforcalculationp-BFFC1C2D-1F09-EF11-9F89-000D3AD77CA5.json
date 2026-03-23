@@ -1,0 +1,642 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps_3": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_webcontents-1": {
+        "api": {
+          "name": "shared_webcontents"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverseHTTPwithAzureAD"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)": {
+          "defaultValue": "operations-d365-schulz-int-11.crm4.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarDataverseInstance",
+            "description": "The Dataverse Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "boolean": {
+                  "title": "Global",
+                  "type": "boolean",
+                  "x-ms-dynamically-added": true,
+                  "description": "\"Yes\" means all calculation version positions, \"No\" certain positions based on JSON input.",
+                  "x-ms-content-hint": "BOOLEAN"
+                },
+                "text": {
+                  "title": "PositionsJSON",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Certain positions to process. Will be used, if \"Global\" is set to \"No\".",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "number": {
+                  "title": "DefaultLanguage",
+                  "type": "number",
+                  "x-ms-dynamically-added": true,
+                  "description": "Normally 192350004 - German.",
+                  "x-ms-content-hint": "NUMBER"
+                },
+                "number_1": {
+                  "title": "PreferredLanguage",
+                  "type": "number",
+                  "x-ms-dynamically-added": true,
+                  "description": "Integer value of preferred language.",
+                  "x-ms-content-hint": "NUMBER"
+                },
+                "text_1": {
+                  "title": "CalculationGUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Only needs to be given, if \"Global\" is set to \"Yes\"",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "boolean",
+                "number",
+                "number_1"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "84fe7166-134f-47bb-be87-0cceafe784e3"
+          }
+        }
+      },
+      "actions": {
+        "Processing": {
+          "type": "Scope",
+          "actions": {
+            "Global_mode": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@triggerBody()['boolean']",
+                  "@true"
+                ]
+              },
+              "actions": {
+                "Compose_3": {
+                  "type": "Compose",
+                  "inputs": "Global",
+                  "metadata": {
+                    "operationMetadataId": "c921e6d7-d888-4d94-bb4f-3da7a376f18b"
+                  }
+                },
+                "Set_FetchXML_on_global_is_true": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "strFetchXML",
+                    "value": "<fetch distinct=\"true\">\n  <entity name=\"hso_calculationdetail\">\n    <attribute name=\"hso_calculationdetailid\" />\n    <attribute name=\"hso_positionelementtype\" />\n    <attribute name=\"hso_linenumber\" />\n<attribute name=\"hso_name\" />\n    <filter>\n      <condition attribute=\"hso_calculationid\" operator=\"eq\" value=\"@{triggerBody()['text_1']}\" />\n    </filter>\n    <order attribute=\"hso_sortinglinenumber\" />\n    <link-entity name=\"product\" from=\"productid\" to=\"hso_productid\" link-type=\"outer\" alias=\"AliasProduct\">\n      <attribute name=\"hso_globalproductid\" />\n      <attribute name=\"msdyn_productnumber\" />\n      <link-entity name=\"msdyn_globalproduct\" from=\"msdyn_globalproductid\" to=\"hso_globalproductid\" link-type=\"outer\" alias=\"AGlobalProduct\">\n        <link-entity name=\"hso_textblock\" from=\"hso_globalproductid\" to=\"msdyn_globalproductid\" link-type=\"outer\" alias=\"AGlobalProductTextblock\">\n          <attribute name=\"hso_description\" />\n          <attribute name=\"hso_language\" />\n          <attribute name=\"hso_name\" />\n          <filter type=\"or\">\n            <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number_1']}\" />\n            <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number']}\" />\n          </filter>\n          <order attribute=\"hso_language\" @{variables('strFetchXMLLanuguageOrder')} />\n        </link-entity>\n      </link-entity>\n    </link-entity>\n    <link-entity name=\"hso_projectproduct\" from=\"hso_projectproductid\" to=\"hso_projectproductid\" link-type=\"outer\" alias=\"AliasProjectproduct\">\n      <attribute name=\"hso_name\" />\n      <link-entity name=\"hso_textblock\" from=\"hso_projectproductid\" to=\"hso_projectproductid\" link-type=\"outer\" alias=\"AProjectproductTextblock\">\n        <attribute name=\"hso_description\" />\n        <attribute name=\"hso_language\" />\n        <attribute name=\"hso_name\" />\n        <filter type=\"or\">\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number_1']}\" />\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number']}\" />\n        </filter>\n        <order attribute=\"hso_language\" @{variables('strFetchXMLLanuguageOrder')} />\n      </link-entity>\n    </link-entity>\n    <link-entity name=\"hso_projectexpense\" from=\"hso_projectexpenseid\" to=\"hso_projectexpenseid\" link-type=\"outer\" alias=\"AliasProjectexpense\">\n      <attribute name=\"hso_name\" />\n      <link-entity name=\"hso_textblock\" from=\"hso_projectexpenseid\" to=\"hso_projectexpenseid\" link-type=\"outer\" alias=\"AProjectexpenseTextblock\">\n        <attribute name=\"hso_description\" />\n        <attribute name=\"hso_language\" />\n        <attribute name=\"hso_name\" />\n        <filter type=\"or\">\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number_1']}\" />\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number']}\" />\n        </filter>\n        <order attribute=\"hso_language\" @{variables('strFetchXMLLanuguageOrder')} />\n      </link-entity>\n    </link-entity>\n    <link-entity name=\"hso_projecthour\" from=\"hso_projecthourid\" to=\"hso_projecthourid\" link-type=\"outer\" alias=\"AliasProjecthour\">\n      <link-entity name=\"hso_textblock\" from=\"hso_projecthourid\" to=\"hso_projecthourid\" link-type=\"outer\" alias=\"AProjecthourTextblock\">\n        <attribute name=\"hso_language\" />\n        <attribute name=\"hso_name\" />\n        <attribute name=\"hso_description\" />\n        <filter type=\"or\">\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number_1']}\" />\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number']}\" />\n        </filter>\n        <order attribute=\"hso_language\" @{variables('strFetchXMLLanuguageOrder')} />\n      </link-entity>\n    </link-entity>\n    <link-entity name=\"hso_externalservice\" from=\"hso_externalserviceid\" to=\"hso_externalserviceid\" link-type=\"outer\" alias=\"AliasExternalservice\">\n      <attribute name=\"hso_currentcost\" />\n      <link-entity name=\"hso_textblock\" from=\"hso_externalserviceid\" to=\"hso_externalserviceid\" link-type=\"outer\" alias=\"AExternalserviceTextblock\">\n        <attribute name=\"hso_description\" />\n        <attribute name=\"hso_language\" />\n        <attribute name=\"hso_name\" />\n        <filter type=\"or\">\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number_1']}\" />\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number']}\" />\n        </filter>\n        <order attribute=\"hso_language\" @{variables('strFetchXMLLanuguageOrder')} />\n      </link-entity>\n    </link-entity>\n    <link-entity name=\"hso_productionhour\" from=\"hso_productionhourid\" to=\"hso_productionhourid\" link-type=\"outer\" alias=\"AliasProductionhour\">\n      <link-entity name=\"hso_textblock\" from=\"hso_productionhourid\" to=\"hso_productionhourid\" link-type=\"outer\" alias=\"AProductionhourTextblock\">\n        <attribute name=\"hso_language\" />\n        <attribute name=\"hso_name\" />\n        <attribute name=\"hso_description\" />\n        <filter type=\"or\">\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number_1']}\" />\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number']}\" />\n        </filter>\n        <order attribute=\"hso_language\" @{variables('strFetchXMLLanuguageOrder')} />\n      </link-entity>\n    </link-entity>\n  </entity>\n</fetch>"
+                  },
+                  "runAfter": {
+                    "Compose_3": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "742a6310-0ad6-4492-b025-9d7a57391bd1"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Debug_dynamic_filter_for_positiondetails": {
+                    "type": "Compose",
+                    "description": "concat('<filter type=\"or\"><condition attribute=\"hso_calculationdetailid\" operator=\"eq\" value=\"', join(json(triggerBody()?['text'])?['Ids'],'\" /><condition attribute=\"hso_calculationdetailid\" operator=\"eq\" value=\"') ,'\"/></filter>')",
+                    "inputs": "@triggerBody()?['text']",
+                    "metadata": {
+                      "operationMetadataId": "805512f6-fe66-47a7-a421-862987cbe1fa"
+                    }
+                  },
+                  "Set_FetchXML_on_global_is_false": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "strFetchXML",
+                      "value": "<fetch distinct=\"true\">\n  <entity name=\"hso_calculationdetail\">\n    <attribute name=\"hso_calculationdetailid\" />\n    <attribute name=\"hso_positionelementtype\" />\n    <attribute name=\"hso_linenumber\" />\n<attribute name=\"hso_name\" />\n@{concat('<filter type=\"or\"><condition attribute=\"hso_calculationdetailid\" operator=\"eq\" value=\"', join(json(triggerBody()?['text'])?['Ids'],'\" /><condition attribute=\"hso_calculationdetailid\" operator=\"eq\" value=\"') ,'\"/></filter>')}\n    <order attribute=\"hso_sortinglinenumber\" />\n    <link-entity name=\"product\" from=\"productid\" to=\"hso_productid\" link-type=\"outer\" alias=\"AliasProduct\">\n      <attribute name=\"hso_globalproductid\" />\n      <attribute name=\"msdyn_productnumber\" />\n      <link-entity name=\"msdyn_globalproduct\" from=\"msdyn_globalproductid\" to=\"hso_globalproductid\" link-type=\"outer\" alias=\"AGlobalProduct\">\n        <link-entity name=\"hso_textblock\" from=\"hso_globalproductid\" to=\"msdyn_globalproductid\" link-type=\"outer\" alias=\"AGlobalProductTextblock\">\n          <attribute name=\"hso_description\" />\n          <attribute name=\"hso_language\" />\n          <attribute name=\"hso_name\" />\n          <filter type=\"or\">\n            <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number_1']}\" />\n            <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number']}\" />\n          </filter>\n          <order attribute=\"hso_language\" @{variables('strFetchXMLLanuguageOrder')} />\n        </link-entity>\n      </link-entity>\n    </link-entity>\n    <link-entity name=\"hso_projectproduct\" from=\"hso_projectproductid\" to=\"hso_projectproductid\" link-type=\"outer\" alias=\"AliasProjectproduct\">\n      <attribute name=\"hso_name\" />\n      <link-entity name=\"hso_textblock\" from=\"hso_projectproductid\" to=\"hso_projectproductid\" link-type=\"outer\" alias=\"AProjectproductTextblock\">\n        <attribute name=\"hso_description\" />\n        <attribute name=\"hso_language\" />\n        <attribute name=\"hso_name\" />\n        <filter type=\"or\">\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number_1']}\" />\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number']}\" />\n        </filter>\n        <order attribute=\"hso_language\" @{variables('strFetchXMLLanuguageOrder')} />\n      </link-entity>\n    </link-entity>\n    <link-entity name=\"hso_projectexpense\" from=\"hso_projectexpenseid\" to=\"hso_projectexpenseid\" link-type=\"outer\" alias=\"AliasProjectexpense\">\n      <attribute name=\"hso_name\" />\n      <link-entity name=\"hso_textblock\" from=\"hso_projectexpenseid\" to=\"hso_projectexpenseid\" link-type=\"outer\" alias=\"AProjectexpenseTextblock\">\n        <attribute name=\"hso_description\" />\n        <attribute name=\"hso_language\" />\n        <attribute name=\"hso_name\" />\n        <filter type=\"or\">\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number_1']}\" />\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number']}\" />\n        </filter>\n        <order attribute=\"hso_language\" @{variables('strFetchXMLLanuguageOrder')} />\n      </link-entity>\n    </link-entity>\n    <link-entity name=\"hso_projecthour\" from=\"hso_projecthourid\" to=\"hso_projecthourid\" link-type=\"outer\" alias=\"AliasProjecthour\">\n      <link-entity name=\"hso_textblock\" from=\"hso_projecthourid\" to=\"hso_projecthourid\" link-type=\"outer\" alias=\"AProjecthourTextblock\">\n        <attribute name=\"hso_language\" />\n        <attribute name=\"hso_name\" />\n        <attribute name=\"hso_description\" />\n        <filter type=\"or\">\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number_1']}\" />\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number']}\" />\n        </filter>\n        <order attribute=\"hso_language\" @{variables('strFetchXMLLanuguageOrder')} />\n      </link-entity>\n    </link-entity>\n    <link-entity name=\"hso_externalservice\" from=\"hso_externalserviceid\" to=\"hso_externalserviceid\" link-type=\"outer\" alias=\"AliasExternalservice\">\n      <attribute name=\"hso_currentcost\" />\n      <link-entity name=\"hso_textblock\" from=\"hso_externalserviceid\" to=\"hso_externalserviceid\" link-type=\"outer\" alias=\"AExternalserviceTextblock\">\n        <attribute name=\"hso_description\" />\n        <attribute name=\"hso_language\" />\n        <attribute name=\"hso_name\" />\n        <filter type=\"or\">\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number_1']}\" />\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number']}\" />\n        </filter>\n        <order attribute=\"hso_language\" @{variables('strFetchXMLLanuguageOrder')} />\n      </link-entity>\n    </link-entity>\n    <link-entity name=\"hso_productionhour\" from=\"hso_productionhourid\" to=\"hso_productionhourid\" link-type=\"outer\" alias=\"AliasProductionhour\">\n      <link-entity name=\"hso_textblock\" from=\"hso_productionhourid\" to=\"hso_productionhourid\" link-type=\"outer\" alias=\"AProductionhourTextblock\">\n        <attribute name=\"hso_language\" />\n        <attribute name=\"hso_name\" />\n        <attribute name=\"hso_description\" />\n        <filter type=\"or\">\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number_1']}\" />\n          <condition attribute=\"hso_language\" operator=\"eq\" value=\"@{triggerBody()['number']}\" />\n        </filter>\n        <order attribute=\"hso_language\" @{variables('strFetchXMLLanuguageOrder')} />\n      </link-entity>\n    </link-entity>\n  </entity>\n</fetch>"
+                    },
+                    "runAfter": {
+                      "Debug_dynamic_filter_for_positiondetails": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "546dcd29-f5ab-4244-8ded-2dd2b60afd71"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "bc9cafd0-5c4d-4602-b7a1-9e69cf1074ae"
+              }
+            },
+            "Fetch_regarding_calculation_positions": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_calculationdetails",
+                  "fetchXml": "@variables('strFetchXML')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps_3"
+                }
+              },
+              "runAfter": {
+                "Global_mode": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "5db3d880-76e7-4ec8-9ae2-927c7779e988"
+              }
+            },
+            "Apply_to_each_Detail_Correction": {
+              "type": "Foreach",
+              "foreach": "@union(body('Select_GUID_for_union'),body('Select_GUID_for_union'))",
+              "actions": {
+                "With_textblock_name_calc": {
+                  "type": "Compose",
+                  "inputs": "@addProperty(outputs('Payload_raw'),'hso_textblock_name_calc',     \n    coalesce(\n        if(\n        equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000000),\n            body('Filter_textblocks')[0]?['hso_textblock_name'],\n            if(\n                equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000006),\n                body('Filter_textblocks')[0]?['hso_textblock_name'],\n                if(\n                equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000000),\n                    body('Filter_textblocks')[0]?['AGlobalProductTextblock.hso_name'],\n                    if(\n                    equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000002),\n                        body('Filter_textblocks')[0]?['AProjectproductTextblock.hso_name'],\n                        if(\n                        equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000004),\n                            body('Filter_textblocks')[0]?['AProjecthourTextblock.hso_name'],\n                            if(\n                            equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000003),\n                                body('Filter_textblocks')[0]?['AProductionhourTextblock.hso_name'],\n                                if(\n                                equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000007),\n                                    body('Filter_textblocks')[0]?['AProjectexpenseTextblock.hso_name'],\n                                    if(\n                                    equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000008),\n                                        body('Filter_textblocks')[0]?['AExternalserviceTextblock.hso_name'],\n                                        body('Filter_textblocks')[0]?['hso_name']\n                                    )\n                                )\n                            )\n                        )\n                    )\n                )\n            )\n        ), \n        body('Filter_textblocks')[0]?['hso_name'], ''\n    )\n)",
+                  "runAfter": {
+                    "Payload_raw": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "fdb383ca-651f-4859-8674-3095ead8d531"
+                  }
+                },
+                "With_textblock_description_calc": {
+                  "type": "Compose",
+                  "inputs": "@addProperty(outputs('With_textblock_name_calc'),'hso_textblock_description_calc',   \n    coalesce(\n        if(\n        equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000000),\n            body('Filter_textblocks')[0]?['hso_textblock_description'],\n            if(\n                equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000006),\n                body('Filter_textblocks')[0]?['hso_textblock_description'],\n                if(\n                equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000000),\n                    body('Filter_textblocks')[0]?['AGlobalProductTextblock.hso_description'],\n                    if(\n                    equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000002),\n                        body('Filter_textblocks')[0]?['AProjectproductTextblock.hso_description'],\n                        if(\n                        equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000004),\n                            body('Filter_textblocks')[0]?['AProjecthourTextblock.hso_description'],\n                            if(\n                            equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000003),\n                                body('Filter_textblocks')[0]?['AProductionhourTextblock.hso_description'],\n                                if(\n                                equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000007),\n                                    body('Filter_textblocks')[0]?['AProjectexpenseTextblock.hso_description'],\n                                    if(\n                                    equals(body('Filter_textblocks')[0]?['hso_positionelementtype'],100000008),\n                                        body('Filter_textblocks')[0]?['AExternalserviceTextblock.hso_description'],\n                                        body('Filter_textblocks')[0]?['hso_name']\n                                    )\n                                )\n                            )\n                        )\n                    )\n                )\n            )\n        ), \n        body('Filter_textblocks')[0]?['hso_name'], ''\n    )\n)",
+                  "runAfter": {
+                    "With_textblock_name_calc": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "e58df905-7e47-4ba0-a99c-92b2121bdc8f"
+                  }
+                },
+                "Push_to_arrTextblockPayloadCorrected": {
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "arrTextblockPayloadCorrected",
+                    "value": "@outputs('With_textblock_description_calc')"
+                  },
+                  "runAfter": {
+                    "With_textblock_description_calc": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "fbae70ab-f810-4210-8e61-766420a034d7"
+                  }
+                },
+                "Payload_raw": {
+                  "type": "Compose",
+                  "inputs": "@body('Filter_textblocks')[0]",
+                  "runAfter": {
+                    "Filter_textblocks": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "1b06ab98-82fb-4695-8ac6-ce8c12f2bcfc"
+                  }
+                },
+                "Filter_textblocks": {
+                  "type": "Query",
+                  "inputs": {
+                    "from": "@outputs('Fetch_regarding_calculation_positions')?['body/value']",
+                    "where": "@equals(item()?['hso_calculationdetailid'], string(items('Apply_to_each_Detail_Correction')['ID']))"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "b7dd65ab-3508-4711-b8fa-d9213b23249b"
+                  }
+                }
+              },
+              "runAfter": {
+                "Select_GUID_for_union": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 50
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "77763acc-dd01-4238-b6ed-69a1e4cb95b5"
+              }
+            },
+            "Select_Calculation_Details_for_Textblock_Update": {
+              "type": "Select",
+              "inputs": {
+                "from": "@variables('arrTextblockPayloadCorrected')",
+                "select": {
+                  "@{variables('varOdataType')}": "#Microsoft.Dynamics.CRM.hso_calculationdetail",
+                  "hso_calculationdetailid": "@item()?['hso_calculationdetailid']",
+                  "hso_textblock_name": "@item()?['hso_textblock_name_calc']",
+                  "hso_textblock_description_max": "@item()?['hso_textblock_description_calc']"
+                }
+              },
+              "runAfter": {
+                "Apply_to_each_Detail_Correction": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "42e54710-34fd-4132-b534-579fd009550d"
+              }
+            },
+            "Update_Calculation_Details_with_Textblocks": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "request/method": "POST",
+                  "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_calculationdetails/Microsoft.Dynamics.CRM.UpdateMultiple",
+                  "request/headers": {
+                    "OData-MaxVersion": "4.0",
+                    "OData-Version": "4.0",
+                    "If-None-Match": "null",
+                    "Accept": "application/json",
+                    "Content-Type": "application/json; charset=utf-8",
+                    "MSCRM.BypassCustomPluginExecution": "true"
+                  },
+                  "request/body": "{\n \"Targets\": @{body('Select_Calculation_Details_for_Textblock_Update')}\n}"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                  "operationId": "InvokeHttp",
+                  "connectionName": "shared_webcontents-1"
+                }
+              },
+              "runAfter": {
+                "Select_Calculation_Details_for_Textblock_Update": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "11f32933-1e86-41c7-af53-36d7d02572e6"
+              }
+            },
+            "Select_GUID_for_union": {
+              "type": "Select",
+              "inputs": {
+                "from": "@outputs('Fetch_regarding_calculation_positions')?['body/value']",
+                "select": {
+                  "ID": "@item()?['hso_calculationdetailid']"
+                }
+              },
+              "runAfter": {
+                "Fetch_regarding_calculation_positions": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "4755414b-6d76-43e0-8df8-7780b4198cc6"
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_strResponse": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c8e52dfe-4178-4885-bb40-d5ed39c2d54a"
+          }
+        },
+        "Initialize_strFetchXML": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strFetchXML",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "9b199f97-c2d1-43ed-912d-b2caf5491a01"
+          }
+        },
+        "Initialize_strFetchXMLLanuguageOrder": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strFetchXMLLanuguageOrder",
+                "type": "string",
+                "value": "@{if(greaterOrEquals(triggerBody()['number_1'],triggerBody()['number_1']),'descending=\"true\"','')}"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_strFetchXML": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "633816ed-2cbb-4410-8e1b-d786382cac0d"
+          }
+        },
+        "Initialize_arrTextblockPayloadCorrected": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "arrTextblockPayloadCorrected",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_strFetchXMLLanuguageOrder": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2cf06ba7-1444-48ee-80f0-b8aeae8e91b1"
+          }
+        },
+        "Initialize_varOdataType": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varOdataType",
+                "type": "string",
+                "value": "@{string('@')}odata.type"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_arrTextblockPayloadCorrected": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "8ad11249-1af4-4f07-8395-92e54d1e30b7"
+          }
+        },
+        "Processing_[CATCH_ERROR]": {
+          "type": "Scope",
+          "actions": {
+            "Set_Status_on_error": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "strStatus",
+                "value": "Error"
+              },
+              "metadata": {
+                "operationMetadataId": "58ed3ddd-b9af-4657-b84b-59dce0552669"
+              }
+            }
+          },
+          "runAfter": {
+            "Processing": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f51aa07f-a608-4fa0-bac4-3b11c1bb7176"
+          }
+        },
+        "Initialize_strStatus": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strStatus",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varOdataType": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9b7de6bf-e78c-40e9-93db-f476bbd77e3a"
+          }
+        },
+        "Initialize_strResponse": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strResponse",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_strStatus": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3f40e134-806e-4804-97f1-346e458ddf7b"
+          }
+        },
+        "Log_and_Response": {
+          "type": "Scope",
+          "actions": {
+            "Error_occured": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@variables('strStatus')",
+                  "Error"
+                ]
+              },
+              "actions": {
+                "Set_response_on_error": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "strResponse",
+                    "value": "An unexpected error occured. Please check Flow Run History for details."
+                  },
+                  "metadata": {
+                    "operationMetadataId": "cdee5432-a5ec-4ab4-a8a2-fc581c9952a9"
+                  }
+                },
+                "Respond_on_error": {
+                  "type": "Response",
+                  "kind": "PowerApp",
+                  "inputs": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "title": "Status",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        },
+                        "response": {
+                          "title": "Response",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": {}
+                    },
+                    "statusCode": 200,
+                    "body": {
+                      "status": "@variables('strStatus')",
+                      "response": "@variables('strResponse')"
+                    }
+                  },
+                  "runAfter": {
+                    "Set_response_on_error": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "62c167dd-0831-4081-8541-0f0d9fe14b68"
+                  }
+                },
+                "Terminate": {
+                  "type": "Terminate",
+                  "inputs": {
+                    "runStatus": "Failed"
+                  },
+                  "runAfter": {
+                    "Respond_on_error": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "9fb1e2f6-2d15-4669-8818-01f28c17b1f1"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Set_response_on_success": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "strResponse",
+                      "value": "@{string(body('Select_Calculation_Details_for_Textblock_Update'))}"
+                    },
+                    "metadata": {
+                      "operationMetadataId": "abafbc25-4171-4417-9e82-ad262c6d3d20"
+                    }
+                  },
+                  "Set_status_on_success": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "strStatus",
+                      "value": "Success"
+                    },
+                    "runAfter": {
+                      "Set_response_on_success": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "50cced19-3200-4db5-a5f0-b8db213d1029"
+                    }
+                  },
+                  "Respond_on_success": {
+                    "type": "Response",
+                    "kind": "PowerApp",
+                    "inputs": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "title": "Status",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          },
+                          "response": {
+                            "title": "Response",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": {}
+                      },
+                      "statusCode": 200,
+                      "body": {
+                        "status": "@variables('strStatus')",
+                        "response": "@variables('strResponse')"
+                      }
+                    },
+                    "runAfter": {
+                      "Set_status_on_success": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "fe50d728-3787-460b-9bbf-74468cea9892"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "24e89ce3-abf3-4948-927f-3f7479fd4057"
+              }
+            }
+          },
+          "runAfter": {
+            "Processing_[CATCH_ERROR]": [
+              "Succeeded",
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9ee5af0b-2b26-45d6-a315-df67189fe33e"
+          }
+        }
+      },
+      "description": "Dieser Flow ergänzt entsprechende Kalkulationspositionen um Textbausteine.\nGrundlegend werden zwei Modi unterstützt. Im Modus \"Global\" = \"JA\" werden alle Positionen einer Kalkulation aktualisiert. Anderenfalls wird ein JSON für zu aktualisierende Positionen erwartet. Nur entsprechend übergebene Positionen werden aktualisiert.\nDie Aktualisierung findet im Kontext der Sprache statt. Hierfür muss eine bevorzugte Sprache und eine Standardsprache übergeben werden. Wenn kein Textbaustein in bevorzugter Sprache vorhanden, wird die Standardsprache verwendet."
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

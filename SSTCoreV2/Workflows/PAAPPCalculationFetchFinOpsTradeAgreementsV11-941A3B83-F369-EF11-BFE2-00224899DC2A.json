@@ -1,0 +1,442 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps_1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_webcontents_1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationHTTPwithAzureAD"
+        },
+        "api": {
+          "name": "shared_webcontents"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)": {
+          "defaultValue": "d365-schulz-int-11b9dbaf056743afd3devaos.axcloud.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarUnifiedOperationsInstance",
+            "description": "The Unified Operations Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "b81b8c82-7213-4ea7-8bf7-c9d8cba5c3d5"
+          },
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "Quote",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The Quote of the Calculation",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Get_Quote": {
+          "runAfter": {
+            "Initialize_varProductCalculationSalesPrices": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "83b53a10-4428-4408-a3f4-c911863502aa"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "quotes",
+              "recordId": "@triggerBody()['text']",
+              "$select": "name,sst_schulzid_str,_msdyn_company_value,_customerid_value",
+              "$expand": "msdyn_Company($select=cdm_companycode),\ncustomerid_account($select=name,accountnumber)"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "connectionName": "shared_commondataserviceforapps_1"
+            }
+          }
+        },
+        "Get_FinOps_Trade_Agreements": {
+          "runAfter": {
+            "Get_Quote": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a2c454a6-4f18-4d22-85f6-d017cdeb4cce"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "request/method": "GET",
+              "request/url": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/data/SalesPriceAgreements?$filter=dataAreaId eq '@{outputs('Get_Quote')?['body/msdyn_company/cdm_companycode']}' and CustomerAccountNumber eq '@{outputs('Get_Quote')?['body/customerid_account/accountnumber']}' and ((PriceApplicableFromDate le @{utcNow()} and PriceApplicableToDate ge @{utcNow()}) or (PriceApplicableFromDate le @{utcNow()} and PriceApplicableToDate eq 1900-01-01T12:00:00Z))&cross-company=true",
+              "request/headers": {
+                "Accept": "application/json"
+              }
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+              "operationId": "InvokeHttp",
+              "connectionName": "shared_webcontents_1"
+            }
+          },
+          "description": "Fetch all Trade Agreement Positions where either a specific date is set or no date is set for FromDate and/or ToDate"
+        },
+        "Parse_JSON": {
+          "runAfter": {
+            "Get_FinOps_Trade_Agreements": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6b4942e1-10ba-42af-8f64-cb8f4ba28a01"
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Get_FinOps_Trade_Agreements')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "@@odata.context": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "@@odata.etag": {
+                        "type": "string"
+                      },
+                      "dataAreaId": {
+                        "type": "string"
+                      },
+                      "RecordId": {
+                        "type": "integer"
+                      },
+                      "PriceApplicableFromDate": {
+                        "type": "string"
+                      },
+                      "WillSearchContinue": {
+                        "type": "string"
+                      },
+                      "SalesPriceQuantity": {
+                        "type": "integer"
+                      },
+                      "QuantityUnitySymbol": {
+                        "type": "string"
+                      },
+                      "ProductNumber": {
+                        "type": "string"
+                      },
+                      "AttributeBasedPricingId": {
+                        "type": "string"
+                      },
+                      "ProductSizeId": {
+                        "type": "string"
+                      },
+                      "ItemNumber": {
+                        "type": "string"
+                      },
+                      "ProductVersionId": {
+                        "type": "string"
+                      },
+                      "PriceCurrencyCode": {
+                        "type": "string"
+                      },
+                      "ToQuantity": {
+                        "type": "integer"
+                      },
+                      "FixedPriceCharges": {
+                        "type": "integer"
+                      },
+                      "WillDeliveryDateControlDisregardLeadTime": {
+                        "type": "string"
+                      },
+                      "PriceApplicableToDate": {
+                        "type": "string"
+                      },
+                      "PriceWarehouseId": {
+                        "type": "string"
+                      },
+                      "SalesLeadTimeDays": {
+                        "type": "integer"
+                      },
+                      "FromQuantity": {
+                        "type": "integer"
+                      },
+                      "CustomerAccountNumber": {
+                        "type": "string"
+                      },
+                      "PriceCustomerGroupCode": {
+                        "type": "string"
+                      },
+                      "Price": {
+                        "type": "number"
+                      },
+                      "PriceSiteId": {
+                        "type": "string"
+                      },
+                      "IsGenericCurrencySearchEnabled": {
+                        "type": "string"
+                      },
+                      "ProductColorId": {
+                        "type": "string"
+                      },
+                      "ProductconfigurationId": {
+                        "type": "string"
+                      },
+                      "ProductStyleId": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "@@odata.etag",
+                      "dataAreaId",
+                      "RecordId",
+                      "PriceApplicableFromDate",
+                      "WillSearchContinue",
+                      "SalesPriceQuantity",
+                      "QuantityUnitySymbol",
+                      "ProductNumber",
+                      "AttributeBasedPricingId",
+                      "ProductSizeId",
+                      "ItemNumber",
+                      "ProductVersionId",
+                      "PriceCurrencyCode",
+                      "ToQuantity",
+                      "FixedPriceCharges",
+                      "WillDeliveryDateControlDisregardLeadTime",
+                      "PriceApplicableToDate",
+                      "PriceWarehouseId",
+                      "SalesLeadTimeDays",
+                      "FromQuantity",
+                      "CustomerAccountNumber",
+                      "PriceCustomerGroupCode",
+                      "Price",
+                      "PriceSiteId",
+                      "IsGenericCurrencySearchEnabled",
+                      "ProductColorId",
+                      "ProductconfigurationId",
+                      "ProductStyleId"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Apply_to_each_Trade_Agreement": {
+          "foreach": "@body('Remove_records_without_ProductNumber')",
+          "actions": {
+            "Filter_Trade_Agreements_by_ProductNumber": {
+              "metadata": {
+                "operationMetadataId": "a8eedd4d-ce0e-422e-8f2c-79eabf5615df"
+              },
+              "type": "Query",
+              "inputs": {
+                "from": "@body('Remove_records_without_ProductNumber')",
+                "where": "@and(\r\n    equals(\r\n        item()?['ProductNumber'], \r\n        items('Apply_to_each_Trade_Agreement')?['ProductNumber']\r\n    ), \r\n    greater(\r\n        item()?['Price'], \r\n        items('Apply_to_each_Trade_Agreement')?['Price']\r\n    )\r\n)"
+              }
+            },
+            "Trade_Agreement_with_higher_Price_for_same_ProductNumber_found": {
+              "actions": {},
+              "runAfter": {
+                "Filter_Trade_Agreements_by_ProductNumber": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Dataverse_Product_Reference": {
+                    "metadata": {
+                      "operationMetadataId": "2d94eb8d-b122-4159-86b0-98c674e82744"
+                    },
+                    "type": "Compose",
+                    "inputs": "/products(msdyn_productnumber='@{items('Apply_to_each_Trade_Agreement')['ProductNumber']}',_msdyn_companyid_value=@{outputs('Get_Quote')?['body/_msdyn_company_value']})"
+                  },
+                  "Append_Trade_Agreement_to_varProductCalculationSalesPrices": {
+                    "runAfter": {
+                      "Dataverse_Product_Reference": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "dc555d77-e198-49c2-9d0c-a9fdde326c6c"
+                    },
+                    "type": "AppendToArrayVariable",
+                    "inputs": {
+                      "name": "varProductCalculationSalesPrices",
+                      "value": {
+                        "priceorigin": 100000000,
+                        "pricetype": 100000000,
+                        "salesprice": "@items('Apply_to_each_Trade_Agreement')?['Price']",
+                        "productid": "@outputs('Dataverse_Product_Reference')",
+                        "productnumber": "@items('Apply_to_each_Trade_Agreement')['ProductNumber']"
+                      }
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@length(body('Filter_Trade_Agreements_by_ProductNumber'))",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "0823e4a3-2251-47b1-98f8-b7e91e81db9e"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Remove_records_without_ProductNumber": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "0ea83a47-cb79-4211-be4b-48cda3feacc7"
+          },
+          "type": "Foreach",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 50
+            }
+          }
+        },
+        "Initialize_varProductCalculationSalesPrices": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "2fde0c54-3346-4811-8751-2e3486bfc4ac"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varProductCalculationSalesPrices",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "Remove_records_without_ProductNumber": {
+          "runAfter": {
+            "Parse_JSON": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "8c6688f4-d49e-425a-b4ec-e74904a8247f"
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Parse_JSON')?['value']",
+            "where": "@not(equals(item()?['ProductNumber'],null))"
+          }
+        },
+        "Response": {
+          "runAfter": {
+            "List_of_Trade_Agreement_Sales_Prices": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "233bc083-b4ee-42c9-ae1c-5119d5168422"
+          },
+          "type": "Response",
+          "kind": "Http",
+          "inputs": {
+            "statusCode": 200,
+            "body": "@outputs('List_of_Trade_Agreement_Sales_Prices')",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "priceorigin": {
+                    "type": "integer"
+                  },
+                  "pricetype": {
+                    "type": "integer"
+                  },
+                  "salesprice": {
+                    "type": "integer"
+                  },
+                  "productid": {
+                    "type": "string"
+                  },
+                  "productnumber": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "priceorigin",
+                  "pricetype",
+                  "salesprice",
+                  "productid",
+                  "productnumber"
+                ]
+              }
+            }
+          }
+        },
+        "List_of_Trade_Agreement_Sales_Prices": {
+          "runAfter": {
+            "Apply_to_each_Trade_Agreement": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b4333507-28f8-48c8-a3d9-deb42837c7df"
+          },
+          "type": "Compose",
+          "inputs": "@union(\r\n  variables('varProductCalculationSalesPrices'), \r\n  variables('varProductCalculationSalesPrices')\r\n)",
+          "description": "Remove Duplicates from Payload (if an item has the exact same price in different Trade Agreement positions)"
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

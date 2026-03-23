@@ -1,0 +1,429 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps-1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_the_absence_management_create_trigger_is_called": {
+          "metadata": {
+            "operationMetadataId": "58f8aa3d-a9ae-4d05-aae4-67dc5fb8edae"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "catalog": "allcatalog",
+              "category": "allcategory",
+              "subscriptionRequest/entityname": "none",
+              "subscriptionRequest/sdkmessagename": "sst_CAGlobalAbsenceManagementCreateTrigger",
+              "subscriptionRequest/name": "4ca87422-f703-f011-bae3-002248a1c76a"
+            },
+            "host": {
+              "connectionName": "shared_commondataserviceforapps-1",
+              "operationId": "BusinessEventsTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Parse_Absence_Parameters": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "c9660ff9-4f5f-4e68-9498-f97d3d820851"
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@triggerOutputs()?['body/InputParameters/AbsenceParameters']",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sst_from": {
+                  "type": "string"
+                },
+                "sst_fromtype": {
+                  "type": "integer"
+                },
+                "sst_handle": {
+                  "type": "integer"
+                },
+                "sst_personnelnumber": {
+                  "type": "string"
+                },
+                "sst_reason": {
+                  "type": "string"
+                },
+                "sst_to": {
+                  "type": "string"
+                },
+                "sst_totype": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "Format_sst_from_datetime": {
+          "runAfter": {
+            "Map_ToType": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2456850d-99b1-428a-8fad-bf9245f80555"
+          },
+          "type": "Compose",
+          "inputs": "@formatDateTime(body('Parse_Absence_Parameters')?['sst_from'], 'dd.MM.yyyy HH:mm')"
+        },
+        "Format_sst_to_datetime": {
+          "runAfter": {
+            "Format_sst_from_datetime": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "14659ccb-1d65-4409-a525-b18ab4c8057d"
+          },
+          "type": "Compose",
+          "inputs": "@formatDateTime(body('Parse_Absence_Parameters')?['sst_to'], 'dd.MM.yyyy HH:mm', 'de-DE')"
+        },
+        "initialize_ToType": {
+          "runAfter": {
+            "Initialize_FromType": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "4f3bb7f0-31e3-4396-9528-df4e8fd54d63"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "sst_to_type",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Initialize_FromType": {
+          "runAfter": {
+            "Parse_Absence_Parameters": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3c003228-1a2e-4b06-80a6-1be4f3f39baf"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "sst_from_type",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Map_FromType": {
+          "runAfter": {
+            "initialize_ToType": [
+              "Succeeded"
+            ]
+          },
+          "cases": {
+            "Set_FromType_to_FirstPart": {
+              "case": 2,
+              "actions": {
+                "Set_from_type_to_FirstPart": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "117d0514-6c31-47da-98b4-35bd1ce281a8"
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "sst_from_type",
+                    "value": 867520001
+                  }
+                }
+              }
+            },
+            "Set_FromType_to_SecondPart": {
+              "case": 3,
+              "actions": {
+                "Set_from_type_to_SecondPart": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "3f84b87a-d5d9-492e-8bb1-2d8d9d00ac57"
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "sst_from_type",
+                    "value": 867520002
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "actions": {
+              "Set_from_type_to_WholeDay": {
+                "runAfter": {},
+                "metadata": {
+                  "operationMetadataId": "484ee731-6e01-48f5-8613-ea2812ca8d14"
+                },
+                "type": "SetVariable",
+                "inputs": {
+                  "name": "sst_from_type",
+                  "value": 867520000
+                }
+              }
+            }
+          },
+          "expression": "@body('Parse_Absence_Parameters')?['sst_fromtype']",
+          "metadata": {
+            "operationMetadataId": "12aa53fe-55b8-4697-a100-a5812462f448"
+          },
+          "type": "Switch"
+        },
+        "Map_ToType": {
+          "runAfter": {
+            "Map_FromType": [
+              "Succeeded"
+            ]
+          },
+          "cases": {
+            "Set_ToType_to_FirstPart-1": {
+              "case": 2,
+              "actions": {
+                "Set_ToType_to_FirstPart": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "c94799fd-c882-4b3e-81e7-8b1e4b3455df"
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "sst_to_type",
+                    "value": 867520001
+                  }
+                }
+              }
+            },
+            "Set_ToType_to_SecondPart-1": {
+              "case": 3,
+              "actions": {
+                "Set_ToType_to_SecondPart": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "9123c842-e2ef-4997-bc4d-98d8c3da862a"
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "sst_to_type",
+                    "value": 867520002
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "actions": {
+              "Set_ToType_to_WholeDay": {
+                "runAfter": {},
+                "metadata": {
+                  "operationMetadataId": "67a21619-1bad-4ea1-8316-d5de5f5d9c03"
+                },
+                "type": "SetVariable",
+                "inputs": {
+                  "name": "sst_to_type",
+                  "value": 867520000
+                }
+              }
+            }
+          },
+          "expression": "@body('Parse_Absence_Parameters')?['sst_totype']",
+          "metadata": {
+            "operationMetadataId": "a452b545-ef38-4666-9129-963ff48df4b1"
+          },
+          "type": "Switch"
+        },
+        "Initialize_CurrentDate": {
+          "runAfter": {
+            "Format_sst_to_datetime": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "14a3f6b0-a9f0-4dc4-9f68-d118764ba546"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "CurrentDate",
+                "type": "string",
+                "value": "@{formatDateTime(body('Parse_Absence_Parameters')?['sst_from'], 'yyyy-MM-ddTHH:mm:ssZ')}"
+              }
+            ]
+          }
+        },
+        "Initialize_Datetime_range_from_sstfrom_to_sstto": {
+          "runAfter": {
+            "Initialize_CurrentDate": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "92185ff9-5b5e-4a78-93f7-61b9fe89a686"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "DateTimeRange",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "Fill_Datetime_Range_array": {
+          "actions": {
+            "Increment_the_CurrentDate_to_the_next_day": {
+              "runAfter": {
+                "CurrentDate_plus_1_day": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "95583561-154b-41d0-9cf0-df04cb30d885"
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "CurrentDate",
+                "value": "@{outputs('CurrentDate_plus_1_day')}"
+              }
+            },
+            "CurrentDate_plus_1_day": {
+              "runAfter": {
+                "Append_CurrentDate_to_datetime_range_variable": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "2d02df5c-e1f1-4f85-b4b0-ac2f344c1f61"
+              },
+              "type": "Compose",
+              "inputs": "@addDays(variables('CurrentDate'), 1, 'yyyy-MM-ddTHH:mm:ssZ')"
+            },
+            "Append_CurrentDate_to_datetime_range_variable": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "d87e9a29-a2a3-455e-924e-d3f9f6d04e9c"
+              },
+              "type": "AppendToArrayVariable",
+              "inputs": {
+                "name": "DateTimeRange",
+                "value": "@variables('CurrentDate')"
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_Datetime_range_from_sstfrom_to_sstto": [
+              "Succeeded"
+            ]
+          },
+          "expression": "@greater(variables('CurrentDate'), body('Parse_Absence_Parameters')?['sst_to'])",
+          "limit": {
+            "count": 5000,
+            "timeout": "PT24H"
+          },
+          "metadata": {
+            "operationMetadataId": "889b2343-2435-4792-91b2-bd3ba52abf33"
+          },
+          "type": "Until"
+        },
+        "Call_resource_handler_action_for_each_item_in_the_datetime_range_array": {
+          "foreach": "@variables('DateTimeRange')",
+          "actions": {
+            "Call_resource_handler_action": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "8c052510-b63f-4758-9831-073a72eb9acf"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "actionName": "sst_CAGlobalAbsenceManagementResourceHandler",
+                  "item/CurrentDate": "@items('Call_resource_handler_action_for_each_item_in_the_datetime_range_array')",
+                  "item/NonworkingtimeId": "@triggerOutputs()?['body/InputParameters/NonworkingtimeId']"
+                },
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps-1",
+                  "operationId": "PerformUnboundAction",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Delay_10sec": {
+              "runAfter": {
+                "Call_resource_handler_action": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "359040dc-2534-4387-a061-2291def701c3"
+              },
+              "type": "Wait",
+              "inputs": {
+                "interval": {
+                  "count": 10,
+                  "unit": "Second"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Fill_Datetime_Range_array": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "23456bd5-d10d-4fdf-aa86-4dca9a6bdcec"
+          },
+          "type": "Foreach",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

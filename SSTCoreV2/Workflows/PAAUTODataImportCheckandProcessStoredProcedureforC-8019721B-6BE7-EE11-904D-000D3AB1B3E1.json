@@ -1,0 +1,559 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps-1": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataverse"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_webcontents": {
+        "api": {
+          "name": "shared_webcontents"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverseHTTPwithAzureAD"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_azuredatafactory_1": {
+        "api": {
+          "name": "shared_azuredatafactory"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataFactory"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)": {
+          "defaultValue": "operations-d365-schulz-int-11.crm4.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarDataverseInstance",
+            "description": "The Dataverse Instance to connect to within a Flow when using Web API Calls"
+          }
+        },
+        "EnvVar | Articlesearch | ADF Settings (hso_EnvVarArticlesearchADFSettings)": {
+          "defaultValue": {
+            "subscriptionId": "4f595913-46c8-423b-ad32-046950dced24",
+            "resourceGroupName": "rg_vendorcatalogue_UAT",
+            "dataFactoryName": "adf-vcm-uat",
+            "pipelineName": "3_3 Products_Validated_Import"
+          },
+          "type": "Object",
+          "metadata": {
+            "schemaName": "hso_EnvVarArticlesearchADFSettings"
+          }
+        }
+      },
+      "triggers": {
+        "When_a_row_is_added,_modified_or_deleted": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "hso_catalogueimport",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "hso_checkandexecutestoredprocedure",
+              "subscriptionRequest/filterexpression": "hso_checkandexecutestoredprocedure eq true"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "a9b419b7-f218-4d62-99c8-08bf2b762909"
+          }
+        }
+      },
+      "actions": {
+        "Validate_Vendor_Mapping": {
+          "type": "Scope",
+          "actions": {
+            "Vendor_already_identified": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@triggerOutputs()?['body/hso_identifyvendor']",
+                      "@true"
+                    ]
+                  },
+                  {
+                    "not": {
+                      "equals": [
+                        "@empty(triggerOutputs()?['body/hso_suppliernumber'])",
+                        "@true"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "actions": {
+                "Set_Payload_with_already_existing_Vendor_Mapping": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "varPayload",
+                    "value": {
+                      "hso_health": "✅ Prüfung erfolgreich. Import gestartet. Artikel sind in wenigen Minuten in der Artikelsuchapp verfügbar.",
+                      "hso_status": "Transfer from validation",
+                      "hso_checkandexecutestoredprocedure": false
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Fetch_filtered_mappings": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_sqlvendormappings",
+                        "$filter": "hso_vendormap eq '@{triggerOutputs()?['body/hso_suppliername']}'"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "ListRecords",
+                        "connectionName": "shared_commondataserviceforapps-1"
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "38ae9bac-b9c2-4e85-9179-e6e714af6af2"
+                    }
+                  },
+                  "Mappings_exists": {
+                    "type": "If",
+                    "expression": {
+                      "greater": [
+                        "@length(outputs('Fetch_filtered_mappings')?['body/value'])",
+                        0
+                      ]
+                    },
+                    "actions": {
+                      "Apply_to_each_filtered_mapping": {
+                        "type": "Foreach",
+                        "foreach": "@outputs('Fetch_filtered_mappings')?['body/value']",
+                        "actions": {
+                          "Set_varVendorNumber": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "varVendorNumber",
+                              "value": "@items('Apply_to_each_filtered_mapping')?['hso_vendornumber']"
+                            },
+                            "metadata": {
+                              "operationMetadataId": "d9d884c1-66d3-4828-b7a5-d9438de7c6ae"
+                            }
+                          }
+                        },
+                        "metadata": {
+                          "operationMetadataId": "e35e176b-cf00-4b4e-b608-a8c0f4a5db95"
+                        }
+                      },
+                      "Set_Payload_with_fetched_Vendor_Mapping": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "varPayload",
+                          "value": {
+                            "hso_health": "✅ Prüfung erfolgreich. Import gestartet. Artikel sind in wenigen Minuten in der Artikelsuchapp verfügbar.",
+                            "hso_status": "Transfer from validation",
+                            "hso_checkandexecutestoredprocedure": false,
+                            "hso_suppliernumber": "@variables('varVendorNumber')"
+                          }
+                        },
+                        "runAfter": {
+                          "Apply_to_each_filtered_mapping": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {
+                        "Upsert_Import_Job_-_missing": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "request/method": "PATCH",
+                              "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_catalogueimports(hso_runid='@{triggerOutputs()?['body/hso_runid']}')",
+                              "request/headers": {
+                                "OData-MaxVersion": "4.0",
+                                "OData-Version": "4.0",
+                                "If-None-Match": "null",
+                                "Accept": "application/json",
+                                "Content-Type": "application/json"
+                              },
+                              "request/body": "{\n\"hso_health\": \"❗ Prüfung fehlgeschlagen. Bitte Mapping für '@{triggerOutputs()?['body/hso_suppliername']}' anlegen und Import erneut bestätigen.\",\n\"hso_status\": \"Pending\",\n\"hso_checkandexecutestoredprocedure\": false,\n\"hso_transferstatus\": 100000003\n}"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                              "operationId": "InvokeHttp",
+                              "connectionName": "shared_webcontents"
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "f06b598a-728a-4dbb-89a4-335a2d54260d"
+                          }
+                        },
+                        "Terminate_missing_mapping": {
+                          "type": "Terminate",
+                          "inputs": {
+                            "runStatus": "Cancelled"
+                          },
+                          "runAfter": {
+                            "Upsert_Import_Job_-_missing": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "5fbe1b15-7300-43fe-a8b6-d0ef1b54653e"
+                          }
+                        }
+                      }
+                    },
+                    "runAfter": {
+                      "Fetch_filtered_mappings": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "d5818455-de84-4a98-8a78-f8611095a01d"
+                    }
+                  }
+                }
+              }
+            },
+            "Upsert_Import_Job_-_healthy": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "request/method": "PATCH",
+                  "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_catalogueimports(hso_runid='@{triggerOutputs()?['body/hso_runid']}')",
+                  "request/headers": {
+                    "OData-MaxVersion": "4.0",
+                    "OData-Version": "4.0",
+                    "If-None-Match": "null",
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                  },
+                  "request/body": "@outputs('Validate_Vendor_Payload')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                  "operationId": "InvokeHttp",
+                  "connectionName": "shared_webcontents"
+                }
+              },
+              "runAfter": {
+                "Validate_Vendor_Payload": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "f06b598a-728a-4dbb-89a4-335a2d54260d"
+              }
+            },
+            "Validate_Vendor_Payload": {
+              "type": "Compose",
+              "inputs": "@variables('varPayload')",
+              "runAfter": {
+                "Vendor_already_identified": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varVendorNumber": [
+              "Succeeded"
+            ],
+            "Initialize_varPayload": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "156fb027-0dda-4bd0-99af-85207353da4b"
+          }
+        },
+        "Execute_Stored_Procedure": {
+          "type": "Scope",
+          "actions": {
+            "Pipelineausführung_erstellen": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "subscriptionId": "@body('Parse_ADF_Settings')?['subscriptionId']",
+                  "resourceGroupName": "@body('Parse_ADF_Settings')?['resourceGroupName']",
+                  "dataFactoryName": "@body('Parse_ADF_Settings')?['dataFactoryName']",
+                  "pipelineName": "@body('Parse_ADF_Settings')?['pipelineName']",
+                  "parameters": {
+                    "varSupplierName": "@{triggerOutputs()?['body/hso_suppliername']}",
+                    "varSupplierNumber": "@{variables('varVendorNumber')}",
+                    "runId": "@{triggerOutputs()?['body/hso_runid']}"
+                  }
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_azuredatafactory",
+                  "operationId": "CreatePipelineRun",
+                  "connectionName": "shared_azuredatafactory_1"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "63b8515b-d93b-4bb9-8a03-e53577dd0d43"
+              }
+            },
+            "Upsert_Import_Job_-_Started": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "request/method": "PATCH",
+                  "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_catalogueimports(hso_runid='@{triggerOutputs()?['body/hso_runid']}')",
+                  "request/headers": {
+                    "OData-MaxVersion": "4.0",
+                    "OData-Version": "4.0",
+                    "If-None-Match": "null",
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                  },
+                  "request/body": "{\n\"hso_health\": \"✅ Transfer-Pipeline erfolgreich gestartet.\",\n\"hso_starttransfer\": true\n}"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                  "operationId": "InvokeHttp",
+                  "connectionName": "shared_webcontents"
+                }
+              },
+              "runAfter": {
+                "Pipelineausführung_erstellen": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "f06b598a-728a-4dbb-89a4-335a2d54260d"
+              }
+            },
+            "Upsert_Import_Job_-_healthy_2": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "request/method": "PATCH",
+                  "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_catalogueimports(hso_runid='@{triggerOutputs()?['body/hso_runid']}')",
+                  "request/headers": {
+                    "OData-MaxVersion": "4.0",
+                    "OData-Version": "4.0",
+                    "If-None-Match": "null",
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                  },
+                  "request/body": "{\n\"hso_health\": \"❗ Fehler beim Ausführen der Pipeline.\",\n\"hso_transferstatus\": 100000003\n}"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                  "operationId": "InvokeHttp",
+                  "connectionName": "shared_webcontents"
+                }
+              },
+              "runAfter": {
+                "Pipelineausführung_erstellen": [
+                  "Failed",
+                  "TimedOut"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "f06b598a-728a-4dbb-89a4-335a2d54260d"
+              }
+            }
+          },
+          "runAfter": {
+            "Validate_Vendor_Mapping": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "924fa64c-dc69-4440-8f0b-706e7829cb77"
+          }
+        },
+        "Parse_ADF_Settings": {
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@parameters('EnvVar | Articlesearch | ADF Settings (hso_EnvVarArticlesearchADFSettings)')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "subscriptionId": {
+                  "type": "string"
+                },
+                "resourceGroupName": {
+                  "type": "string"
+                },
+                "dataFactoryName": {
+                  "type": "string"
+                },
+                "pipelineName": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Delay_until_validation_date": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "feb497b3-520c-4110-8def-44012ee2da6a"
+          }
+        },
+        "Get_Import_Job": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "hso_catalogueimports",
+              "recordId": "@triggerOutputs()?['body/hso_catalogueimportid']",
+              "$select": "hso_checkandexecutestoredprocedure"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "49298906-1efd-485f-b16b-218c500e0587"
+          }
+        },
+        "Check_condition": {
+          "type": "If",
+          "expression": {
+            "equals": [
+              "@outputs('Get_Import_Job')?['body/hso_checkandexecutestoredprocedure']",
+              true
+            ]
+          },
+          "actions": {
+            "Upsert_Import_Job_-_delay": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "request/method": "PATCH",
+                  "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_catalogueimports(hso_runid='@{triggerOutputs()?['body/hso_runid']}')",
+                  "request/headers": {
+                    "OData-MaxVersion": "4.0",
+                    "OData-Version": "4.0",
+                    "If-None-Match": "null",
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                  },
+                  "request/body": "{\n\"hso_health\": \"⏲️ Import vorgemerkt für  @{triggerOutputs()?['body/hso_validfrom']}. Der Prozess wird zum gewählten Datum fortgeführt!\",\n\"hso_status\": \"Waiting\",\n\"hso_processingstatus\": 100000002,\n\"hso_transferstatus\": 100000001\n}"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                  "operationId": "InvokeHttp",
+                  "connectionName": "shared_webcontents"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "f06b598a-728a-4dbb-89a4-335a2d54260d"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Canceled_not_ready": {
+                "type": "Terminate",
+                "inputs": {
+                  "runStatus": "Cancelled"
+                },
+                "metadata": {
+                  "operationMetadataId": "e079aecb-093d-4838-bd1d-cf654b24c751"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Get_Import_Job": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "daa40ec2-c00f-4e18-9c99-c68608243b90"
+          }
+        },
+        "Delay_until_validation_date": {
+          "type": "Wait",
+          "inputs": {
+            "until": {
+              "timestamp": "@{concat(triggerOutputs()?['body/hso_validfrom'], 'Z')}"
+            }
+          },
+          "runAfter": {
+            "Check_condition": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "8a08087d-61df-4323-93ca-c8c93f9f12b8"
+          }
+        },
+        "Initialize_varVendorNumber": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varVendorNumber",
+                "type": "string",
+                "value": "@triggerOutputs()?['body/hso_suppliernumber']"
+              }
+            ]
+          },
+          "runAfter": {
+            "Parse_ADF_Settings": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1127c527-c60a-4d61-affd-bb0bd6941bdd"
+          }
+        },
+        "Initialize_varPayload": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varPayload",
+                "type": "object"
+              }
+            ]
+          },
+          "runAfter": {
+            "Parse_ADF_Settings": [
+              "Succeeded"
+            ]
+          }
+        }
+      },
+      "description": "Triggers the Validation-Pipeline in Azure Data Factory. This will copy the data from validation to the search tables."
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,18 @@
+<customapi uniquename="hso_TemplatedetailApi">
+  <allowedcustomprocessingsteptype>2</allowedcustomprocessingsteptype>
+  <bindingtype>0</bindingtype>
+  <description default="Generische API die Logik für eine Vorlagenposition ausführen kann">
+    <label description="Generische API die Logik für eine Vorlagenposition ausführen kann" languagecode="1031" />
+  </description>
+  <displayname default="HSO - Templatedetail API">
+    <label description="HSO - Templatedetail API" languagecode="1031" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <isfunction>0</isfunction>
+  <isprivate>0</isprivate>
+  <name>HSO - Templatedetail API</name>
+  <plugintypeid>
+    <plugintypeexportkey>224ddccf-6f3d-4e0e-92fc-7790eec7c06d</plugintypeexportkey>
+  </plugintypeid>
+  <workflowsdkstepenabled>0</workflowsdkstepenabled>
+</customapi>

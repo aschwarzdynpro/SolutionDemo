@@ -1,0 +1,10 @@
+hso_sortinglinenumber: |-
+    =If(
+        hso_level = 1, 
+        hso_formattedlinenumber_level,
+        Concatenate(
+            hso_calculationdetail_parentid_sortinglinenum, 
+            ".", 
+            hso_formattedlinenumber_level
+        )
+    )

@@ -1,0 +1,10 @@
+<environmentvariabledefinition schemaname="sst_adf_containername">
+  <displayname default="EnvVar | Advanced Forms | Container Name">
+    <label description="EnvVar | Advanced Forms | Container Name" languagecode="1031" />
+  </displayname>
+  <introducedversion>1.2023.302.3</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000000</type>
+</environmentvariabledefinition>

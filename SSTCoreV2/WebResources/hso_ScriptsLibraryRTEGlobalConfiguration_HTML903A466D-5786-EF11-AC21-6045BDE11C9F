@@ -1,0 +1,18 @@
+ {
+  "defaultSupportedProps": {
+    "font_defaultLabel": "Arial",
+    "fontSize_defaultLabel": "10",
+    "stickyStyle": {
+      "font-size": "10pt",
+      "font-family": "'Arial',sans-serif"
+    },
+    "toolbarLocation": "bottom",
+    "copyFormatting_allowRules": true
+  },
+  "showAsTabControl": true,
+  "showFullScreenExpander": true,
+  "showHtml": true,
+  "showPreview": false,
+  "showPreviewHeaderWarning": false,
+  "disallowUserPersonalization": true
+}

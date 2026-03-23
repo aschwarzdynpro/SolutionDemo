@@ -1,0 +1,29 @@
+<appaction uniquename="hso__GAEB!82a4091f6be14e3191bb04e51f5a061d!msdynce_saleshub!hso_calculation!0">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculation</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculation</contextvalue>
+  <grouptitle default="GAEB">
+    <label description="GAEB" languagecode="1031" />
+    <label description="GAEB" languagecode="1033" />
+  </grouptitle>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>1</isgrouptitlehidden>
+  <location>0</location>
+  <name>GAEB!82a4091f6be14e3191bb04e51f5a061d</name>
+  <onclickeventtype>0</onclickeventtype>
+  <origin>0</origin>
+  <parentappactionid>
+    <uniquename>hso__GAEB!c3909ccc9672435dbae5c5923bfe79bd!msdynce_saleshub!hso_calculation!0</uniquename>
+  </parentappactionid>
+  <sequence>10000.0000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>3</type>
+</appaction>

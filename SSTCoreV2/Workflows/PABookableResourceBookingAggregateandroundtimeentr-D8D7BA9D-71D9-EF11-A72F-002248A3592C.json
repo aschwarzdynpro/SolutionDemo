@@ -1,0 +1,1481 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataverse"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_a_row_is_added,_modified_or_deleted": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "bookableresourcebooking",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "bookingstatus",
+              "subscriptionRequest/filterexpression": "sst_bookingstatus_fieldservicestatus_fx eq 690970004"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "d4a27ef8-23bc-4ef0-af0f-f66bb5c78367"
+          }
+        }
+      },
+      "actions": {
+        "Check_if_booking_is_closed": {
+          "type": "If",
+          "expression": {
+            "equals": [
+              "@outputs('Get_booking_status')?['body/msdyn_fieldservicestatus']",
+              690970004
+            ]
+          },
+          "actions": {
+            "List_time_entries": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "msdyn_timeentries",
+                  "$filter": "_msdyn_bookableresourcebooking_value eq '@{variables('var_bookingorderid')}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "d90ff866-653b-4310-a2b0-9a6802fa3f12"
+              }
+            },
+            "List_rows_in_rounded_entries": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "sst_roundedtimeentrieses",
+                  "$filter": "_sst_bookableresourcebooking_value eq '@{variables('var_bookingorderid')}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "List_time_entries": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "eb9e47ae-ab2e-4f10-8f17-b1c3a7e1a2cd"
+              }
+            },
+            "List_rounded_time_references": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "sst_rundungenzeitbuchungs"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "List_rows_in_rounded_entries": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "58a54d3d-bcc5-4639-b6a1-ee6f20490120"
+              }
+            },
+            "Filter_time_entries_with_work_order": {
+              "type": "Query",
+              "inputs": {
+                "from": "@outputs('List_time_entries')?['body/value']",
+                "where": "@not(equals(item()?['msdyn_entrystatus'], 192350002))"
+              },
+              "runAfter": {
+                "Validation_for_work_order": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "f79c3ab0-50b5-48a1-9af1-330e7eba51bc"
+              }
+            },
+            "Check_if_all_are_approved": {
+              "type": "Compose",
+              "inputs": "@length(body('Filter_time_entries_with_work_order'))",
+              "runAfter": {
+                "Filter_time_entries_with_work_order": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "20f5b41e-1053-4322-8577-caab2e52cd3b"
+              }
+            },
+            "Couldn't_remove_the_step_so_I_left_always_to_true": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  0,
+                  0
+                ]
+              },
+              "actions": {
+                "Output_message_on_true": {
+                  "type": "Compose",
+                  "inputs": "All approved.",
+                  "metadata": {
+                    "operationMetadataId": "8af68a21-eabc-4f7e-9e39-5fd6b6a618a7"
+                  }
+                },
+                "Calculate_Work_type": {
+                  "type": "Scope",
+                  "actions": {
+                    "Filter_time_entries_on_work": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@outputs('List_time_entries')?['body/value']",
+                        "where": "@equals(item()?['msdyn_type'], 192350000)"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "229c3544-9ced-4f60-ba57-b9f7cd102f52"
+                      }
+                    },
+                    "Apply_to_each": {
+                      "type": "Foreach",
+                      "foreach": "@body('Filter_time_entries_on_work')",
+                      "actions": {
+                        "Increment_var_sum_work": {
+                          "type": "IncrementVariable",
+                          "inputs": {
+                            "name": "var_sum_work",
+                            "value": "@item()?['msdyn_duration']"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "090edc71-c581-4bf8-a942-720a4d1b5720"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Filter_time_entries_on_work": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "69ab020c-1c77-4159-9d56-7ebddb770de8"
+                      }
+                    },
+                    "Show_total_of_work": {
+                      "type": "Compose",
+                      "inputs": "@variables('var_sum_work')",
+                      "runAfter": {
+                        "Apply_to_each": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "5b6778b8-7eea-45ca-97be-751808ee5469"
+                      }
+                    },
+                    "Total_of_work_break_into_minutes_and_hours": {
+                      "type": "Compose",
+                      "inputs": "@div(variables('var_sum_work'),60)",
+                      "runAfter": {
+                        "Show_total_of_work": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "6ade9947-e91e-49df-8112-c49d6d522c0e"
+                      }
+                    },
+                    "Show_remaining_minutes_for_work": {
+                      "type": "Compose",
+                      "inputs": "@variables('var_sum_work')",
+                      "runAfter": {
+                        "Check_if_over_60_break": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3b8166b1-1cdf-4bd5-a786-789c6650afb5"
+                      }
+                    },
+                    "Show_total_hours_for_work": {
+                      "type": "Compose",
+                      "inputs": "@variables('var_count_work_hours')",
+                      "runAfter": {
+                        "Show_remaining_minutes_for_work": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "78092055-f24f-4f57-878c-c72b011f671e"
+                      }
+                    },
+                    "Round_any_decimal_minutes": {
+                      "type": "Compose",
+                      "inputs": "@formatNumber(variables('var_sum_work'),'#0')",
+                      "runAfter": {
+                        "Show_total_hours_for_work": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "4300b347-84d6-4692-9db8-f9eaf899d160"
+                      }
+                    },
+                    "Get_rounded_reference_for_work": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@outputs('List_rounded_time_references')?['body/value']",
+                        "where": "@equals(item()?['sst_referencevalue'], int(outputs('Round_any_decimal_minutes')))"
+                      },
+                      "runAfter": {
+                        "Round_any_decimal_minutes": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "97628d13-a399-4c67-8b92-30a022e7b079"
+                      }
+                    },
+                    "Get_rounded_value_for_work": {
+                      "type": "Compose",
+                      "inputs": "@first(body('Get_rounded_reference_for_work'))?['sst_roundedvalue']",
+                      "runAfter": {
+                        "Get_rounded_reference_for_work": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "94949a57-af78-46a6-bfea-a72883e24328"
+                      }
+                    },
+                    "Total_duration_for_work_after_rounding": {
+                      "type": "Compose",
+                      "inputs": "@add(mul(variables('var_count_work_hours'), 60), \r\nif(equals(outputs('Get_rounded_value_for_work'), null),0,outputs('Get_rounded_value_for_work'))\r\n )",
+                      "runAfter": {
+                        "Get_rounded_value_for_work": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "05693037-32c6-442d-9b4f-085da1e8c9b4"
+                      }
+                    },
+                    "Check_if_over_60_break": {
+                      "type": "If",
+                      "expression": {
+                        "greater": [
+                          "@variables('var_sum_work')",
+                          60
+                        ]
+                      },
+                      "actions": {
+                        "Do_until": {
+                          "type": "Until",
+                          "expression": "@less(variables('var_sum_work'), 60)",
+                          "limit": {
+                            "count": 5000,
+                            "timeout": "PT1H"
+                          },
+                          "actions": {
+                            "Decrement_variable_sum_of_work_totals": {
+                              "type": "DecrementVariable",
+                              "inputs": {
+                                "name": "var_sum_work",
+                                "value": 60
+                              },
+                              "metadata": {
+                                "operationMetadataId": "d6e956e0-553d-42e3-a7a1-21cf81a8e72e"
+                              }
+                            },
+                            "Increment_variable_work_hours_count": {
+                              "type": "IncrementVariable",
+                              "inputs": {
+                                "name": "var_count_work_hours",
+                                "value": 1
+                              },
+                              "runAfter": {
+                                "Decrement_variable_sum_of_work_totals": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "5c07fddd-7ca9-4189-9714-8624b60f5643"
+                              }
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "efd168cb-fc96-4867-93ad-d2751165f575"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "runAfter": {
+                        "Total_of_work_break_into_minutes_and_hours": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "14430f86-0bfc-4d9f-81da-8e73fda8bc8b"
+                      }
+                    },
+                    "Convert_total_minutes_in_hour_format_for_work": {
+                      "type": "Compose",
+                      "inputs": "@add(div(mul(outputs('Get_rounded_value_for_work'),100),6000),variables('var_count_work_hours'))",
+                      "runAfter": {
+                        "Total_duration_for_work_after_rounding": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "4909ab3e-f3a1-4f41-9188-8ba230f82b78"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Output_message_on_true": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "899219c7-68ce-4998-a346-d297b2986a9c"
+                  }
+                },
+                "Calculate_traveling_type": {
+                  "type": "Scope",
+                  "actions": {
+                    "Filter_time_entries_on_traveling": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@outputs('List_time_entries')?['body/value']",
+                        "where": "@equals(item()?['msdyn_type'], 192355001)"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "161f56f5-f803-4c81-b0d2-04aa8b7c1d0d"
+                      }
+                    },
+                    "Apply_to_each_2": {
+                      "type": "Foreach",
+                      "foreach": "@body('Filter_time_entries_on_traveling')",
+                      "actions": {
+                        "Increment_var_sum_traveling": {
+                          "type": "IncrementVariable",
+                          "inputs": {
+                            "name": "var_sum_traveling",
+                            "value": "@item()?['msdyn_duration']"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "2ceca3f4-af55-4f4e-9781-aec7a783000a"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Filter_time_entries_on_traveling": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "2842b527-cfd8-4503-ab5b-6af2db85421b"
+                      }
+                    },
+                    "Show_total_of_traveling": {
+                      "type": "Compose",
+                      "inputs": "@variables('var_sum_traveling')",
+                      "runAfter": {
+                        "Apply_to_each_2": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "5b6778b8-7eea-45ca-97be-751808ee5469"
+                      }
+                    },
+                    "Show_remaining_minutes_for_traveling": {
+                      "type": "Compose",
+                      "inputs": "@variables('var_sum_traveling')",
+                      "runAfter": {
+                        "Check_if_over_60_minutes_traveling": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3b8166b1-1cdf-4bd5-a786-789c6650afb5"
+                      }
+                    },
+                    "Show_total_hours_for_traveling": {
+                      "type": "Compose",
+                      "inputs": "@variables('var_count_traveling_hours')",
+                      "runAfter": {
+                        "Show_remaining_minutes_for_traveling": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "78092055-f24f-4f57-878c-c72b011f671e"
+                      }
+                    },
+                    "Round_any_decimal_minutes_traveling": {
+                      "type": "Compose",
+                      "inputs": "@formatNumber(variables('var_sum_traveling'), '#0')",
+                      "runAfter": {
+                        "Show_total_hours_for_traveling": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "4300b347-84d6-4692-9db8-f9eaf899d160"
+                      }
+                    },
+                    "Get_rounded_reference_for_traveling": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@outputs('List_rounded_time_references')?['body/value']",
+                        "where": "@equals(item()?['sst_referencevalue'], int(outputs('Round_any_decimal_minutes_traveling')))"
+                      },
+                      "runAfter": {
+                        "Round_any_decimal_minutes_traveling": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "97628d13-a399-4c67-8b92-30a022e7b079"
+                      }
+                    },
+                    "Get_rounded_value_for_traveling": {
+                      "type": "Compose",
+                      "inputs": "@first(body('Get_rounded_reference_for_traveling'))?['sst_roundedvalue']",
+                      "runAfter": {
+                        "Get_rounded_reference_for_traveling": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "94949a57-af78-46a6-bfea-a72883e24328"
+                      }
+                    },
+                    "Total_duration_for_traveling_after_rounding": {
+                      "type": "Compose",
+                      "inputs": "@add(mul(variables('var_count_traveling_hours'), 60), \r\nif(equals(outputs('Get_rounded_value_for_traveling'), null),0,outputs('Get_rounded_value_for_traveling')) \r\n)",
+                      "runAfter": {
+                        "Get_rounded_value_for_traveling": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "05693037-32c6-442d-9b4f-085da1e8c9b4"
+                      }
+                    },
+                    "Check_if_over_60_minutes_traveling": {
+                      "type": "If",
+                      "expression": {
+                        "greater": [
+                          "@variables('var_sum_traveling')",
+                          60
+                        ]
+                      },
+                      "actions": {
+                        "Do_until_2": {
+                          "type": "Until",
+                          "expression": "@less(variables('var_sum_traveling'), 60)",
+                          "limit": {
+                            "count": 5000,
+                            "timeout": "PT1H"
+                          },
+                          "actions": {
+                            "Decrement_variable_sum_of_traveling_totals": {
+                              "type": "DecrementVariable",
+                              "inputs": {
+                                "name": "var_sum_traveling",
+                                "value": 60
+                              },
+                              "metadata": {
+                                "operationMetadataId": "d6e956e0-553d-42e3-a7a1-21cf81a8e72e"
+                              }
+                            },
+                            "Increment_variable_traveling_hours_count": {
+                              "type": "IncrementVariable",
+                              "inputs": {
+                                "name": "var_count_traveling_hours",
+                                "value": 1
+                              },
+                              "runAfter": {
+                                "Decrement_variable_sum_of_traveling_totals": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "5c07fddd-7ca9-4189-9714-8624b60f5643"
+                              }
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "efd168cb-fc96-4867-93ad-d2751165f575"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "runAfter": {
+                        "Show_total_of_traveling": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "2541c55e-0b67-42aa-a515-4824309ef994"
+                      }
+                    },
+                    "Convert_total_minutes_in_hour_format_for_travelling": {
+                      "type": "Compose",
+                      "inputs": "@add(div(mul(outputs('Get_rounded_value_for_traveling'),100),6000),variables('var_count_traveling_hours'))",
+                      "runAfter": {
+                        "Total_duration_for_traveling_after_rounding": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "b1478333-b4bb-44e4-a6f1-9dd04a40c2c6"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Output_message_on_true": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "d08cb66b-5863-42c3-9cfa-f498531c6438"
+                  }
+                },
+                "Calculate_pause_type": {
+                  "type": "Scope",
+                  "actions": {
+                    "Filter_time_entries_on_pause": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@outputs('List_time_entries')?['body/value']",
+                        "where": "@equals(item()?['msdyn_type'], 192355000)"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "7e0d0c64-11fe-4945-a537-73290eb1d9df"
+                      }
+                    },
+                    "Apply_to_each_3": {
+                      "type": "Foreach",
+                      "foreach": "@body('Filter_time_entries_on_pause')",
+                      "actions": {
+                        "Increment_var_sum_break": {
+                          "type": "IncrementVariable",
+                          "inputs": {
+                            "name": "var_sum_break",
+                            "value": "@item()?['msdyn_duration']"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "91cef30e-0692-42d7-9c7d-3f6ad192576e"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Filter_time_entries_on_pause": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "444cee0c-7328-4980-be29-c1de055bc41f"
+                      }
+                    },
+                    "Show_total_of_break": {
+                      "type": "Compose",
+                      "inputs": "@variables('var_sum_break')",
+                      "runAfter": {
+                        "Apply_to_each_3": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "5b6778b8-7eea-45ca-97be-751808ee5469"
+                      }
+                    },
+                    "Show_remaining_minutes_for_break": {
+                      "type": "Compose",
+                      "inputs": "@variables('var_sum_break')",
+                      "runAfter": {
+                        "Check_if_minutes_over_60": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3b8166b1-1cdf-4bd5-a786-789c6650afb5"
+                      }
+                    },
+                    "Show_total_hours_for_break": {
+                      "type": "Compose",
+                      "inputs": "@variables('var_count_break_hours')",
+                      "runAfter": {
+                        "Show_remaining_minutes_for_break": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "78092055-f24f-4f57-878c-c72b011f671e"
+                      }
+                    },
+                    "Round_any_decimal_minutes_break": {
+                      "type": "Compose",
+                      "inputs": "@formatNumber(variables('var_sum_break'), '#0')",
+                      "runAfter": {
+                        "Show_total_hours_for_break": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "4300b347-84d6-4692-9db8-f9eaf899d160"
+                      }
+                    },
+                    "Get_rounded_reference_for_break": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@outputs('List_rounded_time_references')?['body/value']",
+                        "where": "@equals(item()?['sst_referencevalue'], int(outputs('Round_any_decimal_minutes_break')))"
+                      },
+                      "runAfter": {
+                        "Round_any_decimal_minutes_break": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "97628d13-a399-4c67-8b92-30a022e7b079"
+                      }
+                    },
+                    "Get_rounded_value_for_break": {
+                      "type": "Compose",
+                      "inputs": "@first(body('Get_rounded_reference_for_break'))?['sst_roundedvalue']",
+                      "runAfter": {
+                        "Get_rounded_reference_for_break": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "94949a57-af78-46a6-bfea-a72883e24328"
+                      }
+                    },
+                    "Total_duration_for_break_after_rounding": {
+                      "type": "Compose",
+                      "inputs": "@add(mul(variables('var_count_break_hours'), 60), \r\nif(equals(outputs('Get_rounded_value_for_break'), null), 0,outputs('Get_rounded_value_for_break'))\r\n )",
+                      "runAfter": {
+                        "Get_rounded_value_for_break": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "05693037-32c6-442d-9b4f-085da1e8c9b4"
+                      }
+                    },
+                    "Check_if_minutes_over_60": {
+                      "type": "If",
+                      "expression": {
+                        "greater": [
+                          "@variables('var_sum_break')",
+                          60
+                        ]
+                      },
+                      "actions": {
+                        "Do_until_3": {
+                          "type": "Until",
+                          "expression": "@less(variables('var_sum_break'), 60)",
+                          "limit": {
+                            "count": 5000,
+                            "timeout": "PT1H"
+                          },
+                          "actions": {
+                            "Decrement_variable_sum_of_break_totals": {
+                              "type": "DecrementVariable",
+                              "inputs": {
+                                "name": "var_sum_break",
+                                "value": 60
+                              },
+                              "metadata": {
+                                "operationMetadataId": "d6e956e0-553d-42e3-a7a1-21cf81a8e72e"
+                              }
+                            },
+                            "Increment_variable_traveling_hours_count_2": {
+                              "type": "IncrementVariable",
+                              "inputs": {
+                                "name": "var_count_break_hours",
+                                "value": 1
+                              },
+                              "runAfter": {
+                                "Decrement_variable_sum_of_break_totals": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "5c07fddd-7ca9-4189-9714-8624b60f5643"
+                              }
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "efd168cb-fc96-4867-93ad-d2751165f575"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "runAfter": {
+                        "Show_total_of_break": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3e96f045-690e-494d-a65f-40c5bf292838"
+                      }
+                    },
+                    "Convert_total_minutes_in_hour_format_for_break": {
+                      "type": "Compose",
+                      "inputs": "@add(div(mul(outputs('Get_rounded_value_for_break'),100),6000),variables('var_count_break_hours'))",
+                      "runAfter": {
+                        "Total_duration_for_break_after_rounding": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "503ae533-8dd6-43e7-8c34-1cc69d42e73d"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Output_message_on_true": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "49af0a8d-de80-4b1b-aaf0-9d23af69d731"
+                  }
+                },
+                "Check_if_items_in_rounded_table_already_exist": {
+                  "type": "Compose",
+                  "inputs": "@length(outputs('List_rows_in_rounded_entries')?['body/value'])",
+                  "runAfter": {
+                    "Calculate_Work_type": [
+                      "Succeeded"
+                    ],
+                    "Calculate_traveling_type": [
+                      "Succeeded"
+                    ],
+                    "Calculate_pause_type": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "2a2419f5-2ab1-43fa-9723-3a696a17d8ab"
+                  }
+                },
+                "Check_if_rounded_time_entries_for_this_booking_were_already_generated": {
+                  "type": "If",
+                  "expression": {
+                    "equals": [
+                      "@outputs('Check_if_items_in_rounded_table_already_exist')",
+                      0
+                    ]
+                  },
+                  "actions": {
+                    "Create_work_subtypes": {
+                      "type": "Scope",
+                      "actions": {
+                        "Array_of_types": {
+                          "type": "Compose",
+                          "inputs": [
+                            {
+                              "Type": "Überstunde"
+                            },
+                            {
+                              "Type": "Nacht / Sonntag"
+                            },
+                            {
+                              "Type": "Feiertag"
+                            }
+                          ],
+                          "metadata": {
+                            "operationMetadataId": "6992f2f1-dc63-42f9-b8ef-ef9de2c04612"
+                          }
+                        },
+                        "Parse_JSON": {
+                          "type": "ParseJson",
+                          "inputs": {
+                            "content": "@outputs('Array_of_types')",
+                            "schema": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "Type": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Array_of_types": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "66a182f3-2540-407b-8e3c-60d0351bf05b"
+                          }
+                        },
+                        "Apply_to_each_work_subtype": {
+                          "type": "Foreach",
+                          "foreach": "@body('Parse_JSON')",
+                          "actions": {
+                            "Show_type": {
+                              "type": "Compose",
+                              "inputs": "@items('Apply_to_each_work_subtype')?['Type']",
+                              "metadata": {
+                                "operationMetadataId": "9e43a61a-ee51-4b31-8792-275245fee3e6"
+                              }
+                            },
+                            "Add_a_new_row_in_subtype_subtable": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "sst_roundedtimeentryworksubtypeses",
+                                  "item/sst_name": "@items('Apply_to_each_work_subtype')?['Type']",
+                                  "item/sst_RoundedTimeEntry@odata.bind": "/sst_roundedtimeentrieses(@{outputs('Add_a_new_row_for_work')?['body/sst_roundedtimeentriesid']})"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "operationId": "CreateRecord",
+                                  "connectionName": "shared_commondataserviceforapps"
+                                }
+                              },
+                              "runAfter": {
+                                "Show_type": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "937d5755-32cf-48c0-b62c-6e42e1210b1d"
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Parse_JSON": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "eb5457cb-db8d-4ea8-829f-aa74379899f4"
+                          }
+                        },
+                        "Add_a_new_row_for_normal_type_with_total_value": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "sst_roundedtimeentryworksubtypeses",
+                              "item/sst_name": "Normal",
+                              "item/sst_RoundedTimeEntry@odata.bind": "/sst_roundedtimeentrieses(@{outputs('Add_a_new_row_for_work')?['body/sst_roundedtimeentriesid']})",
+                              "item/sst_timevalue": "@outputs('Convert_total_minutes_in_hour_format_for_work')"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "CreateRecord",
+                              "connectionName": "shared_commondataserviceforapps"
+                            }
+                          },
+                          "runAfter": {
+                            "Apply_to_each_work_subtype": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "3fb9afb0-27e5-4de5-90b5-6969edc7cf8e"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Add_a_new_row_for_work": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "38112710-c1f4-47fc-bf77-59484ba81118"
+                      }
+                    },
+                    "Add_a_new_row_for_work": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "sst_roundedtimeentrieses",
+                          "item/sst_WorkOrder@odata.bind": "@outputs('Validation_for_work_order')",
+                          "item/sst_BookableResourceBooking@odata.bind": "/bookableresourcebookings(@{variables('var_bookingorderid')})",
+                          "item/sst_date": "@triggerOutputs()?['body/sst_buchungstart']",
+                          "item/sst_duration": "@outputs('Convert_total_minutes_in_hour_format_for_work')",
+                          "item/sst_name": "Time entry \"Arbeit (unbearbeitet)\" for Work Order '@{outputs('Get_work_order_details')?['body/msdyn_name']}' and Booking '@{triggerOutputs()?['body/name']}'\"",
+                          "item/sst_Project_id@odata.bind": "@if(empty(outputs('Get_work_order_details')?['body/_sst_projekt_ref_value']), ' ',\r\nconcat('/msdyn_projects(',outputs('Get_work_order_details')?['body/_sst_projekt_ref_value'],')'))",
+                          "item/sst_freitextfeld": "@outputs('Show_Tätigkeitsbeschreibung__of_Work_Order')",
+                          "item/sst_type": "Arbeit"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "CreateRecord",
+                          "connectionName": "shared_commondataserviceforapps"
+                        }
+                      },
+                      "runAfter": {
+                        "Show_Tätigkeitsbeschreibung__of_Work_Order": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "d3754055-6018-493f-ac3a-8551b7e5e526"
+                      }
+                    },
+                    "Show_Tätigkeitsbeschreibung__of_Work_Order": {
+                      "type": "Compose",
+                      "inputs": "@triggerBody()?['sst_bookingdescription_txt']",
+                      "metadata": {
+                        "operationMetadataId": "5761e8e1-aac2-4964-b271-c70020613b8b"
+                      }
+                    },
+                    "Condition": {
+                      "type": "If",
+                      "description": "kept in case we need to restore",
+                      "expression": {
+                        "and": [
+                          {
+                            "equals": [
+                              0,
+                              0
+                            ]
+                          }
+                        ]
+                      },
+                      "actions": {},
+                      "else": {
+                        "actions": {
+                          "Add_a_new_row_for_break": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "sst_roundedtimeentrieses",
+                                "item/sst_WorkOrder@odata.bind": "@outputs('Validation_for_work_order')",
+                                "item/sst_BookableResourceBooking@odata.bind": "/bookableresourcebookings(@{variables('var_bookingorderid')})",
+                                "item/sst_date": "@utcNow()",
+                                "item/sst_duration": "@outputs('Convert_total_minutes_in_hour_format_for_break')",
+                                "item/sst_name": "Time entry \"Pause\" for Work Order '@{outputs('Get_work_order_details')?['body/msdyn_name']}' and Booking '@{triggerOutputs()?['body/name']}'\"",
+                                "item/sst_freitextfeld": "@outputs('Show_Tätigkeitsbeschreibung__of_Work_Order')",
+                                "item/sst_type": "Pause"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "operationId": "CreateRecord",
+                                "connectionName": "shared_commondataserviceforapps"
+                              }
+                            },
+                            "metadata": {
+                              "operationMetadataId": "46e003ce-c7a6-4862-9b0c-4518b9dc7de0"
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Check_if_travel_time_greater_0": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "031922fe-b6d5-456b-96db-83a69c6cd4e8"
+                      }
+                    },
+                    "Check_if_travel_time_greater_0": {
+                      "type": "If",
+                      "expression": {
+                        "not": {
+                          "equals": [
+                            "@outputs('Convert_total_minutes_in_hour_format_for_travelling')",
+                            0
+                          ]
+                        }
+                      },
+                      "actions": {
+                        "Add_a_new_row_for_traveling": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "sst_roundedtimeentrieses",
+                              "item/sst_WorkOrder@odata.bind": "@outputs('Validation_for_work_order')",
+                              "item/sst_BookableResourceBooking@odata.bind": "/bookableresourcebookings(@{variables('var_bookingorderid')})",
+                              "item/sst_date": "@triggerOutputs()?['body/sst_buchungstart']",
+                              "item/sst_duration": "@outputs('Convert_total_minutes_in_hour_format_for_travelling')",
+                              "item/sst_name": "Time entry \"Fahrzeit\" for Work Order '@{outputs('Get_work_order_details')?['body/msdyn_name']}' and Booking '@{triggerOutputs()?['body/name']}'\"",
+                              "item/sst_Project_id@odata.bind": "@if(empty(outputs('Get_work_order_details')?['body/_sst_projekt_ref_value']), ' ',\r\nconcat('/msdyn_projects(',outputs('Get_work_order_details')?['body/_sst_projekt_ref_value'],')'))",
+                              "item/sst_freitextfeld": "@outputs('Show_Tätigkeitsbeschreibung__of_Work_Order')",
+                              "item/sst_type": "Fahrzeit"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "CreateRecord",
+                              "connectionName": "shared_commondataserviceforapps"
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "fcb6fda4-49ec-4d7f-b87d-82fe366d9380"
+                          }
+                        },
+                        "Create_travel_Subtypes": {
+                          "type": "Scope",
+                          "actions": {
+                            "Apply_to_each_work_subtype_2": {
+                              "type": "Foreach",
+                              "foreach": "@body('Parse_JSON')",
+                              "actions": {
+                                "Show_type_2": {
+                                  "type": "Compose",
+                                  "inputs": "@items('Apply_to_each_work_subtype_2')?['Type']",
+                                  "metadata": {
+                                    "operationMetadataId": "9e43a61a-ee51-4b31-8792-275245fee3e6"
+                                  }
+                                },
+                                "Add_a_new_row_in_subtype_subtable_2": {
+                                  "type": "OpenApiConnection",
+                                  "inputs": {
+                                    "parameters": {
+                                      "entityName": "sst_roundedtimeentryworksubtypeses",
+                                      "item/sst_name": "@items('Apply_to_each_work_subtype_2')?['Type']",
+                                      "item/sst_RoundedTimeEntry@odata.bind": "/sst_roundedtimeentrieses(@{outputs('Add_a_new_row_for_traveling')?['body/sst_roundedtimeentriesid']})"
+                                    },
+                                    "host": {
+                                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                      "operationId": "CreateRecord",
+                                      "connectionName": "shared_commondataserviceforapps"
+                                    }
+                                  },
+                                  "runAfter": {
+                                    "Show_type_2": [
+                                      "Succeeded"
+                                    ]
+                                  },
+                                  "metadata": {
+                                    "operationMetadataId": "937d5755-32cf-48c0-b62c-6e42e1210b1d"
+                                  }
+                                }
+                              },
+                              "metadata": {
+                                "operationMetadataId": "eb5457cb-db8d-4ea8-829f-aa74379899f4"
+                              }
+                            },
+                            "Add_a_new_row_for_normal_type_with_total_value_2": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "sst_roundedtimeentryworksubtypeses",
+                                  "item/sst_name": "Normal",
+                                  "item/sst_RoundedTimeEntry@odata.bind": "/sst_roundedtimeentrieses(@{outputs('Add_a_new_row_for_traveling')?['body/sst_roundedtimeentriesid']})",
+                                  "item/sst_timevalue": "@outputs('Convert_total_minutes_in_hour_format_for_travelling')"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "operationId": "CreateRecord",
+                                  "connectionName": "shared_commondataserviceforapps"
+                                }
+                              },
+                              "runAfter": {
+                                "Apply_to_each_work_subtype_2": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "3fb9afb0-27e5-4de5-90b5-6969edc7cf8e"
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Add_a_new_row_for_traveling": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "fe2156e8-7176-493b-9af9-feaf74b6010e"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "runAfter": {
+                        "Create_work_subtypes": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "cd0a6705-886c-412e-b432-857ec9a61ebd"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Check_if_items_in_rounded_table_already_exist": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "ac37d306-2edc-45ed-8ac3-cb1e4bb7654e"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Output_message_on_false": {
+                    "type": "Compose",
+                    "inputs": "At least 1 item unapproved.",
+                    "metadata": {
+                      "operationMetadataId": "1884d6df-36e2-4c7d-98f0-4292fa7eed2c"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Check_if_all_are_approved": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "a52a83c7-8af9-43bd-8ddc-65b4c86cf789"
+              }
+            },
+            "Check_if_Work_order_is_blank": {
+              "type": "If",
+              "expression": {
+                "or": [
+                  {
+                    "equals": [
+                      "@triggerOutputs()?['body/_msdyn_workorder_value']",
+                      "@null"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@triggerOutputs()?['body/_msdyn_workorder_value']",
+                      ""
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Set_variable_work_order_lookup_to_null": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "var_workorderlookup",
+                    "value": "@{null}"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "61cc7e64-0c09-46fb-865d-08f204458c21"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Set_variable_work_order_lookup_to_guid": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "var_workorderlookup",
+                      "value": "@triggerOutputs()?['body/_msdyn_workorder_value']"
+                    },
+                    "metadata": {
+                      "operationMetadataId": "53fce256-183b-4f87-8135-4563c0249ed5"
+                    }
+                  },
+                  "Get_work_order_details": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "msdyn_workorders",
+                        "recordId": "@triggerOutputs()?['body/_msdyn_workorder_value']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "GetItem",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    },
+                    "runAfter": {
+                      "Set_variable_work_order_lookup_to_guid": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "29b4736e-05cb-4ca1-8387-700e22e0d96f"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "List_rounded_time_references": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "5b7e152a-94ba-4558-9bce-9d2ea9c8f57a"
+              }
+            },
+            "Validation_for_work_order": {
+              "type": "Compose",
+              "inputs": "@if(equals(variables('var_workorderlookup'),''),null,concat('/msdyn_workorders(',variables('var_workorderlookup'),')'))",
+              "runAfter": {
+                "Show_work_order_lookup_variable": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "e1462ca0-e91d-47dd-9dc8-92d6fd77db8c"
+              }
+            },
+            "Show_work_order_lookup_variable": {
+              "type": "Compose",
+              "inputs": "@variables('var_workorderlookup')",
+              "runAfter": {
+                "Check_if_Work_order_is_blank": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "f316181d-b79c-4391-ace6-a91a5cfff2bc"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Get_booking_status": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c047bf2c-cc40-454e-bc32-d2e215e2a436"
+          }
+        },
+        "Initialize_variable_float_sum_work_types": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "var_sum_work",
+                "type": "float",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_variable_work_order_lookup_": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "437ed5a2-4fcc-4076-bbd5-16e6684877cd"
+          }
+        },
+        "Initialize_work_type_hours_count": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "var_count_work_hours",
+                "type": "float",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_variable_float_sum_work_types": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a25e8f92-e6a2-45dd-ba29-9ca699a17584"
+          }
+        },
+        "Initialize_traveling_type_hours_count": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "var_count_traveling_hours",
+                "type": "float",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_work_type_hours_count": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a25e8f92-e6a2-45dd-ba29-9ca699a17584"
+          }
+        },
+        "Initialize_break_type_hours_count": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "var_count_break_hours",
+                "type": "float",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_traveling_type_hours_count": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a25e8f92-e6a2-45dd-ba29-9ca699a17584"
+          }
+        },
+        "Initialize_variable_float_sum_traveling_types": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "var_sum_traveling",
+                "type": "float",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_break_type_hours_count": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "712ba318-bc4a-4768-abff-2873a71fa1e5"
+          }
+        },
+        "Initialize_variable_float_sum_break_types": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "var_sum_break",
+                "type": "float",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_variable_float_sum_traveling_types": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9d872051-7e55-4016-9061-3c657971a059"
+          }
+        },
+        "Initialize_variable_booking_order_id": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "var_bookingorderid",
+                "type": "string",
+                "value": "@triggerOutputs()?['body/bookableresourcebookingid']"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "3d82661d-b739-4543-95b5-7de69d450ac7"
+          }
+        },
+        "Initialize_variable_work_order_lookup_": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "var_workorderlookup",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_variable_booking_order_id": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "4131e3fe-0c5a-4ceb-bcfe-940a88a765c5"
+          }
+        },
+        "Get_booking_status": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "bookingstatuses",
+              "recordId": "@triggerOutputs()?['body/_bookingstatus_value']",
+              "$select": "msdyn_fieldservicestatus"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "runAfter": {
+            "Initialize_variable_float_sum_break_types": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1525d41b-1eca-4337-a8f7-a782b8d85536"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

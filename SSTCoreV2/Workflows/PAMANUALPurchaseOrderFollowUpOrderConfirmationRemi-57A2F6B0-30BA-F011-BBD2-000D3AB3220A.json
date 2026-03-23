@@ -1,0 +1,994 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps-1": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataverse"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Wenn_eine_Zeile_hinzugefügt,_geändert_oder_gelöscht_wird": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 4,
+              "subscriptionRequest/entityname": "sst_flow_trigger",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "sst_flowtrigger_type_set,\nsst_start_flow_bit, sst_name",
+              "subscriptionRequest/filterexpression": "sst_start_flow_bit eq true and sst_flowtrigger_type_set eq 1000001"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          }
+        }
+      },
+      "actions": {
+        "Define_WorkDays": {
+          "type": "InitializeVariable",
+          "description": "dayOfWeek 0 is eq Sonntag. Aktuelle Tag muss auch abgezogen werden.",
+          "inputs": {
+            "variables": [
+              {
+                "name": "WorkDays",
+                "type": "array",
+                "value": [
+                  {
+                    "dayOfWeek": 0,
+                    "daysOf": -2
+                  },
+                  {
+                    "dayOfWeek": 1,
+                    "daysOf": -3
+                  },
+                  {
+                    "dayOfWeek": 2,
+                    "daysOf": -4
+                  },
+                  {
+                    "dayOfWeek": 3,
+                    "daysOf": -2
+                  },
+                  {
+                    "dayOfWeek": 4,
+                    "daysOf": -2
+                  },
+                  {
+                    "dayOfWeek": 5,
+                    "daysOf": -2
+                  },
+                  {
+                    "dayOfWeek": 6,
+                    "daysOf": -2
+                  }
+                ]
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "605bfdc8-d281-4388-ab3e-1e9771033ca0"
+          }
+        },
+        "Filter_array": {
+          "type": "Query",
+          "description": "dayOfWeek(utcNow())",
+          "inputs": {
+            "from": "@body('Parse_JSON_WorkDays')",
+            "where": "@equals(item()['dayOfWeek'], dayOfWeek(utcNow()))"
+          },
+          "runAfter": {
+            "Parse_JSON_WorkDays": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f0868908-b3cc-4589-9e5a-1dd376f2444b"
+          }
+        },
+        "Parse_JSON_WorkDays": {
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@variables('WorkDays')",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "dayOfWeek": {
+                    "type": "integer"
+                  },
+                  "daysOf": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "dayOfWeek",
+                  "daysOf"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Define_WorkDays": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e2846997-c125-4f9a-acfc-2f5c04c9520c"
+          }
+        },
+        "Define_daysOf": {
+          "type": "InitializeVariable",
+          "description": "first(body('Filter_array'))?['daysOf']",
+          "inputs": {
+            "variables": [
+              {
+                "name": "daysOf",
+                "type": "integer",
+                "value": "@first(body('Filter_array'))?['daysOf']"
+              }
+            ]
+          },
+          "runAfter": {
+            "Filter_array": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "92353f84-7b8a-4319-8fe5-e20b07f60dc4"
+          }
+        },
+        "Define_purchaseDate": {
+          "type": "InitializeVariable",
+          "description": "addDays(utcNow(),variables('daysOf'))",
+          "inputs": {
+            "variables": [
+              {
+                "name": "purchaseDate",
+                "type": "string",
+                "value": "@{addDays(utcNow(),variables('daysOf'))}"
+              }
+            ]
+          },
+          "runAfter": {
+            "Define_daysOf": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1719d772-abe7-48f3-ab4d-0c2bc7d90704"
+          }
+        },
+        "Scope_CREATE_confirmation_reminder": {
+          "type": "Scope",
+          "actions": {
+            "DELETE_Reminders": {
+              "type": "Scope",
+              "actions": {
+                "List_Order_Reminders_for_DELETE": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "sst_orderreminders",
+                      "$select": "sst_remind,sst_remindercreated,sst_orderreminderid,sst_triggerstart,sst_reminderlevel,sst_orderreminderid,sst_ordernumber,sst_remidertype,sst_abnum",
+                      "$filter": "(_sst_superiorcoreminder_value ne null and sst_abnum ne null) or sst_remidertype eq 1"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "f90a87be-5c14-4782-a000-fcdb095d1f6e"
+                  }
+                },
+                "Apply_DELETE_to_each_Order_Confirmation_Reminder": {
+                  "type": "Foreach",
+                  "foreach": "@outputs('List_Order_Reminders_for_DELETE')?['body/value']",
+                  "actions": {
+                    "Condition_to_delete_Order_Confirmation_Reminder": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "equals": [
+                              "@items('Apply_DELETE_to_each_Order_Confirmation_Reminder')?['sst_remind']",
+                              false
+                            ]
+                          },
+                          {
+                            "equals": [
+                              "@items('Apply_DELETE_to_each_Order_Confirmation_Reminder')?['sst_remindercreated']",
+                              false
+                            ]
+                          }
+                        ]
+                      },
+                      "actions": {
+                        "Delete_the_reminder_with_value_NO": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "sst_orderreminders",
+                              "recordId": "@items('Apply_DELETE_to_each_Order_Confirmation_Reminder')?['sst_orderreminderid']"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "DeleteRecord",
+                              "connectionName": "shared_commondataserviceforapps-1"
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "25c240dd-6b81-4204-82a9-fbba1a724764"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "metadata": {
+                        "operationMetadataId": "48bf0d7e-3eb5-417b-abbe-ce443f5993f7"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "List_Order_Reminders_for_DELETE": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "1d856b68-0005-480b-b8c7-08b65258f5ab"
+                  }
+                }
+              },
+              "runAfter": {
+                "Add_Notification_Process_started": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "1247e67c-a721-4fcd-9cd3-bdbe21656754"
+              }
+            },
+            "Apply_to_each_header": {
+              "type": "Foreach",
+              "foreach": "@body('Filter_headers_by_purchase_date_copy')",
+              "actions": {
+                "Filter_Purchase_order_header_staging": {
+                  "type": "OpenApiConnection",
+                  "description": "items('Apply_to_each_Line_Purchase_Order')?['mserp_purchaseordernumber']",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "mserp_sstedipurchorderstagingheaderentities",
+                      "$select": "mserp_purchid",
+                      "$filter": "mserp_purchid eq '@{items('Apply_to_each_header')?['mserp_purchaseordernumber']\r\n}'"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "c84ea993-fd79-4a54-934e-ad01ad6aad54"
+                  }
+                },
+                "Condition_NO_Purchase_Order_in_header_staging": {
+                  "type": "If",
+                  "description": "empty(outputs('Filter_Purchase_order_header_staging')?['body/value'])  / length(outputs('Filter_Purchase_order_header_staging')?['body/value'])",
+                  "expression": {
+                    "equals": [
+                      "@length(outputs('Filter_Purchase_order_header_staging')?['body/value'])",
+                      0
+                    ]
+                  },
+                  "actions": {
+                    "Filter_array_NO_quantity_arrived_in_lines_copy": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@outputs('Filter_lines')?['body/value']",
+                        "where": "@equals(item()?['mserp_sstarrivedpurchphysical'], 0)"
+                      },
+                      "runAfter": {
+                        "Filter_lines": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "9f94026b-6580-4a7b-b8fe-f0e6ac8fa709"
+                      }
+                    },
+                    "Apply_to_each_line": {
+                      "type": "Foreach",
+                      "foreach": "@body('Filter_array_NO_quantity_arrived_in_lines_copy')",
+                      "actions": {
+                        "If_no_the_same_confirmation_reminder": {
+                          "type": "If",
+                          "description": "length(outputs('List_Order_Reminder')?['body/value'])",
+                          "expression": {
+                            "and": [
+                              {
+                                "equals": [
+                                  "@empty(outputs('List_Order_Reminder')?['body/value'])",
+                                  true
+                                ]
+                              }
+                            ]
+                          },
+                          "actions": {
+                            "Test_AB-Mahnung_on_header_Level": {
+                              "type": "Compose",
+                              "inputs": "To be delted",
+                              "metadata": {
+                                "operationMetadataId": "8b6b610c-6375-43bf-9373-eb66e822d82f"
+                              }
+                            },
+                            "Apply_to_each_Product": {
+                              "type": "Foreach",
+                              "foreach": "@outputs('first_product_id')",
+                              "actions": {
+                                "Apply_to_each_Vendor": {
+                                  "type": "Foreach",
+                                  "foreach": "@outputs('List_Vendors')?['body/value']",
+                                  "actions": {
+                                    "Create_confirmation_reminder": {
+                                      "type": "OpenApiConnection",
+                                      "description": "addDays(items('Apply_to_each_varPurchaseDate')?['mserp_sstlastconfirmrequestdate'], 2)",
+                                      "inputs": {
+                                        "parameters": {
+                                          "entityName": "sst_orderreminders",
+                                          "item/sst_orderconfirmationduedate": "@if(\r\n    or(\r\n        equals(formatDateTime(items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate'], 'dddd'), 'Thursday'),\r\n        equals(formatDateTime(items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate'], 'dddd'), 'Friday')\r\n    ),\r\n    addDays(items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate'], 4),\r\n    addDays(items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate'], 2)\r\n)\r\n",
+                                          "item/sst_coreminderfrom": "@items('Apply_to_each_header')?['mserp_sstconfirmreminderfromdate']",
+                                          "item/sst_requesteddeliverydate": "@{items('Apply_to_each_line')?['mserp_requesteddeliverydate']}",
+                                          "item/sst_productid@odata.bind": "products(@{items('Apply_to_each_Product')})",
+                                          "item/sst_confirmeddeliverydate": "@items('Apply_to_each_line')?['mserp_confirmeddeliverydate']",
+                                          "item/sst_purchaseorder": "@{items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate']}",
+                                          "item/sst_orderreminderid": "@guid()",
+                                          "item/sst_ordernumber": "@items('Apply_to_each_line')?['mserp_purchaseordernumber']",
+                                          "item/sst_purchasequantity": "@items('Apply_to_each_line')?['mserp_orderedpurchasequantity']",
+                                          "item/sst_vendoritemnumber": "@{items('Apply_to_each_line')?['mserp_itemnumber']}",
+                                          "item/sst_warehouselocation": "@{items('Apply_to_each_line')?['mserp_receivingwarehouseid']}",
+                                          "item/sst_vendorid@odata.bind": "msdyn_vendors(@{items('Apply_to_each_Vendor')?['msdyn_vendorid']})",
+                                          "item/sst_deliverymode": "@{items('Apply_to_each_line')?['mserp_dlvmode']}",
+                                          "item/sst_reminderlevel": 1,
+                                          "item/sst_remidertype": 1,
+                                          "item/sst_reminderrunfrom": "@utcNow()",
+                                          "item/sst_linenumber": "@items('Apply_to_each_line')?['mserp_linenumber']",
+                                          "item/sst_remainpurchasequantity": "@items('Apply_to_each_line')?['mserp_sstremainpurchphysical']",
+                                          "item/sst_triggerstart": true,
+                                          "item/sst_company@odata.bind": "cdm_companies(@{items('Apply_to_each_line')?['_mserp_dataareaid_id_value']})"
+                                        },
+                                        "host": {
+                                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                          "operationId": "CreateRecord",
+                                          "connectionName": "shared_commondataserviceforapps-1"
+                                        }
+                                      },
+                                      "metadata": {
+                                        "operationMetadataId": "3a1be0a6-014f-4d4a-93eb-98a4f1043d00"
+                                      }
+                                    }
+                                  },
+                                  "metadata": {
+                                    "operationMetadataId": "5968fdb9-f5e0-4bf9-9200-ce3bc8afeed9"
+                                  }
+                                }
+                              },
+                              "runAfter": {
+                                "Test_AB-Mahnung_on_header_Level": [
+                                  "Failed"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "8ac7ece5-9573-47ed-9479-0bcd7a2c8793"
+                              }
+                            }
+                          },
+                          "else": {
+                            "actions": {
+                              "Apply_to_each_order_reminder_id": {
+                                "type": "Foreach",
+                                "foreach": "@outputs('List_Order_Reminder')?['body/value']",
+                                "actions": {
+                                  "Apply_to_each_Product_2": {
+                                    "type": "Foreach",
+                                    "foreach": "@outputs('first_product_id')",
+                                    "actions": {
+                                      "Apply_to_each_Vendor_2": {
+                                        "type": "Foreach",
+                                        "foreach": "@outputs('List_Vendors')?['body/value']",
+                                        "actions": {
+                                          "Create_delivery_reminder": {
+                                            "type": "OpenApiConnection",
+                                            "inputs": {
+                                              "parameters": {
+                                                "entityName": "sst_orderreminders",
+                                                "item/sst_abdocumentdate": "@items('Apply_to_each_header')?['mserp_sstabdocumentdate']",
+                                                "item/sst_orderconfirmationduedate": "@if(\r\n    or(\r\n        equals(formatDateTime(items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate'], 'dddd'), 'Thursday'),\r\n        equals(formatDateTime(items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate'], 'dddd'), 'Friday')\r\n    ),\r\n    addDays(items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate'], 4),\r\n    addDays(items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate'], 2)\r\n)\r\n",
+                                                "item/sst_abnum": "@items('Apply_to_each_header')?['mserp_sstabnum']",
+                                                "item/sst_coreminderfrom": "@items('Apply_to_each_header')?['mserp_sstconfirmreminderfromdate']",
+                                                "item/sst_requesteddeliverydate": "@{items('Apply_to_each_line')?['mserp_requesteddeliverydate']}",
+                                                "item/sst_productid@odata.bind": "products(@{items('Apply_to_each_Product_2')})",
+                                                "item/sst_confirmeddeliverydate": "@items('Apply_to_each_line')?['mserp_confirmeddeliverydate']",
+                                                "item/sst_purchaseorder": "@{items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate']}",
+                                                "item/sst_orderreminderid": "@guid()",
+                                                "item/sst_ordernumber": "@{items('Apply_to_each_line')?['mserp_purchaseordernumber']}",
+                                                "item/sst_purchasequantity": "@items('Apply_to_each_line')?['mserp_orderedpurchasequantity']",
+                                                "item/sst_vendoritemnumber": "@{items('Apply_to_each_line')?['mserp_itemnumber']}",
+                                                "item/sst_warehouselocation": "@{items('Apply_to_each_line')?['mserp_receivingwarehouseid']}",
+                                                "item/sst_vendorid@odata.bind": "msdyn_vendors(@{items('Apply_to_each_Vendor_2')?['msdyn_vendorid']})",
+                                                "item/sst_deliverymode": "@{items('Apply_to_each_line')?['mserp_dlvmode']}",
+                                                "item/sst_reminderlevel": 1,
+                                                "item/sst_remidertype": 2,
+                                                "item/sst_reminderrunfrom": "@utcNow()",
+                                                "item/sst_linenumber": "@items('Apply_to_each_line')?['mserp_linenumber']",
+                                                "item/sst_remainpurchasequantity": "@items('Apply_to_each_line')?['mserp_sstremainpurchphysical']",
+                                                "item/sst_triggerstart": true,
+                                                "item/sst_superiorCoReminder@odata.bind": "sst_orderreminders(@{items('Apply_to_each_order_reminder_id')?['sst_orderreminderid']})",
+                                                "item/sst_company@odata.bind": "cdm_companies(@{items('Apply_to_each_line')?['_mserp_dataareaid_id_value']})"
+                                              },
+                                              "host": {
+                                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                                "operationId": "CreateRecord",
+                                                "connectionName": "shared_commondataserviceforapps-1"
+                                              }
+                                            },
+                                            "metadata": {
+                                              "operationMetadataId": "3a1be0a6-014f-4d4a-93eb-98a4f1043d00"
+                                            }
+                                          }
+                                        },
+                                        "metadata": {
+                                          "operationMetadataId": "e5a3f542-3a50-4363-8583-f3682d337f77"
+                                        }
+                                      }
+                                    },
+                                    "metadata": {
+                                      "operationMetadataId": "d8b0d145-c673-4c52-a74d-c6472a954017"
+                                    }
+                                  }
+                                },
+                                "metadata": {
+                                  "operationMetadataId": "5a57d246-5a19-4537-a9e6-f605c350d9d2"
+                                }
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "List_Order_Reminder": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "a9653b1f-9ef4-40b9-90ff-0ec2f894309b"
+                          }
+                        },
+                        "List_Products_ID": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "products",
+                              "$select": "productid",
+                              "$filter": "msdyn_itemnumber eq '@{items('Apply_to_each_line')?['mserp_itemnumber']}'"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "ListRecords",
+                              "connectionName": "shared_commondataserviceforapps-1"
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "8153390a-7e40-4e93-8383-f474781b5a9e"
+                          }
+                        },
+                        "List_Order_Reminder": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "sst_orderreminders",
+                              "$select": "sst_orderreminderid",
+                              "$filter": "sst_ordernumber eq '@{items('Apply_to_each_header')?['mserp_purchaseordernumber']}' and \nsst_remindercreated eq true and \nsst_linenumber eq @{items('Apply_to_each_line')?['mserp_linenumber']}"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "ListRecords",
+                              "connectionName": "shared_commondataserviceforapps-1"
+                            }
+                          },
+                          "runAfter": {
+                            "first_product_id": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "6a8e5108-677b-4ecf-b85d-85e2de831ddf"
+                          }
+                        },
+                        "first_product_id": {
+                          "type": "Compose",
+                          "inputs": "@array(first(outputs('List_Products_ID')?['body/value'])?['productid'])",
+                          "runAfter": {
+                            "List_Products_ID": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "763f0f43-0d83-40ac-b95d-818308ddf656"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Filter_array_NO_quantity_arrived_in_lines_copy": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "0874e679-e0fa-4b7f-8d0e-9d015ecd8bc1"
+                      }
+                    },
+                    "Filter_lines": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "mserp_purchpurchaseorderlinev2entities",
+                          "$select": "mserp_linenumber,mserp_purchaseordernumber,mserp_externalitemnumber,mserp_dlvmode,mserp_itemnumber,mserp_orderedpurchasequantity,mserp_receivingwarehouseid,mserp_sstremainpurchphysical,mserp_confirmeddeliverydate,_mserp_dataareaid_id_value,mserp_requesteddeliverydate,mserp_sstarrivedpurchphysical,mserp_purchpurchaseorderlinev2entityid",
+                          "$filter": "mserp_purchaseordernumber eq '@{items('Apply_to_each_header')?['mserp_purchaseordernumber']}' and mserp_purchaseorderlinestatus ne 200000004 and mserp_sstnodeliveryreminder ne 200000001"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "ListRecords",
+                          "connectionName": "shared_commondataserviceforapps-1"
+                        }
+                      },
+                      "runAfter": {
+                        "Add_a_new_row_on_Header_Level": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "4e9a51d2-a772-408b-a14c-b04efebeef15"
+                      }
+                    },
+                    "Get_a_row_by_ID_Header": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "mserp_purchpurchaseorderheaderv2entities",
+                          "recordId": "@items('Apply_to_each_header')?['mserp_purchpurchaseorderheaderv2entityid']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "GetItem",
+                          "connectionName": "shared_commondataserviceforapps-1"
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "2751e8d8-1308-48f1-80d5-543b13b3e049"
+                      }
+                    },
+                    "Add_a_new_row_on_Header_Level": {
+                      "type": "OpenApiConnection",
+                      "description": "item.item/sst_vendorname: @{outputs('Get_a_row_by_ID_Header')?['body/mserp_purchaseordername']}",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "sst_orderreminders",
+                          "item/sst_orderconfirmationduedate": "@if(\n    or(\n        equals(formatDateTime(items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate'], 'dddd'), 'Thursday'),\n        equals(formatDateTime(items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate'], 'dddd'), 'Friday')\n    ),\n    addDays(items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate'], 4),\n    addDays(items('Apply_to_each_header')?['mserp_sstlastconfirmrequestdate'], 2)\n)\n",
+                          "item/sst_abnum": "@outputs('Get_a_row_by_ID_Header')?['body/mserp_sstabnum']",
+                          "item/sst_coreminderfrom": "@outputs('Get_a_row_by_ID_Header')?['body/mserp_sstconfirmreminderfromdate']",
+                          "item/sst_requesteddeliverydate": "@outputs('Get_a_row_by_ID_Header')?['body/mserp_requesteddeliverydate']",
+                          "item/sst_confirmeddeliverydate": "@outputs('Get_a_row_by_ID_Header')?['body/mserp_confirmeddeliverydate']",
+                          "item/sst_purchaseorder": "@outputs('Get_a_row_by_ID_Header')?['body/mserp_sstlastconfirmrequestdate']",
+                          "item/sst_orderreminderid": "@guid()",
+                          "item/sst_ordernumber": "@outputs('Get_a_row_by_ID_Header')?['body/mserp_purchaseordernumber']",
+                          "item/sst_vendorid@odata.bind": "msdyn_vendors(@{outputs('Trimm_Vendor_list_to_first_Vendor_ID')})",
+                          "item/sst_reminderlevel": 1,
+                          "item/sst_remidertype": 1,
+                          "item/sst_reminderrunfrom": "@utcNow()",
+                          "item/sst_triggerstart": true,
+                          "item/sst_company@odata.bind": "cdm_companies(@{outputs('Get_a_row_by_ID_Header')?['body/_mserp_dataareaid_id_value']})"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "CreateRecord",
+                          "connectionName": "shared_commondataserviceforapps-1"
+                        }
+                      },
+                      "runAfter": {
+                        "Get_a_row_by_ID_Header": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "0aadeeff-d24f-4d75-8c13-a0eea487fe26"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Trimm_Vendor_list_to_first_Vendor_ID": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "2ce750e6-b59a-4f42-803c-8c2fa7440c2e"
+                  }
+                },
+                "List_Vendors": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "msdyn_vendors",
+                      "$select": "msdyn_vendorid",
+                      "$filter": "sst_noconfirmreminder eq false and \nmsdyn_vendoraccountnumber eq '@{items('Apply_to_each_header')?['mserp_ordervendoraccountnumber']}' and\n_msdyn_company_value eq '@{items('Apply_to_each_header')?['_mserp_dataareaid_id_value']}'"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Filter_Purchase_order_header_staging": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "49a403cc-4d1a-4901-b801-8f0090ddc341"
+                  }
+                },
+                "Trimm_Vendor_list_to_first_Vendor_ID": {
+                  "type": "Compose",
+                  "inputs": "@first(outputs('List_Vendors')?['body/value'])?['msdyn_vendorid']",
+                  "runAfter": {
+                    "List_Vendors": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "777d7ef6-9c2d-4e7f-92fb-553ed2c798c4"
+                  }
+                }
+              },
+              "runAfter": {
+                "Filter_headers_by_purchase_date_copy": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "5c7cc768-4c5a-449a-9cdf-778ac95801a7"
+              }
+            },
+            "Filter_headers_copy": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "mserp_purchpurchaseorderheaderv2entities",
+                  "$select": "mserp_purchpurchaseorderheaderv2entityid,mserp_purchaseordernumber,mserp_ordervendoraccountnumber, mserp_sstlastconfirmrequestdate, mserp_sstconfirmreminderfromdate,mserp_confirmeddeliverydate,mserp_sstconfirmreminderfromdate,mserp_sstabdocumentdate,mserp_sstabnum,_mserp_dataareaid_id_value",
+                  "$filter": "mserp_documentapprovalstatus eq 200000004 and mserp_sstnoconfirmreminder eq 200000000 and mserp_isdelivereddirectly ne 200000001 and mserp_purchaseorderstatus ne 200000004"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              },
+              "runAfter": {
+                "UPDATE_Reminder_level": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ffd32da7-1a1a-4f3f-99d7-406f18ce130b"
+              }
+            },
+            "Filter_headers_by_purchase_date_copy": {
+              "type": "Query",
+              "inputs": {
+                "from": "@outputs('Filter_headers_copy')?['body/value']",
+                "where": "@lessOrEquals(item()?['mserp_sstlastconfirmrequestdate'], variables('purchaseDate'))"
+              },
+              "runAfter": {
+                "Filter_headers_copy": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "0e582658-b762-4a5f-84a8-96a02d73cc01"
+              }
+            },
+            "UPDATE_Reminder_level": {
+              "type": "Scope",
+              "actions": {
+                "List_Order_Reminders_to_ADD_Reminder_level": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "sst_orderreminders",
+                      "$select": "sst_orderreminderid,sst_reminderlevel",
+                      "$filter": "sst_remidertype eq 1"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "f90a87be-5c14-4782-a000-fcdb095d1f6e"
+                  }
+                },
+                "Apply_to_each_Order_Confirmation_Reminder_the_Reminder_level": {
+                  "type": "Foreach",
+                  "foreach": "@outputs('List_Order_Reminders_to_ADD_Reminder_level')?['body/value']",
+                  "actions": {
+                    "Condition": {
+                      "type": "If",
+                      "expression": {
+                        "greaterOrEquals": [
+                          "@items('Apply_to_each_Order_Confirmation_Reminder_the_Reminder_level')?['sst_reminderlevel']",
+                          1
+                        ]
+                      },
+                      "actions": {
+                        "Update_by_Max_Reminder_Level": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "sst_orderreminders",
+                              "recordId": "@items('Apply_to_each_Order_Confirmation_Reminder_the_Reminder_level')?['sst_orderreminderid']",
+                              "item/sst_reminderlevel": "@add(max(items('Apply_to_each_Order_Confirmation_Reminder_the_Reminder_level')?['sst_reminderlevel']), 1)",
+                              "item/sst_triggerstart": true
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "UpdateRecord",
+                              "connectionName": "shared_commondataserviceforapps-1"
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "bbf8a030-caa9-4661-932a-f619921853ed"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "metadata": {
+                        "operationMetadataId": "265496c1-6476-41b3-be2f-7d2cccc43fdb"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "List_Order_Reminders_to_ADD_Reminder_level": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "db911b0a-8e23-4fba-8295-3b896bd51126"
+                  }
+                }
+              },
+              "runAfter": {
+                "DELETE_Reminders_which_have_AB_number": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "26674292-ed0f-4db3-83c2-e69f353fa225"
+              }
+            },
+            "DELETE_Reminders_which_have_AB_number": {
+              "type": "Scope",
+              "actions": {
+                "List_Order_Reminders_for_DELETE_2": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "sst_orderreminders",
+                      "$select": "sst_orderreminderid,sst_ordernumber,sst_abnum",
+                      "$filter": "sst_remidertype eq 2 and \n_sst_superiorcoreminder_value ne null and\nsst_abnum ne null"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "f90a87be-5c14-4782-a000-fcdb095d1f6e"
+                  }
+                },
+                "Apply_to_each_delivery_reminder_which_came_from_confirmation_reminder": {
+                  "type": "Foreach",
+                  "foreach": "@outputs('List_Order_Reminders_for_DELETE_2')?['body/value']",
+                  "actions": {
+                    "List_Order_Reminders_for_DELETE_3": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "sst_orderreminders",
+                          "$select": "sst_orderreminderid,sst_ordernumber,sst_abnum",
+                          "$filter": "sst_remidertype eq 1 and \nsst_ordernumber eq '@{items('Apply_to_each_delivery_reminder_which_came_from_confirmation_reminder')?['sst_ordernumber']}'"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "operationId": "ListRecords",
+                          "connectionName": "shared_commondataserviceforapps-1"
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "f90a87be-5c14-4782-a000-fcdb095d1f6e"
+                      }
+                    },
+                    "Apply_DELETE_to_each_Order_Confirmation_Reminder_3": {
+                      "type": "Foreach",
+                      "foreach": "@outputs('List_Order_Reminders_for_DELETE_3')?['body/value']",
+                      "actions": {
+                        "Condition_to_delete_Order_Confirmation_Reminder_2": {
+                          "type": "If",
+                          "expression": {
+                            "equals": [
+                              "@empty(outputs('List_Order_Reminders_for_DELETE_2')?['body/value'])",
+                              false
+                            ]
+                          },
+                          "actions": {
+                            "Delete_the_reminder_with_value_NO_2": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "sst_orderreminders",
+                                  "recordId": "@items('Apply_DELETE_to_each_Order_Confirmation_Reminder_3')?['sst_orderreminderid']"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "operationId": "DeleteRecord",
+                                  "connectionName": "shared_commondataserviceforapps-1"
+                                }
+                              },
+                              "metadata": {
+                                "operationMetadataId": "25c240dd-6b81-4204-82a9-fbba1a724764"
+                              }
+                            }
+                          },
+                          "else": {
+                            "actions": {}
+                          },
+                          "metadata": {
+                            "operationMetadataId": "48bf0d7e-3eb5-417b-abbe-ce443f5993f7"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "List_Order_Reminders_for_DELETE_3": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "1d856b68-0005-480b-b8c7-08b65258f5ab"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "List_Order_Reminders_for_DELETE_2": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "325f2f41-e6bc-4506-98ba-ef7cb00d6682"
+                  }
+                }
+              },
+              "runAfter": {
+                "DELETE_Reminders": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "1247e67c-a721-4fcd-9cd3-bdbe21656754"
+              }
+            },
+            "Add_Notification_Process_started": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "appnotifications",
+                  "item/title": "Bestellmahnungenprozess (manuell) für ''AB-Mahnung''",
+                  "item/ownerid@odata.bind": "systemusers(@{triggerOutputs()?['body/_modifiedby_value']})",
+                  "item/icontype": 100000000,
+                  "item/priority": 200000000,
+                  "item/body": "Die Bestellmahnungenprozess (manuell) für ''AB-Mahnung'' ist gestartet."
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Define_purchaseDate": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7af54427-5a23-46d4-b335-1219ad7dd99a"
+          }
+        },
+        "Update_Flow_Trigger": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "sst_flow_triggers",
+              "recordId": "@triggerOutputs()?['body/sst_flow_triggerid']",
+              "item/sst_start_flow_bit": false
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "UpdateOnlyRecord",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          },
+          "runAfter": {
+            "Scope_CREATE_confirmation_reminder": [
+              "Succeeded",
+              "Skipped",
+              "TimedOut",
+              "Failed"
+            ]
+          }
+        },
+        "Add_Notification_Process_completed": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "appnotifications",
+              "item/title": "Bestellmahnungenprozess (manuell) für ''AB-Mahnung''",
+              "item/ownerid@odata.bind": "systemusers(@{triggerOutputs()?['body/_modifiedby_value']})",
+              "item/icontype": 100000000,
+              "item/priority": 200000000,
+              "item/body": "Die Bestellmahnungenprozess (manuell) für ''AB-Mahnung'' ist abgeschlossen."
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "CreateRecord",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          },
+          "runAfter": {
+            "Update_Flow_Trigger": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

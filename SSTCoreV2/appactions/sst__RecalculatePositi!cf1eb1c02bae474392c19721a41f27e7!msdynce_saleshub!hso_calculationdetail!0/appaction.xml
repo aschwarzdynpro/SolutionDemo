@@ -1,0 +1,40 @@
+<appaction uniquename="sst__RecalculatePositi!cf1eb1c02bae474392c19721a41f27e7!msdynce_saleshub!hso_calculationdetail!0">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="(Neu) Berechnen">
+    <label description="(Neu) Berechnen" languagecode="1031" />
+  </buttonlabeltext>
+  <buttontooltipdescription default="Führt eine (Neu-) Berechnung der Kalkulationsposition durch.">
+    <label description="Führt eine (Neu-) Berechnung der Kalkulationsposition durch." languagecode="1031" />
+  </buttontooltipdescription>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculationdetail</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculationdetail</contextvalue>
+  <fonticon>$clientsvg:Calculator</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>0</location>
+  <name>RecalculatePositi!cf1eb1c02bae474392c19721a41f27e7</name>
+  <onclickeventjavascriptfunctionname>Schulz.CalculationPositionRibbon.callCustomAPIExecuteOperation</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":5},{"type":4},{"type":21,"value":"SingleRecalculatePosition"},{"type":19,"value":2}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>36ff4f4d-c662-ee11-8df0-000d3ab3405b</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100100022.5000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>sst_saleshubdefaultcommandlibrary_a87a9</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>d247c6abc3d5424782c2b349bd20bb7a</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

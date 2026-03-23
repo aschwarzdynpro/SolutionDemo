@@ -1,0 +1,55 @@
+if (typeof (Schulz) === "undefined") { Schulz = {}; };
+if (typeof (Schulz.BookingForm) === "undefined") { Schulz.BookingForm = {}; }
+
+Schulz.BookingForm.onLoad = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    //Schulz.WorkOrderForm.registerEvents(formContext);
+
+    if (formContext.ui.getFormType() === 2) // Update
+    {
+        Schulz.BookingForm.setFormReadonlyIfWorkOrderIsFinished(formContext);
+        Schulz.BookingForm.showRelevantTimeline(formContext);
+    }
+
+};
+
+Schulz.BookingForm.showRelevantTimeline = (formContext) => {
+
+    var workordertype = formContext.getAttribute("sst_workordertype_str")?.getValue();
+
+    var notesTab = formContext.ui.tabs.get("tab_notes") ?? formContext.ui.tabs.get("tab_general");
+
+    if (workordertype === null || workordertype === "Montage") // Show booking timeline for Montage and non-workorder bookings
+    {
+        notesTab.sections.get("section_notes_brb").setVisible(true);
+        notesTab.sections.get("section_notes_wo").setVisible(false);
+    }
+    else
+    {
+        notesTab.sections.get("section_notes_brb").setVisible(false);
+        notesTab.sections.get("section_notes_wo").setVisible(true);
+    }
+}
+
+Schulz.BookingForm.setFormReadonlyIfWorkOrderIsFinished = (formContext) => {
+
+    var workOrderAttribute = formContext.getAttribute("msdyn_workorder").getValue();
+
+    if (workOrderAttribute === null || workOrderAttribute.length <= 0)
+        return;
+
+    var workOrderId = workOrderAttribute[0].id;
+    Xrm.WebApi.retrieveRecord("msdyn_workorder", workOrderId, "?$select=msdyn_systemstatus").then(
+        function success(result) {
+            if (result.msdyn_systemstatus >= 690970003)
+            {
+                Schulz.Common.disableAllFields(formContext);
+                formContext.ui.setFormNotification("Die Work Order ist abgeschlossen. Änderungen sind nicht mehr möglich.", "INFO", "wo_readonly");
+            }
+        },
+        function (error) {
+            console.log(error.message);
+            // handle error conditions
+        }
+    );
+}

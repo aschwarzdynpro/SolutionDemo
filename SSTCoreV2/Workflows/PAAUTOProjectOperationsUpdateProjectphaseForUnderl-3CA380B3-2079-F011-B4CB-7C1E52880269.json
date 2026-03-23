@@ -1,0 +1,242 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataverse"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Bei_Änderung_Projektphase_auf_Abgeschlossen": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "msdyn_project",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filterexpression": "sst_projectphase_opt eq 867520004"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "conditions": [
+            {
+              "expression": "@equals(triggerOutputs()?['body/sst_projectphase_opt'], 867520004)"
+            },
+            {
+              "expression": "@not(equals(triggerOutputs()?['body/sst_projectphase_opt'], triggerOutputs()?['body/previous/sst_projectphase_opt']))"
+            }
+          ],
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 10,
+              "maximumWaitingRuns": 10
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "5213764e-6a3b-4ec8-8d53-9e104f8957d1"
+          }
+        }
+      },
+      "actions": {
+        "Wenn_Projekt_keine_übergeordnete_Projekte_hat": {
+          "type": "If",
+          "expression": {
+            "not": {
+              "equals": [
+                "@triggerOutputs()?['body/_sst_parentproject_id_value']",
+                "@null"
+              ]
+            }
+          },
+          "actions": {
+            "Als_untergeordnetes_Projekt_direkte_Ressourcenanforderung_updaten": {
+              "type": "Scope",
+              "actions": {
+                "In_Ressourcenanforderungen_nach_Projekt_aus_Trigger_filtern": {
+                  "type": "OpenApiConnection",
+                  "description": "Filter both projects and assembly-projects",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "msdyn_resourcerequirements",
+                      "$filter": "_msdyn_projectid_value eq @{triggerOutputs()?['body/msdyn_projectid']} or _sst_projectassembly_ref_value eq @{triggerOutputs()?['body/msdyn_projectid']}"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "473ffa64-ff7a-4765-b67a-da7d7926888e"
+                  }
+                },
+                "Wenn_mindestens_eine_Ressourcenanforderung_vorhanden_ist": {
+                  "type": "If",
+                  "expression": {
+                    "greater": [
+                      "@length(outputs('In_Ressourcenanforderungen_nach_Projekt_aus_Trigger_filtern')?['body/value'])",
+                      0
+                    ]
+                  },
+                  "actions": {
+                    "Für_alle_zugehörigen_Ressourcenanforderungen": {
+                      "type": "Foreach",
+                      "foreach": "@outputs('In_Ressourcenanforderungen_nach_Projekt_aus_Trigger_filtern')?['body/value']",
+                      "actions": {
+                        "Aktualisiere_Status_Abgeschlossen_via_Schema_und_GUID": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "msdyn_resourcerequirements",
+                              "recordId": "@items('Für_alle_zugehörigen_Ressourcenanforderungen')?['msdyn_resourcerequirementid']",
+                              "item/msdyn_Status@odata.bind": "/msdyn_requirementstatuses(3d6f40b1-0fb5-40d3-8f12-6cd30f67bcad)",
+                              "item/statecode": 1
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord",
+                              "connectionName": "shared_commondataserviceforapps"
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "9a4ad969-0c52-46c4-860a-90f277d1b232"
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "754d2b9b-6c66-47d5-a1bf-246c0ccf0972"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "In_Ressourcenanforderungen_nach_Projekt_aus_Trigger_filtern": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "8035c3eb-7ff8-49da-bccc-0712720713a2"
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "4f9164a0-946f-4551-ac22-135c497416b0"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Als_übergeordnetes_Projekt_auch_untergeordnete_Projekte_bearbeiten": {
+                "type": "Scope",
+                "actions": {
+                  "List_rows": {
+                    "type": "OpenApiConnection",
+                    "description": "OLD Filter rows: \nstartswith(sst_projectnumber, '@{concat(triggerOutputs()?['body/sst_projectnumber'],'_')}')",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "msdyn_projects",
+                        "$select": "msdyn_projectid,sst_projectnumber,sst_projectphase_opt,sst_parentproject_id",
+                        "$filter": "startswith(sst_projectnumber, '@{concat(triggerOutputs()?['body/sst_projectnumber'])}') and _sst_parentproject_id_value ne null and sst_projectphase_opt ne 867520004"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "ListRecords",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "31b9237d-db8d-4d05-8ee8-e7b619f36f69"
+                    }
+                  },
+                  "Wenn_untergeordnete_Projekte_gefunden_wurden": {
+                    "type": "If",
+                    "expression": {
+                      "greater": [
+                        "@length(outputs('List_rows')?['body/value'])",
+                        0
+                      ]
+                    },
+                    "actions": {
+                      "Für_alle_gefundenen_Unterprojekte": {
+                        "type": "Foreach",
+                        "description": "Durch Setzen des Status der Unterprojekte wird dieser Flow X-mal erneut getriggert",
+                        "foreach": "@outputs('List_rows')?['body/value']",
+                        "actions": {
+                          "Aktualisiere_Projektphase": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "msdyn_projects",
+                                "recordId": "@items('Für_alle_gefundenen_Unterprojekte')?['msdyn_projectid']",
+                                "item/sst_projectphase_opt": 867520004
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord",
+                                "connectionName": "shared_commondataserviceforapps"
+                              }
+                            },
+                            "metadata": {
+                              "operationMetadataId": "ef2cafe1-3263-4943-a8d3-33f2bdcf5fa7"
+                            }
+                          }
+                        },
+                        "metadata": {
+                          "operationMetadataId": "d018b4ff-7fd3-4372-8fb7-10ece95bfe1a"
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {}
+                    },
+                    "runAfter": {
+                      "List_rows": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "6e833492-e410-4883-bd44-6db16dbbfd98"
+                    }
+                  }
+                },
+                "metadata": {
+                  "operationMetadataId": "1c1fbcad-2f8e-4987-a3eb-0984d30dd621"
+                }
+              }
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "b70c12e5-fb10-4dee-94cb-f1e141d54ed4"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

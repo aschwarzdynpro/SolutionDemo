@@ -1,0 +1,3899 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps_1": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRDataverse"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_sql_1": {
+        "api": {
+          "name": "shared_sql"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "sst_CRSQL"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)": {
+          "defaultValue": "d365-schulz-int-11b9dbaf056743afd3devaos.axcloud.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarUnifiedOperationsInstance",
+            "description": "The Unified Operations Instance to connect to within a Flow when using Web API Calls"
+          }
+        },
+        "EnvVar | Name App Reg ClientID (hso_EnvVarNameAppRegClientID)": {
+          "defaultValue": "AppReg-D365-PowerAutomate-Dev-ClientID",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarNameAppRegClientID"
+          }
+        },
+        "EnvVar | Name App Reg ClientSecret (hso_EnvVarNameAppRegClientSecret)": {
+          "defaultValue": "AppReg-D365-PowerAutomate-Dev-ClientSecret",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarNameAppRegClientSecret"
+          }
+        },
+        "EnvVar | Articlesearch | Overhead Surcharge Group (hso_EnvVarArticlesearchOverheadSurchargeGroup)": {
+          "defaultValue": "AUS1",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarArticlesearchOverheadSurchargeGroup"
+          }
+        }
+      },
+      "triggers": {
+        "When_a_row_is_added,_modified_or_deleted": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 4,
+              "subscriptionRequest/entityname": "hso_productrequirementdetail",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "hso_status",
+              "subscriptionRequest/filterexpression": "hso_status eq 2"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps_1"
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "01e645d6-ecf1-48a4-87f2-616ca19820a0"
+          }
+        }
+      },
+      "actions": {
+        "Pre-Operation": {
+          "type": "Scope",
+          "actions": {
+            "List_CDS_Released_Products_[crosscompany]": {
+              "type": "Http",
+              "inputs": {
+                "uri": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/data/CDSReleasedDistinctProducts?$filter=(SSTManufacturerItemNum eq '@{encodeUriComponent(triggerOutputs()?['body/hso_manufacturerpid'])}') and (SSTManufacturer eq '@{encodeUriComponent(outputs('Get_Manufacturer')?['body/hso_name'])}')&cross-company=true",
+                "method": "GET",
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "tenant": "@{body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['tenantid']}",
+                  "audience": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/",
+                  "clientId": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['clientid']",
+                  "secret": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['secret']"
+                }
+              },
+              "runAfter": {
+                "Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c0bdceec-565c-4291-a72a-484af6b68a4b"
+              }
+            },
+            "Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_productrequirementdetails",
+                  "recordId": "@triggerOutputs()?['body/hso_productrequirementdetailid']",
+                  "$expand": "hso_productcategory_id($select=msdyn_name,msdyn_code,_msdyn_hierarchy_value, hso_categoryrecordid),\nhso_costcenter($select=sst_costcenter_number_txt),\nhso_countryoforigin_id($select=sst_countryiso3code)"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "connectionName": "shared_commondataserviceforapps_1"
+                }
+              },
+              "runAfter": {
+                "Get_Manufacturer": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "a2070e6c-40b1-4cdc-addb-633dde1e26e4"
+              }
+            },
+            "Log_-_Start_PreOp": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "Log_txt",
+                "value": "[INF] - [@{utcNow()}] - Fetching information: Article request and CDS released products  @{decodeUriComponent('%0A')}"
+              },
+              "metadata": {
+                "operationMetadataId": "e112e8c4-f99f-43b5-8a16-4811a2efb8bd"
+              }
+            },
+            "Global_Product_already_created_by_Flow_[Pre]": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@triggerOutputs()?['body/hso_foglobalproduct_opt']",
+                  true
+                ]
+              },
+              "actions": {
+                "Set_GlobalProductID_because_existing_[by_Flow]": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "GlobalProductID_txt",
+                    "value": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productnumberlog']"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "672778a3-854e-4c84-ad3b-8c701637bd2d"
+                  }
+                },
+                "Log_-_Global_product_already_existing": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "Log_txt",
+                    "value": "[INF] - [@{utcNow()}] - Global Product from previous flow run detected.  Using @{variables('GlobalProductID_txt')} as Global Product ID  @{decodeUriComponent('%0A')}"
+                  },
+                  "runAfter": {
+                    "Set_GlobalProductID_because_existing_[by_Flow]": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "9562c0be-9e5e-462a-921f-01072a68b05e"
+                  }
+                },
+                "Check_if_released_product_exists_[GP]": {
+                  "type": "If",
+                  "expression": {
+                    "greater": [
+                      "@length(body('List_CDS_Released_Products_[crosscompany]')?['value'])",
+                      0
+                    ]
+                  },
+                  "actions": {
+                    "Log_-_released_product_found_[GP]": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "Log_txt",
+                        "value": "[INF] - [@{utcNow()}] - Released product found - Using @{variables('GlobalProductID_txt')} as Global Product ID  @{decodeUriComponent('%0A')}"
+                      },
+                      "runAfter": {
+                        "ExistingReleasedProduct_[true_GP]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "ae0bd69a-28ee-4d72-a024-d413e78b5134"
+                      }
+                    },
+                    "ExistingReleasedProduct_[true_GP]": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "ExistingReleasedProduct_bool",
+                        "value": true
+                      },
+                      "metadata": {
+                        "operationMetadataId": "2c62f0a8-766c-450b-83d4-0f1efc44cce6"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Log_-_no_released_product_found_[GP]": {
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "Log_txt",
+                          "value": "[INF] - [@{utcNow()}] - No released product found - Creation of Global Product  @{decodeUriComponent('%0A')}"
+                        },
+                        "runAfter": {
+                          "ExistingReleasedProduct_[false_GP]": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "c2423368-90b8-4937-b151-162d7f58975e"
+                        }
+                      },
+                      "ExistingReleasedProduct_[false_GP]": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "ExistingReleasedProduct_bool",
+                          "value": false
+                        },
+                        "metadata": {
+                          "operationMetadataId": "2c62f0a8-766c-450b-83d4-0f1efc44cce6"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Log_-_Global_product_already_existing": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "64c3d718-f6ed-4a44-ad7f-fbd181f1ac13"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Check_if_released_product_exists_or_no_PID": {
+                    "type": "If",
+                    "expression": {
+                      "and": [
+                        {
+                          "greater": [
+                            "@length(body('List_CDS_Released_Products_[crosscompany]')?['value'])",
+                            0
+                          ]
+                        },
+                        {
+                          "not": {
+                            "equals": [
+                              "@empty(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_manufacturerpid'])",
+                              "@true"
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "actions": {
+                      "CreateGlobalProduct_[false]": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "InlineCreateGlobalProduct_bool",
+                          "value": false
+                        },
+                        "metadata": {
+                          "operationMetadataId": "50f8f73d-fe7e-4cad-9fb7-3d1c155ffb09"
+                        }
+                      },
+                      "Set_GlobalProductID_because_existing": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "GlobalProductID_txt",
+                          "value": "@{first(body('List_CDS_Released_Products_[crosscompany]')?['value'])?['ProductNumber']}"
+                        },
+                        "runAfter": {
+                          "ExistingReleasedProduct_[true]": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "9d9ad2d1-252a-4a11-a66a-a456781da7db"
+                        }
+                      },
+                      "Log_-_released_product_found": {
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "Log_txt",
+                          "value": "[INF] - [@{utcNow()}] - Released product found - Using @{variables('GlobalProductID_txt')} as Global Product ID  @{decodeUriComponent('%0A')}"
+                        },
+                        "runAfter": {
+                          "Set_GlobalProductID_because_existing": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "ae0bd69a-28ee-4d72-a024-d413e78b5134"
+                        }
+                      },
+                      "ExistingReleasedProduct_[true]": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "ExistingReleasedProduct_bool",
+                          "value": true
+                        },
+                        "runAfter": {
+                          "CreateGlobalProduct_[false]": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "2c62f0a8-766c-450b-83d4-0f1efc44cce6"
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {
+                        "CreateGlobalProduct_[true]": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "InlineCreateGlobalProduct_bool",
+                            "value": true
+                          },
+                          "metadata": {
+                            "operationMetadataId": "50f8f73d-fe7e-4cad-9fb7-3d1c155ffb09"
+                          }
+                        },
+                        "Log_-_no_released_product_found": {
+                          "type": "AppendToStringVariable",
+                          "inputs": {
+                            "name": "Log_txt",
+                            "value": "[INF] - [@{utcNow()}] - No released product found - Creation of Global Product  @{decodeUriComponent('%0A')}"
+                          },
+                          "runAfter": {
+                            "ExistingReleasedProduct_[false]": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "c2423368-90b8-4937-b151-162d7f58975e"
+                          }
+                        },
+                        "ExistingReleasedProduct_[false]": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "ExistingReleasedProduct_bool",
+                            "value": false
+                          },
+                          "runAfter": {
+                            "CreateGlobalProduct_[true]": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "2c62f0a8-766c-450b-83d4-0f1efc44cce6"
+                          }
+                        }
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "64c3d718-f6ed-4a44-ad7f-fbd181f1ac13"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Check_sales_price_markup": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9b45a4cb-659f-414c-af41-7cf34c2c3e44"
+              }
+            },
+            "Get_Manufacturer": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_manufacturers",
+                  "recordId": "@triggerOutputs()?['body/_hso_manufacturer_id_value']",
+                  "$select": "hso_name"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "connectionName": "shared_commondataserviceforapps_1"
+                }
+              },
+              "runAfter": {
+                "Log_-_Start_PreOp": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c66e5a10-a98d-4c9d-bf85-393e0b0fb102"
+              }
+            },
+            "ReleasedProductSetting_str": {
+              "type": "SetVariable",
+              "description": "\"SSTManufacturerItemNum\": \"will be set during released product creaton, bcc if not given GlobalProductID",
+              "inputs": {
+                "name": "ReleasedProductSettings_str",
+                "value": "\"ItemModelGroupId\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_itemmodelgroup_opt@OData.Community.Display.V1.FormattedValue']}\",\n\"TrackingDimensionGroupName\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_trackingdimensiongroup_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"PurchaseSalesTaxItemGroupCode\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_purchasetaxgroup_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"StorageDimensionGroupName\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_storagedimensiongroup_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"UnitConversionSequenceGroupId\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_unitsequencegroup_value@OData.Community.Display.V1.FormattedValue']}\",\n\"InventoryUnitSymbol\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_lagereinheit_value@OData.Community.Display.V1.FormattedValue']}\",\n\"BOMUnitSymbol\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_lagereinheit_value@OData.Community.Display.V1.FormattedValue']}\",\n\"ProductLifecycleStateId\": \"AKTIV\",\n\"PurchaseUnitSymbol\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_orderunit_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"InventoryReservationHierarchyName\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_reservationhierarchy_value@OData.Community.Display.V1.FormattedValue']}\",\n\"ProjectCategoryId\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_projectcategory_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"SalesUnitSymbol\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_orderunit_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"ProductGroupId\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_itemgroup_value@OData.Community.Display.V1.FormattedValue']}\",\n\"SalesSalesTaxItemGroupCode\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_salestaxgroup_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"SSTManufacturer\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_manufacturer_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"SSTManufacturerTypeNum\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_manufacturertype']}\",\n\"IntrastatCommodityCode\":\"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_customsnumber']}\",\n\"SSTMetalId1\":\"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_metalsurchargetype1_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"SSTMetalBase1\":@{Coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_metalbase1_dec'],0)},\n\"SSTMetalQuantity1\":@{Coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_metalquantity1_dec'],0)},\n\"SSTMetalId2\":\"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_metalsurchargetype2_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"SSTMetalBase2\":@{Coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_metalbase2_dec'],0)},\n\"SSTMetalQuantity2\":@{Coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_metalquantity2_dec'],0)},\n\"SSTMetalId3\":\"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_metalsurchargetype3_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"SSTMetalBase3\":@{Coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_metalbase3_dec'],0)},\n\"SSTMetalQuantity3\":@{Coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_metalquantity3_dec'],0)},\n\"SSTEplanItemNum\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_eplanarticlenumber']}\",\n\"SSTOVHGroupId\": \"@{parameters('EnvVar | Articlesearch | Overhead Surcharge Group (hso_EnvVarArticlesearchOverheadSurchargeGroup)')}\",\n\"OriginCountryRegionId\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_countryoforigin_id/sst_countryiso3code']}\",\n\"SSTBasePricePurch\": @{Coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_purchasepricecatalogue'],0)},\n\"PurchasePriceQuantity\": @{Coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_pricequantity'],1)},\n\"UnitCost\": @{Coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_purchasepricecatalogue'],0)},\n\"UnitCostQuantity\": @{Coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_pricequantity'],1)},\n\"PurchaseLineDiscountProductGroupCode\": @{if(empty(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_surchargegroup']),string('\"\"'),Concat(string('\"'),outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_surchargegroup'],string('\"')))},\n\"DefaultOrderType\": \"@{if(\r\nequals(\r\n    outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_defaultordertype_opt']\r\n    ,3\r\n   ),\r\n'Kanban',\r\n    if(\r\n        equals(\r\n        outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_defaultordertype_opt']\r\n        ,2\r\n        ),\r\n        'Production',\r\n    'Purch')\r\n)}\",\n\"CostGroupId\": \"Material\",\n\"RawMaterialPickingPrinciple\": \"OrderPicking\",\n\"FlushingPrinciple\": \"Finish\",\n\"IsUnitCostAutomaticallyUpdated\": \"Yes\",\n\"PurchaseOverdeliveryPercentage\": @{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_purchaseoverdeliverypercentage_fx']},\n\"PurchaseUnderdeliveryPercentage\": @{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_purchaseunderdeliverypercentage_fx']},\n\"SalesOverdeliveryPercentage\": @{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_salesoverdeliverypercentage_fx']},\n\"SalesUnderdeliveryPercentage\": @{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_salesunderdeliverypercentage_fx']},\n\"TransferOrderOverdeliveryPercentage\": @{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_transferorderoverdeliverypercentage_f']},\n\"TransferOrderUnderdeliveryPercentage\": @{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_transferorderunderdeliverypercentage_']},\n\"MaterialOverpickPercentage\": 5000"
+              },
+              "runAfter": {
+                "List_CDS_Released_Products_[crosscompany]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "5d954d07-f662-4761-98f2-cc185299c16d"
+              }
+            },
+            "Check_Manual_Metal_Surcharge": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@coalesce(\r\n  outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_manualmetalsurcharge'],\r\n  false\r\n)",
+                      "@true"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Append_Manual_Metal_Surcharge_to_Setting": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "ReleasedProductSettings_str",
+                    "value": ", \"SSTManualMetalSurchargeSpecification\": \"Yes\",\n\"SSTMetalSurcharge\": @{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_metalsurchargepricequantity']}"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "ac0a8e8a-d6e2-408b-b426-3e408b9b6424"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "ReleasedProductSetting_str": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "0a6a1b57-17ba-48b9-800d-462b108e365e"
+              }
+            },
+            "Check_sales_price_markup": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_usecategoryforpricecalculation'], false)",
+                  "@true"
+                ]
+              },
+              "actions": {
+                "Append_Setting_MarkupCode": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "ReleasedProductSettings_str",
+                    "value": ", \"SalesPriceCalculationModel\": \"PercentMarkup\",\n\"BaseSalesPriceSource\": \"PurchPrice\",\n\"SSTETIMMarkupCode\": @{coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productcategory_id/hso_categoryrecordid'],0)}"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "dad4f9bc-f51b-4c3c-8f4e-dff09892b09c"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Append_Setting_None": {
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "ReleasedProductSettings_str",
+                      "value": ", \"SalesPriceCalculationModel\": \"None\""
+                    },
+                    "metadata": {
+                      "operationMetadataId": "e2608a53-18a3-4d61-8b01-78749be54e43"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Check_Manual_Metal_Surcharge": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "94a85651-23d1-4d58-9467-037de5ff17c1"
+              }
+            },
+            "Check_Default_Order_Type": {
+              "type": "If",
+              "description": "Ignore Financial Dimension Display Value for Items with Default Order Type =\"Production\"",
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@triggerOutputs()?['body/hso_defaultordertype_opt']",
+                        2
+                      ]
+                    }
+                  }
+                ]
+              },
+              "actions": {
+                "Append_Financial_Dimension_Display_Value": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "ReleasedProductSettings_str",
+                    "value": ", \"DefaultLedgerDimensionDisplayValue\": \"-@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_costcenter/sst_costcenter_number_txt']}--\""
+                  },
+                  "metadata": {
+                    "operationMetadataId": "df97e6ad-a734-49a9-98c8-fb8af7106a6a"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Global_Product_already_created_by_Flow_[Pre]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ca6480e6-357a-4abc-8abc-ed6c7e93ddd8"
+              }
+            },
+            "Check_Overhead_Surcharge_Group": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@empty(\r\n  outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_overheadsurchargegroup_id_value']\r\n)",
+                      "@false"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Append_Overhead_Surcharge_Group": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "ReleasedProductSettings_str",
+                    "value": ", \"SSTOVHGroupId\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_overheadsurchargegroup_id_value@OData.Community.Display.V1.FormattedValue']}\""
+                  },
+                  "metadata": {
+                    "operationMetadataId": "e3e17210-8a33-4f7a-bf13-7a5614e2b04e"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Check_Default_Order_Type": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "61006a1a-03fa-4ea4-87c2-2a4fb071de77"
+              }
+            },
+            "Check_Base_Sales_Price": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@empty(\r\n  string(\r\n    outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_basesalesprice']\r\n  )\r\n)",
+                      "@false"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Append_Base_Sales_Price": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "ReleasedProductSettings_str",
+                    "value": ", \"SalesPrice\": @{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_basesalesprice']}"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "3e4f1f78-fcf5-4064-bf88-21c38b2c6f4f"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Check_Overhead_Surcharge_Group": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "94d462b6-93c9-4099-bafd-a9e17b318840"
+              }
+            },
+            "Check_Sales_Model_List_Price": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@equals(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/sst_salespricemodel_listprice_bol'], true)",
+                      "@true"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Append_Yes_to_JSON": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "ReleasedProductSettings_str",
+                    "value": ", \"SSTSalesModelListPrice\": \"Yes\""
+                  },
+                  "metadata": {
+                    "operationMetadataId": "3e4f1f78-fcf5-4064-bf88-21c38b2c6f4f"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Append_No_to_JSON": {
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "ReleasedProductSettings_str",
+                      "value": ", \"SSTSalesModelListPrice\": \"No\""
+                    },
+                    "metadata": {
+                      "operationMetadataId": "3e4f1f78-fcf5-4064-bf88-21c38b2c6f4f"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Check_Base_Sales_Price": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "94d462b6-93c9-4099-bafd-a9e17b318840"
+              }
+            }
+          },
+          "runAfter": {
+            "CreateReleasedProduct": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "dc696f33-27c5-4e6b-9e87-beab5f992bc8"
+          }
+        },
+        "FinOps_Global_Product": {
+          "type": "Scope",
+          "actions": {
+            "Global_Product_already_created_by_Flow": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@triggerOutputs()?['body/hso_foglobalproduct_opt']",
+                  false
+                ]
+              },
+              "actions": {
+                "No_Released_Product_found": {
+                  "type": "If",
+                  "expression": {
+                    "equals": [
+                      "@variables('InlineCreateGlobalProduct_bool')",
+                      true
+                    ]
+                  },
+                  "actions": {
+                    "GlobalProductProcessed_[FULL_TRUE]": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "GlobalProductCreated_bool",
+                        "value": true
+                      },
+                      "runAfter": {
+                        "Set_GlobalProductID": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "60891ceb-daca-45e0-b859-6725263a1e84"
+                      }
+                    },
+                    "Append_Log_[GP]": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "Log_txt",
+                        "value": "[INF] - [@{utcNow()}] - Start creating global product.@{decodeUriComponent('%0A')}"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+                      }
+                    },
+                    "Create_Global_Product_[FULL]": {
+                      "type": "Http",
+                      "inputs": {
+                        "uri": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/data/ProductsV2",
+                        "method": "POST",
+                        "headers": {
+                          "Content-Type": "application/json"
+                        },
+                        "body": "@json(variables('strGlobalProductJSON'))",
+                        "authentication": {
+                          "type": "ActiveDirectoryOAuth",
+                          "tenant": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['tenantid']",
+                          "audience": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/",
+                          "clientId": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['clientid']",
+                          "secret": "@{body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['secret']}"
+                        }
+                      },
+                      "runAfter": {
+                        "Is_ProductSubType_Productmaster": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "a8d27b91-6904-4b31-9131-7054ef964ee7"
+                      }
+                    },
+                    "Set_GlobalProductID": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "GlobalProductID_txt",
+                        "value": "@{body('Create_Global_Product_[FULL]')?['ProductNumber']}"
+                      },
+                      "runAfter": {
+                        "Create_Global_Product_[FULL]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "84d98fa6-d390-4972-8fa9-48a946dd5cb3"
+                      }
+                    },
+                    "Append_Log_[GP]_2": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "Log_txt",
+                        "value": "[INF] - [@{utcNow()}] - Global product created with number @{variables('GlobalProductID_txt')}. @{decodeUriComponent('%0A')}"
+                      },
+                      "runAfter": {
+                        "GlobalProductProcessed_[FULL_TRUE]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+                      }
+                    },
+                    "Is_ProductSubType_Productmaster": {
+                      "type": "If",
+                      "description": "100000000 = Productmaster, 100000001 = Product",
+                      "expression": {
+                        "equals": [
+                          "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productsubtype_opt']",
+                          100000000
+                        ]
+                      },
+                      "actions": {
+                        "Set_strGlobalProduct_to_ProductMaster_Setting": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "strGlobalProductJSON",
+                            "value": "{\n  \"ProductType\": \"Item\",\n  \"ProductSubType\": \"ProductMaster\",\n  \"ProductDimensionGroupName\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_productdimension_id_value@OData.Community.Display.V1.FormattedValue']}\",\n  \"ProductSizeGroupId\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_sizegroup_id_value@OData.Community.Display.V1.FormattedValue']}\",\n  \"ProductDescription\": \"@{replace(\n    coalesce(\n        outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productdescription']\n        ,outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productname']\n         ),'\"', '\\\"'\n    )}\",\n  \"ProductName\": \"@{replace(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productname'], '\"', '\\\"')}\"\n}"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "678640fc-bc30-4cc2-a5cc-f1ce87aaa066"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Set_strGlobalProduct_to_Product_Setting": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "strGlobalProductJSON",
+                              "value": "{\n  \"ProductType\": \"Item\",\n  \"ProductDescription\": \"@{replace(\n    coalesce(\n        outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productdescription']\n        ,outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productname']\n         ),'\"', '\\\"'\n    )}\",\n  \"ProductName\": \"@{replace(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productname'], '\"', '\\\"')}\"\n}"
+                            },
+                            "metadata": {
+                              "operationMetadataId": "14f2f85a-e7d9-468f-b121-08c9beb7fba9"
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Append_Log_[GP]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "783ff763-c734-4054-9a10-bda0b1b793ee"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Compose_[GP]": {
+                        "type": "Compose",
+                        "inputs": "Global Product ID should be set during Pre-Operation process.\nGlobal Product Number: @{variables('GlobalProductID_txt')}.",
+                        "metadata": {
+                          "operationMetadataId": "8f0b1f78-99e6-4516-8dff-2bc4e3013e83"
+                        }
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "827aecc2-2268-4228-99db-c23b9e01d44a"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Compose_[GP]_2": {
+                    "type": "Compose",
+                    "inputs": "Global Product ID should be set during Pre-Operation process.\nGlobal Product Number: @{variables('GlobalProductID_txt')}.",
+                    "metadata": {
+                      "operationMetadataId": "c92ee27c-8f36-494a-91f0-f5e8ec7b5181"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "8046993b-3fa1-46f2-b091-7a03d59307d2"
+              }
+            },
+            "Append_Log_[GP]_3": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "Log_txt",
+                "value": "[INF] - [@{utcNow()}] - Global product processing finished. @{variables('GlobalProductID_txt')} will be used for further processing. @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "Global_Product_already_created_by_Flow": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+              }
+            }
+          },
+          "runAfter": {
+            "Init_strGlobalProductJSON": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c8ae1df4-7001-435d-912a-3f254aa78d5e"
+          }
+        },
+        "FinOpsEnv": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "FinOpsEnv_str",
+                "type": "string",
+                "value": "@parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')"
+              }
+            ]
+          },
+          "runAfter": {
+            "Error_-_State": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "46e6a5b4-8615-417a-98ed-76062b3e2825"
+          }
+        },
+        "CompanyName": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "CompanyName_str",
+                "type": "string",
+                "value": "HSV"
+              }
+            ]
+          },
+          "runAfter": {
+            "FinOpsEnv": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "02029eb7-bf23-4151-b48e-90614c8b6ec2"
+          }
+        },
+        "GlobalProductCreated": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "GlobalProductCreated_bool",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "Pre-Operation_[CATCH]": [
+              "Skipped"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f0d29f97-a18f-4263-b2f7-8ed5d3300c90"
+          }
+        },
+        "ReleasedProductProcessed": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ReleasedProductProcessed_bool",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "GlobalProductCreated": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c99152e2-d3f1-4280-b04c-bfbb5c3addd4"
+          }
+        },
+        "ReleasedProductsCreated": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ReleasedProductsCreated_arr",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "ReleasedProductProcessed": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "80efa645-e873-45b2-88c8-49afe4bd0969"
+          }
+        },
+        "FinOpsStatus": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "FinOpsStatus_str",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "ReleasedProductsCreated": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "cb71632c-fe67-4eee-95cd-3a4aa3fc9691"
+          }
+        },
+        "ReleasedProductSettings": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ReleasedProductSettings_str",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "CompanyName": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "dfc35129-a395-43c1-a9f3-3ab96e2b4831"
+          }
+        },
+        "Credentials": {
+          "type": "Scope",
+          "actions": {
+            "Parallel_Loading": {
+              "type": "Compose",
+              "inputs": "Parallel Loading",
+              "metadata": {
+                "operationMetadataId": "8aafa191-8224-4c92-918b-196daa86afb9"
+              }
+            },
+            "PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials": {
+              "type": "Workflow",
+              "inputs": {
+                "host": {
+                  "workflowReferenceName": "1fe99852-ba66-ee11-9ae7-000d3ab3cbd3"
+                },
+                "body": {
+                  "text": "AppReg-TenantId",
+                  "text_1": "@parameters('EnvVar | Name App Reg ClientID (hso_EnvVarNameAppRegClientID)')",
+                  "text_2": "@parameters('EnvVar | Name App Reg ClientSecret (hso_EnvVarNameAppRegClientSecret)')"
+                }
+              },
+              "runAfter": {
+                "Parallel_Loading": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "secureData": {
+                  "properties": [
+                    "outputs"
+                  ]
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "f0ffa545-0bf7-48a9-851b-247d82ae9765"
+              }
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "ff1ce4f2-e0e6-472a-b817-b29fa5a75809"
+          }
+        },
+        "CreateGlobalProduct": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "InlineCreateGlobalProduct_bool",
+                "type": "boolean",
+                "value": true
+              }
+            ]
+          },
+          "runAfter": {
+            "ReleasedProductSettings": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e79ab28e-f2f9-474b-9536-bc559f26ea64"
+          }
+        },
+        "CreateReleasedProduct": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ExistingReleasedProduct_bool",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "GlobalProductID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b6b473c2-633c-4257-a69d-76b205427077"
+          }
+        },
+        "FinOps_Released_Products": {
+          "type": "Scope",
+          "actions": {
+            "Create_Released_Product_Batch": {
+              "type": "Http",
+              "inputs": {
+                "uri": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/data/$batch",
+                "method": "POST",
+                "headers": {
+                  "OData-MaxVersion": "4.0",
+                  "OData-Version": "4.0",
+                  "Accept": "application/json",
+                  "Content-Type": "multipart/mixed;boundary=batch_@{variables('BatchGUID_txt')}"
+                },
+                "body": "@variables('BatchDocumentJSON_str')",
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "tenant": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['tenantid']",
+                  "audience": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/",
+                  "clientId": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['clientid']",
+                  "secret": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['secret']"
+                }
+              },
+              "runAfter": {
+                "Compose_2": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "a8d27b91-6904-4b31-9131-7054ef964ee7"
+              }
+            },
+            "Close_BatchDocumentJSON": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "BatchDocumentJSON_str",
+                "value": "--changeset_@{variables('ChangesetGUID_txt')}--\n--batch_@{variables('BatchGUID_txt')}--"
+              },
+              "runAfter": {
+                "No_existing_released_product": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "367aa7f8-b3bd-4412-b034-f90ae97ea88f"
+              }
+            },
+            "Compose_2": {
+              "type": "Compose",
+              "inputs": "@variables('BatchDocumentJSON_str')",
+              "runAfter": {
+                "Append_Log_[RP]_2": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c30e46ce-8505-47e5-aaac-ffae505a6d27"
+              }
+            },
+            "Append_Log_[RP]": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "Log_txt",
+                "value": "[INF] - [@{utcNow()}] - Start building BatchJSONDocument. @{variables('ReleasingCompanies_arr')}@{decodeUriComponent('%0A')}"
+              },
+              "metadata": {
+                "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+              }
+            },
+            "No_existing_released_product": {
+              "type": "If",
+              "description": " - complete creation path",
+              "expression": {
+                "equals": [
+                  "@variables('ExistingReleasedProduct_bool')",
+                  false
+                ]
+              },
+              "actions": {
+                "Apply_to_each_Releasing_Company_[NEW]": {
+                  "type": "Foreach",
+                  "foreach": "@variables('ReleasingCompanies_arr')",
+                  "actions": {
+                    "Increment_BatchContentID": {
+                      "type": "IncrementVariable",
+                      "inputs": {
+                        "name": "BatchContentID_int",
+                        "value": 1
+                      },
+                      "metadata": {
+                        "operationMetadataId": "26aad9bf-5895-4c58-b0d9-abf891c93fb0"
+                      }
+                    },
+                    "Append_to_BatchDocumentJSON_[NEW]": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "BatchDocumentJSON_str",
+                        "value": "--changeset_@{variables('ChangesetGUID_txt')}\nContent-Type: application/http\nContent-Transfer-Encoding: binary\nContent-ID: @{variables('BatchContentID_int')}\n\nPOST ReleasedProductsV2?cross-company=true HTTP/1.1\nContent-Type: application/json\n\n{\n\"ItemNumber\": \"@{variables('GlobalProductID_txt')}\",\n\"ProductNumber\": \"@{variables('GlobalProductID_txt')}\",\n\"dataAreaId\": \"@{items('Apply_to_each_Releasing_Company_[NEW]')}\",\n\"PrimaryVendorAccountNumber\":  \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_supplier_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"SSTManufacturerItemNum\": \"@{coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_manufacturerpid'],variables('GlobalProductID_txt'),'')}\",\n@{variables('ReleasedProductSettings_str')}\n}\n@{decodeUriComponent('%0A')}"
+                      },
+                      "runAfter": {
+                        "Increment_BatchContentID": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "7d1c177f-da53-459c-853a-56cc8a2217f8"
+                      }
+                    },
+                    "Append_Log_[RP]_3": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "Log_txt",
+                        "value": "[INF] - [@{utcNow()}] - Add Batchitem. POST @{variables('GlobalProductID_txt')} with Vendor in @{items('Apply_to_each_Releasing_Company_[NEW]')}.@{decodeUriComponent('%0A')}"
+                      },
+                      "runAfter": {
+                        "Append_to_BatchDocumentJSON_[NEW]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "ccf28677-4fa5-47dd-bdb0-3156efb3c466"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Apply_to_each_releasing_company": {
+                    "type": "Foreach",
+                    "foreach": "@variables('ReleasingCompanies_arr')",
+                    "actions": {
+                      "Filter_array_existing_released_products": {
+                        "type": "Query",
+                        "inputs": {
+                          "from": "@body('List_CDS_Released_Products_[crosscompany]')?['value']",
+                          "where": "@equals(tolower(item()?['dataAreaId']), toLower(items('Apply_to_each_releasing_company')))"
+                        },
+                        "metadata": {
+                          "operationMetadataId": "afb8f4b4-2e71-40d7-b88a-f01e8db2fa33"
+                        }
+                      },
+                      "Released_product_exists_in_company": {
+                        "type": "If",
+                        "expression": {
+                          "greater": [
+                            "@length(body('Filter_array_existing_released_products'))",
+                            0
+                          ]
+                        },
+                        "actions": {
+                          "Append_to_BatchDocumentJSON_[UPDATE]": {
+                            "type": "AppendToStringVariable",
+                            "inputs": {
+                              "name": "BatchDocumentJSON_str",
+                              "value": "--changeset_@{variables('ChangesetGUID_txt')}\nContent-Type: application/http\nContent-Transfer-Encoding: binary\nContent-ID: @{variables('BatchContentID_int')}\n\nPATCH ReleasedProductsV2(dataAreaId='@{tolower(items('Apply_to_each_releasing_company'))}',ItemNumber='@{variables('GlobalProductID_txt')}')?cross-company=true HTTP/1.1\nContent-Type: application/json\n\n{\n\"PrimaryVendorAccountNumber\":  \"\"\n}\n@{decodeUriComponent('%0A')}"
+                            },
+                            "metadata": {
+                              "operationMetadataId": "7d1c177f-da53-459c-853a-56cc8a2217f8"
+                            }
+                          }
+                        },
+                        "else": {
+                          "actions": {
+                            "Append_to_BatchDocumentJSON_[ADD]_": {
+                              "type": "AppendToStringVariable",
+                              "inputs": {
+                                "name": "BatchDocumentJSON_str",
+                                "value": "--changeset_@{variables('ChangesetGUID_txt')}\nContent-Type: application/http\nContent-Transfer-Encoding: binary\nContent-ID: @{variables('BatchContentID_int')}\n\nPOST ReleasedProductsV2?cross-company=true HTTP/1.1\nContent-Type: application/json\n\n{\n\"ItemNumber\": \"@{variables('GlobalProductID_txt')}\",\n\"ProductNumber\": \"@{variables('GlobalProductID_txt')}\",\n\"dataAreaId\": \"@{items('Apply_to_each_releasing_company')}\",\n\"SSTManufacturerItemNum\": \"@{coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_manufacturerpid'],variables('GlobalProductID_txt'),'')}\",\n@{variables('ReleasedProductSettings_str')}\n}\n@{decodeUriComponent('%0A')}"
+                              },
+                              "metadata": {
+                                "operationMetadataId": "7d1c177f-da53-459c-853a-56cc8a2217f8"
+                              }
+                            }
+                          }
+                        },
+                        "runAfter": {
+                          "Increment_BatchContentID_[EXIST]": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "1a4133b8-6f61-401c-adfb-29753c83d5e2"
+                        }
+                      },
+                      "Increment_BatchContentID_[EXIST]": {
+                        "type": "IncrementVariable",
+                        "inputs": {
+                          "name": "BatchContentID_int",
+                          "value": 1
+                        },
+                        "runAfter": {
+                          "Filter_array_existing_released_products": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "26aad9bf-5895-4c58-b0d9-abf891c93fb0"
+                        }
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "ccf28677-4fa5-47dd-bdb0-3156efb3c466"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Append_Log_[RP]": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "139fa545-ba87-448f-a1df-3cc3002303f1"
+              }
+            },
+            "Append_Log_[RP]_2": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "Log_txt",
+                "value": "[INF] - [@{utcNow()}] - BatchJSONDocument successfully created. Start Batch processing. @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "Close_BatchDocumentJSON": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+              }
+            },
+            "Inline_error": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@outputs('statusCode')",
+                        200
+                      ]
+                    }
+                  },
+                  {
+                    "not": {
+                      "equals": [
+                        "@outputs('statusCode')",
+                        201
+                      ]
+                    }
+                  },
+                  {
+                    "not": {
+                      "equals": [
+                        "@outputs('statusCode')",
+                        204
+                      ]
+                    }
+                  }
+                ]
+              },
+              "actions": {
+                "innererror_message": {
+                  "type": "Compose",
+                  "inputs": "@Coalesce(body('Create_Released_Product_Batch')?['$multipart']?[0]?['body']?['$multipart']?[0]?['body']?['$applicationHttp']?['body']?['error']?['innererror']?['message'], '')",
+                  "metadata": {
+                    "operationMetadataId": "df57d9c5-422f-4d53-9aaa-f42b3f66bc55"
+                  }
+                },
+                "Terminate_RP_inline_error": {
+                  "type": "Terminate",
+                  "inputs": {
+                    "runStatus": "Cancelled"
+                  },
+                  "runAfter": {
+                    "Update_Product_Requirement_Detail_RP_inline_error": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "185e9f56-b4c3-41d0-a7fa-8bc7429a2e3d"
+                  }
+                },
+                "Error_RP_inline_error": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "Error_bool",
+                    "value": true
+                  },
+                  "runAfter": {
+                    "innererror_message": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "41b070da-ec0b-4ae9-98a0-cdafc1aa7cea"
+                  }
+                },
+                "Error-Log_RP_inline_error": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "Log_txt",
+                    "value": "[INF] - [@{utcNow()}] - There was an error during Released Product Batch processing.\n[ERR] - [@{utcNow()}] - Termination with error:  \n@{outputs('innererror_message')}"
+                  },
+                  "runAfter": {
+                    "Error_RP_inline_error": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+                  }
+                },
+                "Update_Product_Requirement_Detail_RP_inline_error": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_productrequirementdetails",
+                      "recordId": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productrequirementdetailid']",
+                      "item/hso_foglobalproduct_opt": true,
+                      "item/hso_integrationsstatuslog_opt": 100000002,
+                      "item/hso_log": "@variables('Log_txt')",
+                      "item/hso_productnumberlog": "@variables('GlobalProductID_txt')",
+                      "item/hso_status": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps_1"
+                    }
+                  },
+                  "runAfter": {
+                    "Error-Log_RP_inline_error": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "db079d14-33d3-4841-a029-f05827afffb9"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "ReleasedProductProcessed_[TRUE]": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "ReleasedProductProcessed_bool",
+                      "value": true
+                    },
+                    "metadata": {
+                      "operationMetadataId": "35916045-1e0a-43d3-b683-729d97c3e201"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "statusCode": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "5c4aa861-0db7-45ff-abd2-c217f2b050d2"
+              }
+            },
+            "statusCode": {
+              "type": "Compose",
+              "inputs": "@Coalesce(body('Create_Released_Product_Batch')?['$multipart']?[0]?['body']?['$multipart']?[0]?['body']?['$applicationHttp']?['statusCode'], 200)",
+              "runAfter": {
+                "Create_Released_Product_Batch": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "a6f309cb-3c0c-4df2-aab2-4757b3969413"
+              }
+            }
+          },
+          "runAfter": {
+            "BatchDocumentJSON": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c260ace8-c082-4e81-b4f7-072eaba73e1b"
+          }
+        },
+        "FinOps_Released_Products_[CATCH]": {
+          "type": "Scope",
+          "actions": {
+            "Terminate_in_FinOps_Released_Product": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              },
+              "runAfter": {
+                "Update_Product_Requirement_Detail_in_FinOps_Released_Product": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "391cf5a6-e000-4977-95b7-67fb84095ee4"
+              }
+            },
+            "Error_in_FinOps_Global_Product_in_FinOps_Released_Product": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "Error_bool",
+                "value": true
+              },
+              "metadata": {
+                "operationMetadataId": "41b070da-ec0b-4ae9-98a0-cdafc1aa7cea"
+              }
+            },
+            "Filter_array_in_FinOps_Released_Products": {
+              "type": "Query",
+              "inputs": {
+                "from": "@result('FinOps_Released_Products')",
+                "where": "@equals(item()?['status'], 'Failed')"
+              },
+              "runAfter": {
+                "Error_in_FinOps_Global_Product_in_FinOps_Released_Product": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9420e9bd-9d2b-439b-b441-7c77cccc620b"
+              }
+            },
+            "Error-Log_in_Pre-Operation_in_FinOps_Released_Product": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "Log_txt",
+                "value": "[INF] - [@{utcNow()}] - There was an error during Released Product processing.\n[ERR] - [@{utcNow()}] - Termination with error:  \n@{coalesce(first(body('Filter_array_in_FinOps_Released_Products'))?['error']?['message'], first(body('Filter_array_in_FinOps_Released_Products'))?['outputs']?['body']?['Message'], 'No Message found. Please check Flowrun.')}"
+              },
+              "runAfter": {
+                "Filter_array_in_FinOps_Released_Products": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+              }
+            },
+            "Update_Product_Requirement_Detail_in_FinOps_Released_Product": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_productrequirementdetails",
+                  "recordId": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productrequirementdetailid']",
+                  "item/hso_integrationsstatuslog_opt": 100000002,
+                  "item/hso_log": "@variables('Log_txt')",
+                  "item/hso_productnumberlog": "@variables('GlobalProductID_txt')",
+                  "item/hso_status": 1
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateRecord",
+                  "connectionName": "shared_commondataserviceforapps_1"
+                }
+              },
+              "runAfter": {
+                "Error-Log_in_Pre-Operation_in_FinOps_Released_Product": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "db079d14-33d3-4841-a029-f05827afffb9"
+              }
+            }
+          },
+          "runAfter": {
+            "FinOps_Released_Products": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "dcc89b3c-3cbb-40c8-9818-b103539870e6"
+          }
+        },
+        "Log_-_File": {
+          "type": "InitializeVariable",
+          "description": "Will be appended for major steps within run.",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Log_txt",
+                "type": "string",
+                "value": "[INF] - [@{utcNow()}] - Initializing Flow Run @{decodeUriComponent('%0A')}"
+              }
+            ]
+          },
+          "runAfter": {
+            "Credentials": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "4b3a0b0c-cfa9-41b0-9a92-46aa0e65b4d4"
+          }
+        },
+        "Pre-Operation_[CATCH]": {
+          "type": "Scope",
+          "actions": {
+            "Error_in_Pre-Operation": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "Error_bool",
+                "value": true
+              },
+              "metadata": {
+                "operationMetadataId": "41b070da-ec0b-4ae9-98a0-cdafc1aa7cea"
+              }
+            },
+            "Error-Log_in_Pre-Operation": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "Log_txt",
+                "value": "[INF] - [@{utcNow()}] - There was an error during Pre-Operation processing.\n[ERR] - [@{utcNow()}] - Termination with error:  \n@{coalesce(first(body('Filter_array_in_Pre-Operation'))?['error']?['message'], first(body('Filter_array_in_Pre-Operation'))?['outputs']?['body']?['Message'], 'No Message found. Please check Flowrun.')}\n"
+              },
+              "runAfter": {
+                "Filter_array_in_Pre-Operation": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+              }
+            },
+            "Update_Product_Requirement_Detail_in_Pre-Operation": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_productrequirementdetails",
+                  "recordId": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productrequirementdetailid']",
+                  "item/hso_integrationsstatuslog_opt": 100000002,
+                  "item/hso_log": "@variables('Log_txt')",
+                  "item/hso_status": 1
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateRecord",
+                  "connectionName": "shared_commondataserviceforapps_1"
+                }
+              },
+              "runAfter": {
+                "Error-Log_in_Pre-Operation": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "db079d14-33d3-4841-a029-f05827afffb9"
+              }
+            },
+            "Filter_array_in_Pre-Operation": {
+              "type": "Query",
+              "inputs": {
+                "from": "@result('Pre-Operation')",
+                "where": "@equals(item()?['status'], 'Failed')"
+              },
+              "runAfter": {
+                "Error_in_Pre-Operation": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9420e9bd-9d2b-439b-b441-7c77cccc620b"
+              }
+            },
+            "Terminate_in_Pre-Operation": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              },
+              "runAfter": {
+                "Update_Product_Requirement_Detail_in_Pre-Operation": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "5bae2d55-dfc4-4e57-8611-5cdd248bd036"
+              }
+            }
+          },
+          "runAfter": {
+            "Pre-Operation": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "26695eee-5e9f-4da2-8a2c-d52974a316cd"
+          }
+        },
+        "Error_-_State": {
+          "type": "InitializeVariable",
+          "description": "Will be set if an error occurs.",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Error_bool",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "Log_-_File": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "77bc436d-b632-4f88-9018-c9dc98012cc1"
+          }
+        },
+        "GlobalProductID": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "GlobalProductID_txt",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "CreateGlobalProduct": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "fbb10147-5e64-491a-9c19-d9f3d1cd3f35"
+          }
+        },
+        "FinOps_Global_Product_[CATCH]": {
+          "type": "Scope",
+          "actions": {
+            "Error_in_FinOps_Global_Product": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "Error_bool",
+                "value": true
+              },
+              "metadata": {
+                "operationMetadataId": "41b070da-ec0b-4ae9-98a0-cdafc1aa7cea"
+              }
+            },
+            "Error-Log_in_FinOps_Global_Product": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "Log_txt",
+                "value": "[INF] - [@{utcNow()}] - There was an error during FinOps Global Product processing.\n[ERR] - [@{utcNow()}] - Termination with error:  \n@{coalesce(first(body('Filter_array_in_FinOps_Global_Product'))?['error']?['message'], first(body('Filter_array_in_FinOps_Global_Product'))?['outputs']?['body']?['Message'], 'No Message found. Please check Flowrun.')}\n"
+              },
+              "runAfter": {
+                "Filter_array_in_FinOps_Global_Product": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+              }
+            },
+            "Update_Product_Requirement_Detail_in_FinOps_Global_Product": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_productrequirementdetails",
+                  "recordId": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productrequirementdetailid']",
+                  "item/hso_foglobalproduct_opt": false,
+                  "item/hso_integrationsstatuslog_opt": 100000002,
+                  "item/hso_log": "@variables('Log_txt')",
+                  "item/hso_productnumberlog": "@variables('GlobalProductID_txt')",
+                  "item/hso_status": 1
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateRecord",
+                  "connectionName": "shared_commondataserviceforapps_1"
+                }
+              },
+              "runAfter": {
+                "Error-Log_in_FinOps_Global_Product": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "db079d14-33d3-4841-a029-f05827afffb9"
+              }
+            },
+            "Filter_array_in_FinOps_Global_Product": {
+              "type": "Query",
+              "inputs": {
+                "from": "@result('FinOps_Global_Product')",
+                "where": "@equals(item()?['status'], 'Failed')"
+              },
+              "runAfter": {
+                "Error_in_FinOps_Global_Product": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9420e9bd-9d2b-439b-b441-7c77cccc620b"
+              }
+            },
+            "Terminate_in_FinOps_Global_Product": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              },
+              "runAfter": {
+                "Update_Product_Requirement_Detail_in_FinOps_Global_Product": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "f189773d-47aa-4820-b3c6-93ce82a47d42"
+              }
+            }
+          },
+          "runAfter": {
+            "FinOps_Global_Product": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "26695eee-5e9f-4da2-8a2c-d52974a316cd"
+          }
+        },
+        "Releasing_Companies": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ReleasingCompanies_arr",
+                "type": "array",
+                "value": "@split(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_releasecompany_opt@OData.Community.Display.V1.FormattedValue'], '; ')"
+              }
+            ]
+          },
+          "runAfter": {
+            "FinOps_Global_Product_[CATCH]": [
+              "Skipped"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d8cd48f0-126e-464c-8bb1-952eab6d8323"
+          }
+        },
+        "BatchContentID": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "BatchContentID_int",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Releasing_Companies": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6932902f-1bb6-49be-ae77-e43b28fa66fe"
+          }
+        },
+        "BatchDocumentJSON": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "BatchDocumentJSON_str",
+                "type": "string",
+                "value": "--batch_@{variables('BatchGUID_txt')}\nContent-Type: multipart/mixed; boundary=changeset_@{variables('ChangesetGUID_txt')}\n@{decodeUriComponent('%0A')}"
+              }
+            ]
+          },
+          "runAfter": {
+            "ChangesetGUID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c6f0d948-ee47-4b8f-ad2b-5ff1f213c3c2"
+          }
+        },
+        "BatchGUID": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "BatchGUID_txt",
+                "type": "string",
+                "value": "@{guid()}"
+              }
+            ]
+          },
+          "runAfter": {
+            "BatchContentID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "05c49f43-b00e-4e60-bf96-0207b7932ce8"
+          }
+        },
+        "ChangesetGUID": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ChangesetGUID_txt",
+                "type": "string",
+                "value": "@{guid()}"
+              }
+            ]
+          },
+          "runAfter": {
+            "BatchGUID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d15060e1-d059-4486-8920-3c1c5592bffa"
+          }
+        },
+        "BatchContentID_VD": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "BatchContentID_VD_int",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "BatchDocumentJSON_VD": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6932902f-1bb6-49be-ae77-e43b28fa66fe"
+          }
+        },
+        "BatchDocumentJSON_VD": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "BatchDocumentJSON_VD_str",
+                "type": "string",
+                "value": "--batch_@{variables('BatchGUID_VD_txt')}\nContent-Type: multipart/mixed; boundary=changeset_@{variables('ChangesetGUID_VD_txt')}\n@{decodeUriComponent('%0A')}"
+              }
+            ]
+          },
+          "runAfter": {
+            "ChangesetGUID_VD": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c6f0d948-ee47-4b8f-ad2b-5ff1f213c3c2"
+          }
+        },
+        "BatchGUID_VD": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "BatchGUID_VD_txt",
+                "type": "string",
+                "value": "@{guid()}"
+              }
+            ]
+          },
+          "runAfter": {
+            "Update_Main_Branch": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "05c49f43-b00e-4e60-bf96-0207b7932ce8"
+          }
+        },
+        "Update_Main_Branch": {
+          "type": "Scope",
+          "actions": {
+            "Append_log_-_main_data_done": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "Log_txt",
+                "value": "[INF] - [@{utcNow()}] - Main data process is done. Global and released product generated. Proceed with peripherical data.@{decodeUriComponent('%0A')}"
+              },
+              "metadata": {
+                "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+              }
+            },
+            "Update_Product_Requirement_Detail_Main_data_done": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_productrequirementdetails",
+                  "recordId": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productrequirementdetailid']",
+                  "item/hso_itemnumberlog": "@variables('GlobalProductID_txt')",
+                  "item/hso_foreleasedproduct_opt": true,
+                  "item/hso_foglobalproduct_opt": true,
+                  "item/hso_manufacturerpid": "@coalesce(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_manufacturerpid'],variables('GlobalProductID_txt'),'')",
+                  "item/hso_log": "@variables('Log_txt')",
+                  "item/hso_productnumberlog": "@variables('GlobalProductID_txt')"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateRecord",
+                  "connectionName": "shared_commondataserviceforapps_1"
+                }
+              },
+              "runAfter": {
+                "Append_log_-_main_data_done": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "db079d14-33d3-4841-a029-f05827afffb9"
+              }
+            }
+          },
+          "runAfter": {
+            "FinOps_Released_Products_[CATCH]": [
+              "Skipped"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "318235e2-f5c2-44d4-8464-e1137cd90766"
+          }
+        },
+        "Init_boolSQL": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "boolSQL",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "Update_Main_Branch": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "bf357bb0-c64b-4081-a016-ec30515bc9cb"
+          }
+        },
+        "ChangesetGUID_VD": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ChangesetGUID_VD_txt",
+                "type": "string",
+                "value": "@{guid()}"
+              }
+            ]
+          },
+          "runAfter": {
+            "BatchGUID_VD": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d15060e1-d059-4486-8920-3c1c5592bffa"
+          }
+        },
+        "Init_strJournalNumbers": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strJournalNumbers",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Init_boolTradeAgreementProcessed": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "ae7fb02a-9a64-48fd-b3b6-f1d5671519e2"
+          }
+        },
+        "Init_boolVendorDescriptionCreated": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "boolVendorDescriptionCreated",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "BatchContentID_VD": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2c0d7aac-775a-4777-9dfc-bbcaf6721853"
+          }
+        },
+        "Init_boolTradeAgreementProcessed": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "boolTradeAgreementProcessed",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "Update_Main_Branch": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c2f41056-0610-4ad7-a8a2-bebf848f989e"
+          }
+        },
+        "Init_strGlobalProductJSON": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strGlobalProductJSON",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "FinOpsStatus": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c731038f-7eda-45e9-a774-54cc7beb8f81"
+          }
+        },
+        "Init_boolProductCategoryProcessed": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Init boolProductCategoryProcessed",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "Update_Main_Branch": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "483704a5-8eb0-4c18-aebf-2199712cbd61"
+          }
+        },
+        "Process_External_Item_Descriptions": {
+          "type": "Scope",
+          "actions": {
+            "Skip_-_External_Item_Description": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@triggerOutputs()?['body/hso_skipperiphery_bool']",
+                  "@false"
+                ]
+              },
+              "actions": {
+                "FinOps_External_Item_Descriptions": {
+                  "type": "Scope",
+                  "actions": {
+                    "Vendor_Product_descriptions_found": {
+                      "type": "If",
+                      "expression": {
+                        "greater": [
+                          "@length(body('List_Vendor_product_descriptions_[crosscompany]')?['value'])",
+                          0
+                        ]
+                      },
+                      "actions": {
+                        "Apply_to_each_Releasing_Company_VD_[existing]": {
+                          "type": "Foreach",
+                          "foreach": "@variables('ReleasingCompanies_arr')",
+                          "actions": {
+                            "Filter_array_existing_VDs": {
+                              "type": "Query",
+                              "description": "@and(equals(tolower(item()?['dataAreaId']), tolower(items('Apply_to_each_Releasing_Company_VD_[existing]'))),equals(item()?['VendorAccountNumber'], outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_supplier_id_value@OData.Com",
+                              "inputs": {
+                                "from": "@body('List_Vendor_product_descriptions_[crosscompany]')?['value']",
+                                "where": "@and(equals(tolower(item()?['dataAreaId']), tolower(items('Apply_to_each_Releasing_Company_VD_[existing]'))),equals(item()?['VendorAccountNumber'], outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_supplier_id_value@OData.Community.Display.V1.FormattedValue']))"
+                              },
+                              "metadata": {
+                                "operationMetadataId": "afb8f4b4-2e71-40d7-b88a-f01e8db2fa33"
+                              }
+                            },
+                            "VD_in_company_exists": {
+                              "type": "If",
+                              "expression": {
+                                "greater": [
+                                  "@length(body('Filter_array_existing_VDs'))",
+                                  0
+                                ]
+                              },
+                              "actions": {},
+                              "else": {
+                                "actions": {
+                                  "Increment_BatchContentID_VD_[existing]": {
+                                    "type": "IncrementVariable",
+                                    "inputs": {
+                                      "name": "BatchContentID_VD_int",
+                                      "value": 1
+                                    },
+                                    "metadata": {
+                                      "operationMetadataId": "0a382560-09e1-4e9a-804f-bdc5214f9c3a"
+                                    }
+                                  },
+                                  "Append_to_BatchDocumentJSON_VD_[existing]": {
+                                    "type": "AppendToStringVariable",
+                                    "inputs": {
+                                      "name": "BatchDocumentJSON_VD_str",
+                                      "value": "--changeset_@{variables('ChangesetGUID_VD_txt')}\nContent-Type: application/http\nContent-Transfer-Encoding: binary\nContent-ID: @{variables('BatchContentID_VD_int')}\n\nPOST VendorProductDescriptionsV2?cross-company=true HTTP/1.1\nContent-Type: application/json\n\n{\n\"ItemNumber\": \"@{variables('GlobalProductID_txt')}\",\n\"dataAreaId\": \"@{items('Apply_to_each_Releasing_Company_VD_[existing]')}\",\n\"VendorAccountNumber\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_supplier_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"VendorProductNumber\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_supplierpid']}\",\n\"VendorProductDescription\": \"@{replace(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productdescription'], '\"', '\\\"')}\",\n\"VendorABCCodeNote\": \"@{replace(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productname'], '\"', '\\\"')}\"\n}\n@{decodeUriComponent('%0A')}"
+                                    },
+                                    "runAfter": {
+                                      "Increment_BatchContentID_VD_[existing]": [
+                                        "Succeeded"
+                                      ]
+                                    },
+                                    "metadata": {
+                                      "operationMetadataId": "7d1c177f-da53-459c-853a-56cc8a2217f8"
+                                    }
+                                  }
+                                }
+                              },
+                              "runAfter": {
+                                "Filter_array_existing_VDs": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "cfa8655d-59c1-44cb-a5eb-04b7bb445426"
+                              }
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "fc052424-2331-43d8-a2d8-5349d34a1fd2"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Apply_to_each_Releasing_Company_VD_[new]": {
+                            "type": "Foreach",
+                            "foreach": "@variables('ReleasingCompanies_arr')",
+                            "actions": {
+                              "Increment_BatchContentID_VD": {
+                                "type": "IncrementVariable",
+                                "inputs": {
+                                  "name": "BatchContentID_VD_int",
+                                  "value": 1
+                                },
+                                "metadata": {
+                                  "operationMetadataId": "0a382560-09e1-4e9a-804f-bdc5214f9c3a"
+                                }
+                              },
+                              "Append_to_BatchDocumentJSON_VD_[NEW]": {
+                                "type": "AppendToStringVariable",
+                                "inputs": {
+                                  "name": "BatchDocumentJSON_VD_str",
+                                  "value": "--changeset_@{variables('ChangesetGUID_VD_txt')}\nContent-Type: application/http\nContent-Transfer-Encoding: binary\nContent-ID: @{variables('BatchContentID_VD_int')}\n\nPOST VendorProductDescriptionsV2?cross-company=true HTTP/1.1\nContent-Type: application/json\n\n{\n\"ItemNumber\": \"@{variables('GlobalProductID_txt')}\",\n\"dataAreaId\": \"@{items('Apply_to_each_Releasing_Company_VD_[new]')}\",\n\"VendorAccountNumber\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_supplier_id_value@OData.Community.Display.V1.FormattedValue']}\",\n\"VendorProductNumber\": \"@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_supplierpid']}\",\n\"VendorProductDescription\": \"@{replace(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productdescription'], '\"', '\\\"')}\",\n\"VendorABCCodeNote\": \"@{replace(outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productname'], '\"', '\\\"')}\"\n}\n@{decodeUriComponent('%0A')}"
+                                },
+                                "runAfter": {
+                                  "Increment_BatchContentID_VD": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "metadata": {
+                                  "operationMetadataId": "7d1c177f-da53-459c-853a-56cc8a2217f8"
+                                }
+                              }
+                            },
+                            "metadata": {
+                              "operationMetadataId": "fc052424-2331-43d8-a2d8-5349d34a1fd2"
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "List_Vendor_product_descriptions_[crosscompany]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "f024f450-0135-49d5-8b4d-bef54b8ed5b7"
+                      }
+                    },
+                    "Close_BatchDocumentJSON_VD": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "BatchDocumentJSON_str",
+                        "value": "--changeset_@{variables('ChangesetGUID_VD_txt')}--\n--batch_@{variables('BatchGUID_VD_txt')}--"
+                      },
+                      "runAfter": {
+                        "Vendor_Product_descriptions_found": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "367aa7f8-b3bd-4412-b034-f90ae97ea88f"
+                      }
+                    },
+                    "Append_Log_[VD]": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "Log_txt",
+                        "value": "[INF] - [@{utcNow()}] - Start building BatchJSONDocument for external description. @{decodeUriComponent('%0A')}"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+                      }
+                    },
+                    "List_Vendor_product_descriptions_[crosscompany]": {
+                      "type": "Http",
+                      "inputs": {
+                        "uri": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/data/VendorProductDescriptionsV2?$filter=ItemNumber eq '@{variables('GlobalProductID_txt')}'&cross-company=true",
+                        "method": "GET",
+                        "headers": {
+                          "Content-Type": "application/json"
+                        },
+                        "authentication": {
+                          "type": "ActiveDirectoryOAuth",
+                          "tenant": "@{body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['tenantid']}",
+                          "audience": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/",
+                          "clientId": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['clientid']",
+                          "secret": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['secret']"
+                        }
+                      },
+                      "runAfter": {
+                        "Append_Log_[VD]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "c0bdceec-565c-4291-a72a-484af6b68a4b"
+                      }
+                    },
+                    "Execution_criteria": {
+                      "type": "If",
+                      "expression": {
+                        "greater": [
+                          "@variables('BatchContentID_VD_int')",
+                          0
+                        ]
+                      },
+                      "actions": {
+                        "Set_boolVendorDescriptionCreated": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "boolVendorDescriptionCreated",
+                            "value": true
+                          },
+                          "runAfter": {
+                            "Create_Vendor_product_description_batch": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "428437f0-ed63-4906-b993-64dc0b056228"
+                          }
+                        },
+                        "statusCode_VD": {
+                          "type": "Compose",
+                          "inputs": "@Coalesce(body('Create_Vendor_product_description_batch')?['$multipart']?[0]?['body']?['$multipart']?[0]?['body']?['$applicationHttp']?['statusCode'], 200)",
+                          "runAfter": {
+                            "Set_boolVendorDescriptionCreated": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "0521db24-cb9d-4e85-a6ec-fbb6dc4635f5"
+                          }
+                        },
+                        "Inline_error_VD": {
+                          "type": "If",
+                          "expression": {
+                            "and": [
+                              {
+                                "not": {
+                                  "equals": [
+                                    "@outputs('statusCode')",
+                                    200
+                                  ]
+                                }
+                              },
+                              {
+                                "not": {
+                                  "equals": [
+                                    "@outputs('statusCode_VD')",
+                                    201
+                                  ]
+                                }
+                              },
+                              {
+                                "not": {
+                                  "equals": [
+                                    "@outputs('statusCode_VD')",
+                                    204
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          "actions": {
+                            "innererror_message_VD": {
+                              "type": "Compose",
+                              "inputs": "@Coalesce(body('Create_Vendor_product_description_batch')?['$multipart']?[0]?['body']?['$multipart']?[0]?['body']?['$applicationHttp']?['body']?['error']?['innererror']?['message'], '')",
+                              "metadata": {
+                                "operationMetadataId": "f6000069-6221-4325-9e60-532999739e44"
+                              }
+                            },
+                            "Error_inline_error_VD": {
+                              "type": "SetVariable",
+                              "inputs": {
+                                "name": "Error_bool",
+                                "value": true
+                              },
+                              "runAfter": {
+                                "innererror_message_VD": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "41b070da-ec0b-4ae9-98a0-cdafc1aa7cea"
+                              }
+                            },
+                            "Error-Log_inline_error_VD": {
+                              "type": "AppendToStringVariable",
+                              "inputs": {
+                                "name": "Log_txt",
+                                "value": "[INF] - [@{utcNow()}] - There was an error during Pre-Operation processing.\n[ERR] - [@{utcNow()}] - Termination with error:  \n@{outputs('innererror_message_VD')}"
+                              },
+                              "runAfter": {
+                                "Error_inline_error_VD": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "metadata": {
+                                "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+                              }
+                            }
+                          },
+                          "else": {
+                            "actions": {}
+                          },
+                          "runAfter": {
+                            "statusCode_VD": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "0b5be4bc-da9b-4a87-a4dc-8e7bbcee42a0"
+                          }
+                        },
+                        "Append_Log_[VD]_2": {
+                          "type": "AppendToStringVariable",
+                          "inputs": {
+                            "name": "Log_txt",
+                            "value": "[INF] - [@{utcNow()}] - Send batch request for external description. @{decodeUriComponent('%0A')}"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+                          }
+                        },
+                        "Create_Vendor_product_description_batch": {
+                          "type": "Http",
+                          "inputs": {
+                            "uri": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/data/$batch",
+                            "method": "POST",
+                            "headers": {
+                              "OData-MaxVersion": "4.0",
+                              "OData-Version": "4.0",
+                              "Accept": "application/json",
+                              "Content-Type": "multipart/mixed;boundary=batch_@{variables('BatchGUID_VD_txt')}"
+                            },
+                            "body": "@variables('BatchDocumentJSON_VD_str')",
+                            "authentication": {
+                              "type": "ActiveDirectoryOAuth",
+                              "tenant": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['tenantid']",
+                              "audience": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/",
+                              "clientId": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['clientid']",
+                              "secret": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['secret']"
+                            }
+                          },
+                          "runAfter": {
+                            "Append_Log_[VD]_2": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "a8d27b91-6904-4b31-9131-7054ef964ee7"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {}
+                      },
+                      "runAfter": {
+                        "Close_BatchDocumentJSON_VD": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "cc88813c-027d-4edc-9192-29dc7d61cbe5"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "f661246a-ab2f-4ec8-9f05-2587e8641de6"
+                  }
+                },
+                "FinOps_External_Item_Descriptions_[CATCH]": {
+                  "type": "Scope",
+                  "actions": {
+                    "Error_in_FinOps_Global_Product_in_FinOps_External_Item_Descriptions": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "Error_bool",
+                        "value": true
+                      },
+                      "metadata": {
+                        "operationMetadataId": "41b070da-ec0b-4ae9-98a0-cdafc1aa7cea"
+                      }
+                    },
+                    "Filter_array_in_FinOps_External_Item_Descriptions": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@result('FinOps_External_Item_Descriptions')",
+                        "where": "@equals(item()?['status'], 'Failed')"
+                      },
+                      "runAfter": {
+                        "Error_in_FinOps_Global_Product_in_FinOps_External_Item_Descriptions": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "9420e9bd-9d2b-439b-b441-7c77cccc620b"
+                      }
+                    },
+                    "Error-Log_in_Pre-Operation_in_FinOps_External_Item_Descriptions": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "Log_txt",
+                        "value": "[INF] - [@{utcNow()}] - There was an error during FinOps External Item Descriptions processing.\n[ERR] - [@{utcNow()}] - Termination with error:  \n@{coalesce(first(body('Filter_array_in_FinOps_External_Item_Descriptions'))?['error']?['message'], first(body('Filter_array_in_FinOps_External_Item_Descriptions'))?['outputs']?['body']?['Message'], 'No Message found. Please check Flowrun.')}@{decodeUriComponent('%0A')}"
+                      },
+                      "runAfter": {
+                        "Filter_array_in_FinOps_External_Item_Descriptions": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "ff80dd2c-4233-47bc-8154-a816f1bac985"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "FinOps_External_Item_Descriptions": [
+                      "Failed",
+                      "TimedOut"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "dcc89b3c-3cbb-40c8-9818-b103539870e6"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "metadata": {
+                "operationMetadataId": "4b743be9-b3cf-45b1-b78c-361a046612de"
+              }
+            }
+          },
+          "runAfter": {
+            "Init_boolVendorDescriptionCreated": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a2af49f6-e3f9-4096-a447-2349485fbf28"
+          }
+        },
+        "Process_SQL": {
+          "type": "Scope",
+          "actions": {
+            "Skip_-_SQL": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@triggerOutputs()?['body/hso_skipperiphery_bool']",
+                  "@false"
+                ]
+              },
+              "actions": {
+                "SQL_Product": {
+                  "type": "Scope",
+                  "actions": {
+                    "Record_existis": {
+                      "type": "If",
+                      "expression": {
+                        "greater": [
+                          "@length(outputs('Search_for_existing_entries_in_Product_table')?['body/value'])",
+                          0
+                        ]
+                      },
+                      "actions": {},
+                      "else": {
+                        "actions": {
+                          "Create_SQL_record_in_product_table": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "server": "default",
+                                "database": "default",
+                                "table": "[dbo].[Products]",
+                                "item/MANUFACTURER_NAME_P": "@outputs('Update_Product_Requirement_Detail_Main_data_done')?['body/hso_manufacturername']",
+                                "item/MANUFACTURER_PID_P": "@outputs('Update_Product_Requirement_Detail_Main_data_done')?['body/hso_manufacturerpid']",
+                                "item/SUPPLIER_NAME_P": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_suppliername']",
+                                "item/FINOPS_ID_P": "@variables('GlobalProductID_txt')",
+                                "item/MODIFIED_P": "@utcNow()",
+                                "item/SUPPLIER_PID_P": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_supplierpid']",
+                                "item/VENDOR_NUMBER_P": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_supplier_id_value@OData.Community.Display.V1.FormattedValue']",
+                                "item/PRODUCTS_NK_P": "@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_supplier_id_value@OData.Community.Display.V1.FormattedValue']} | @{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_supplierpid']}"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_sql",
+                                "operationId": "PostItem_V2",
+                                "connectionName": "shared_sql_1"
+                              }
+                            },
+                            "metadata": {
+                              "operationMetadataId": "a9244feb-27b0-4126-aa67-0507ee7e4373"
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Search_for_existing_entries_in_Product_table": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "ba1e8861-53e3-4012-968c-2f4b5960d22e"
+                      }
+                    },
+                    "Set_boolSQL_done": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "boolSQL",
+                        "value": true
+                      },
+                      "runAfter": {
+                        "Record_existis": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "9e51827c-2362-496f-8012-454581900671"
+                      }
+                    },
+                    "Append_log_start_SQL_Process": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "Log_txt",
+                        "value": "[INF] - [@{utcNow()}] - Start SQL Process. @{decodeUriComponent('%0A')}"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "14b1ebe3-e818-4f13-9a00-8dce146fdf04"
+                      }
+                    },
+                    "Search_for_existing_entries_in_Product_table": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "server": "default",
+                          "database": "default",
+                          "table": "[dbo].[Products]",
+                          "$filter": "SUPPLIER_PID_P eq '@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_supplierpid']}' and SUPPLIER_NAME_P eq '@{outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_suppliername']}'"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sql",
+                          "operationId": "GetItems_V2",
+                          "connectionName": "shared_sql_1"
+                        }
+                      },
+                      "runAfter": {
+                        "Append_log_start_SQL_Process": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "5ea0c757-43e1-4a20-85e3-45d9e04fee47"
+                      }
+                    },
+                    "Append_log_on_error_while_SQL_processing": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "Log_txt",
+                        "value": "[ERR] - [@{utcNow()}] - There was an error during SQL processing.@{decodeUriComponent('%0A')}"
+                      },
+                      "runAfter": {
+                        "Record_existis": [
+                          "Failed",
+                          "TimedOut"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "c01b190b-05bd-4f63-a4ac-a3ed24fa3e2a"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "fe7ffa2e-f50f-4a7d-8ed2-ceb05722db6e"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "metadata": {
+                "operationMetadataId": "9dbc6a07-8b65-4a89-95dd-1abbe62fa2a0"
+              }
+            }
+          },
+          "runAfter": {
+            "Init_boolSQL": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "179f9251-1aad-4c1d-9341-b65692d10e00"
+          }
+        },
+        "Process_Trade_Agreement": {
+          "type": "Scope",
+          "actions": {
+            "Skip_-_Trade_Agreement": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@triggerOutputs()?['body/hso_skipperiphery_bool']",
+                  "@false"
+                ]
+              },
+              "actions": {
+                "Trade_Agreement_Processing": {
+                  "type": "Scope",
+                  "actions": {
+                    "Trade_agreement_not_created_yet": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "equals": [
+                              "@body('Update_Product_Requirement_Detail_Main_data_done')?['hso_tradeagreementjournalline_opt']",
+                              false
+                            ]
+                          }
+                        ]
+                      },
+                      "actions": {
+                        "Append_log_Start_Trade_Agreement_Process": {
+                          "type": "AppendToStringVariable",
+                          "inputs": {
+                            "name": "Log_txt",
+                            "value": "[INF] - [@{utcNow()}] -Start Trade Agreement Process. @{decodeUriComponent('%0A')}"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "d7f0e1bf-c9a0-4d96-9e39-d64d7a0386a5"
+                          }
+                        },
+                        "Process_Trade_Agreement_Journal_Lines": {
+                          "type": "Workflow",
+                          "inputs": {
+                            "host": {
+                              "workflowReferenceName": "86389b0a-a0c9-ee11-9079-000d3ab1b3e1"
+                            },
+                            "body": {
+                              "text": "@string(variables('ReleasingCompanies_arr'))",
+                              "text_1": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_requirementid_id_value@OData.Community.Display.V1.FormattedValue']",
+                              "boolean": true,
+                              "text_2": "@variables('GlobalProductID_txt')",
+                              "text_3": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['tenantid']",
+                              "text_4": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['clientid']",
+                              "text_5": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['secret']",
+                              "number": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_pricequantity']",
+                              "number_1": "@triggerOutputs()?['body/hso_purchasebaseprice']",
+                              "text_6": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/_hso_supplier_id_value@OData.Community.Display.V1.FormattedValue']"
+                            }
+                          },
+                          "runAfter": {
+                            "Append_log_Start_Trade_Agreement_Process": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "96ecd13d-9f6b-4cef-aa55-e7d05e92ca20"
+                          }
+                        },
+                        "PA_|_MANUAL_|_Articlesearch_|_Relate_trade_agreement_journal": {
+                          "type": "Workflow",
+                          "inputs": {
+                            "host": {
+                              "workflowReferenceName": "d6ec3cfc-e47f-ef11-ac21-000d3abad6b5"
+                            },
+                            "body": {
+                              "text": "@outputs('Update_Product_Requirement_Detail_Main_data_done')?['body/_hso_requirementid_id_value']",
+                              "text_1": "@if(empty(outputs('Process_Trade_Agreement_Journal_Lines')?['Body']?['journalnumbers']),outputs('Update_Product_Requirement_Detail_Main_data_done')?['body/hso_tradeagreementjournalheader'],replace(outputs('Process_Trade_Agreement_Journal_Lines')?['Body']?['journalnumbers'],'\\',''))"
+                            }
+                          },
+                          "runAfter": {
+                            "Process_Trade_Agreement_Journal_Lines": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "d626ebc7-376a-4ea1-8680-787d377e7ce4"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Set_strJournalNumbers_[EXISITING]": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "strJournalNumbers",
+                              "value": "@outputs('Update_Product_Requirement_Detail_Main_data_done')?['body/hso_tradeagreementjournalheader']"
+                            },
+                            "metadata": {
+                              "operationMetadataId": "7934ea03-41ff-4038-b31b-1dce4c4411bb"
+                            }
+                          },
+                          "Set_boolTradeAgreementProcessed_[EXISTING]": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "boolTradeAgreementProcessed",
+                              "value": true
+                            },
+                            "runAfter": {
+                              "Set_strJournalNumbers_[EXISITING]": [
+                                "Succeeded"
+                              ]
+                            },
+                            "metadata": {
+                              "operationMetadataId": "588cf5f2-7d6e-4b46-9a44-03a8c816063f"
+                            }
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "bc8fafd6-2ead-44ee-8be5-5c829e6edd34"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "cbc78ef6-305c-4927-bea3-65a20ae58176"
+                  }
+                },
+                "Trade_Agreement_Processing_[LOG]": {
+                  "type": "Scope",
+                  "actions": {
+                    "Check_for_error_while_trade_agreement_processing": {
+                      "type": "If",
+                      "expression": {
+                        "equals": [
+                          "@body('Process_Trade_Agreement_Journal_Lines')?['strstatus']",
+                          400
+                        ]
+                      },
+                      "actions": {
+                        "Set_error_bool_to_true_-_trade_agreement": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "Error_bool",
+                            "value": true
+                          },
+                          "metadata": {
+                            "operationMetadataId": "76c84e2d-f4b6-4999-b98e-897f272c8eb1"
+                          }
+                        },
+                        "Append_log_on_error_-_trade_agreement": {
+                          "type": "AppendToStringVariable",
+                          "inputs": {
+                            "name": "Log_txt",
+                            "value": "[ERR] - [@{utcNow()}] - There was an error during trade agreement processing. @{body('Process_Trade_Agreement_Journal_Lines')?['responsemsg']}\n@{decodeUriComponent('%0A')}"
+                          },
+                          "runAfter": {
+                            "Set_error_bool_to_true_-_trade_agreement": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "3de0c233-b82f-4666-ad63-7aec1459e511"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Append_log_on_success-_trade_agreement": {
+                            "type": "AppendToStringVariable",
+                            "inputs": {
+                              "name": "Log_txt",
+                              "value": "[SUC] - [@{utcNow()}] - Trade agreement processing finished successful. @{body('Process_Trade_Agreement_Journal_Lines')?['responsemsg']}@{decodeUriComponent('%0A')}"
+                            },
+                            "metadata": {
+                              "operationMetadataId": "0ac640bc-f99d-49ef-baa2-692ad40f8d81"
+                            }
+                          },
+                          "Set_strJournalNumbers": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "strJournalNumbers",
+                              "value": "@{if(empty(outputs('Process_Trade_Agreement_Journal_Lines')?['Body']?['journalnumbers']),outputs('Update_Product_Requirement_Detail_Main_data_done')?['body/hso_tradeagreementjournalheader'],replace(outputs('Process_Trade_Agreement_Journal_Lines')?['Body']?['journalnumbers'],'\\',''))}"
+                            },
+                            "runAfter": {
+                              "Set_boolTradeAgreementProcessed_[NEW]": [
+                                "Succeeded"
+                              ]
+                            },
+                            "metadata": {
+                              "operationMetadataId": "b0360c64-8096-48ea-9a3f-6103cd5eb45b"
+                            }
+                          },
+                          "Set_boolTradeAgreementProcessed_[NEW]": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "boolTradeAgreementProcessed",
+                              "value": true
+                            },
+                            "runAfter": {
+                              "Append_log_on_success-_trade_agreement": [
+                                "Succeeded"
+                              ]
+                            },
+                            "metadata": {
+                              "operationMetadataId": "182407cd-f2fa-406a-b15a-48e13efbe1b5"
+                            }
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "2b423cd5-a27c-41e7-b087-056e074de3f4"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Trade_Agreement_Processing": [
+                      "Succeeded",
+                      "TimedOut",
+                      "Failed"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "a874ed7a-3e3b-4ba2-9729-a07ce33e0333"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "metadata": {
+                "operationMetadataId": "eec52540-9008-4623-a4de-030f6bc29d51"
+              }
+            }
+          },
+          "runAfter": {
+            "Init_strJournalNumbers": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9628c959-afea-47ed-b1a0-c49095f996ba"
+          }
+        },
+        "Process_category_assignement": {
+          "type": "Scope",
+          "actions": {
+            "Skip_-_category_assigment": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@triggerOutputs()?['body/hso_skipperiphery_bool']",
+                  "@false"
+                ]
+              },
+              "actions": {
+                "Product_category_assignment": {
+                  "type": "Scope",
+                  "actions": {
+                    "Product_category_not_created_yet": {
+                      "type": "If",
+                      "expression": {
+                        "equals": [
+                          "@outputs('Update_Product_Requirement_Detail_Main_data_done')?['body/hso_productcategoryassignment_opt']",
+                          false
+                        ]
+                      },
+                      "actions": {
+                        "Append_log_Start_Product_Category_Creation": {
+                          "type": "AppendToStringVariable",
+                          "inputs": {
+                            "name": "Log_txt",
+                            "value": "[INF] - [@{utcNow()}] -Start Product Category Assignment Creation. @{decodeUriComponent('%0A')}"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "3dd773d1-28b6-43d9-8ea2-3dca99ae174e"
+                          }
+                        },
+                        "PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Create_Product_Category_Assignment": {
+                          "type": "Workflow",
+                          "inputs": {
+                            "host": {
+                              "workflowReferenceName": "7a9ab6a1-b2cc-ee11-9079-000d3ab1b3e1"
+                            },
+                            "body": {
+                              "text_2": "@variables('GlobalProductID_txt')",
+                              "text_3": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['tenantid']",
+                              "text_4": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['clientid']",
+                              "text_5": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['secret']",
+                              "text": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productcategory_id/msdyn_name']",
+                              "text_1": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productcategory_id/_msdyn_hierarchy_value@OData.Community.Display.V1.FormattedValue']"
+                            }
+                          },
+                          "runAfter": {
+                            "Append_log_Start_Product_Category_Creation": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "deee3f16-996b-46d4-9b3e-51fa0825f398"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Set_boolProductCategoryProcessed_existing": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "Init boolProductCategoryProcessed",
+                              "value": true
+                            },
+                            "metadata": {
+                              "operationMetadataId": "a6f6088e-3c43-410c-84c5-7df20bc20931"
+                            }
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "8b11ad64-47d1-406b-ab95-5dc50e9696c1"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "0caca8c6-2331-495c-831f-4ce3ef9b24d8"
+                  }
+                },
+                "Product_category_assignment_[LOG]": {
+                  "type": "Scope",
+                  "actions": {
+                    "Check_for_error_while_product_category_assignment": {
+                      "type": "If",
+                      "expression": {
+                        "equals": [
+                          "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Create_Product_Category_Assignment')?['strstatus']",
+                          "400"
+                        ]
+                      },
+                      "actions": {
+                        "Set_error_bool_to_true_-_product_category_assignment": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "Error_bool",
+                            "value": true
+                          },
+                          "metadata": {
+                            "operationMetadataId": "3f78cb1f-9655-4a80-9164-2730aef34ce5"
+                          }
+                        },
+                        "Append_log_on_error_-_product_category_assignment": {
+                          "type": "AppendToStringVariable",
+                          "inputs": {
+                            "name": "Log_txt",
+                            "value": "[ERR] - [@{utcNow()}] - There was an error during product category assignment. @{body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Create_Product_Category_Assignment')?['responsemsg']}\n@{decodeUriComponent('%0A')}"
+                          },
+                          "runAfter": {
+                            "Set_error_bool_to_true_-_product_category_assignment": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "3de0c233-b82f-4666-ad63-7aec1459e511"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Set_boolProductCategoryProcessed": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "Init boolProductCategoryProcessed",
+                              "value": true
+                            },
+                            "metadata": {
+                              "operationMetadataId": "8fc3919f-e257-471f-99f8-8810c7f6ec1b"
+                            }
+                          },
+                          "Append_to_log_on_success_-_product_category_assignment": {
+                            "type": "AppendToStringVariable",
+                            "inputs": {
+                              "name": "Log_txt",
+                              "value": "[SUC] - [@{utcNow()}] -  Product category assignment finished successful. @{body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Create_Product_Category_Assignment')?['responsemsg']}@{decodeUriComponent('%0A')}"
+                            },
+                            "runAfter": {
+                              "Set_boolProductCategoryProcessed": [
+                                "Succeeded"
+                              ]
+                            },
+                            "metadata": {
+                              "operationMetadataId": "13003e2d-d37e-4145-adc6-518e92b2a833"
+                            }
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "a38f311b-6c1d-4661-ba9a-1adb07d5e86f"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Product_category_assignment": [
+                      "Succeeded",
+                      "Failed",
+                      "TimedOut"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "152c3cb9-ed29-434b-9275-2472f979d5c0"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "metadata": {
+                "operationMetadataId": "6d262e16-db5d-48d0-9373-a8d0406a2639"
+              }
+            }
+          },
+          "runAfter": {
+            "Init_boolProductCategoryProcessed": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "049919e2-cafc-402d-8a49-a9e950990a84"
+          }
+        },
+        "Init_boolPriceUpdate": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "boolPriceUpdate",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "Update_Main_Branch": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a8c47a8f-33c0-4e26-b91f-6f6bca4d5de4"
+          }
+        },
+        "Update_metal_prices": {
+          "type": "Scope",
+          "actions": {
+            "Skip_-_update_metal_prices": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@triggerOutputs()?['body/hso_skipperiphery_bool']",
+                  "@false"
+                ]
+              },
+              "actions": {
+                "Update": {
+                  "type": "Scope",
+                  "actions": {
+                    "PA_|_MANUAL_|_Articlesearch_|_Update_metal_price_for_released_product": {
+                      "type": "Workflow",
+                      "inputs": {
+                        "host": {
+                          "workflowReferenceName": "d1c854cd-2dfb-ee11-a1fe-002248a1bffc"
+                        },
+                        "body": {
+                          "text": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['tenantid']",
+                          "text_1": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['clientid']",
+                          "text_2": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['secret']",
+                          "text_3": "@variables('GlobalProductID_txt')",
+                          "number": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productsubtype_opt']"
+                        }
+                      },
+                      "runAfter": {
+                        "Append_log_Start_Update_Prices": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "deee3f16-996b-46d4-9b3e-51fa0825f398"
+                      }
+                    },
+                    "Append_log_Start_Update_Prices": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "Log_txt",
+                        "value": "[INF] - [@{utcNow()}] -Start Update metal prices for released products.. @{decodeUriComponent('%0A')}"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3dd773d1-28b6-43d9-8ea2-3dca99ae174e"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "0caca8c6-2331-495c-831f-4ce3ef9b24d8"
+                  }
+                },
+                "Update_metal_prices_[LOG]": {
+                  "type": "Scope",
+                  "actions": {
+                    "Check_for_error_while_updating_metal_prices": {
+                      "type": "If",
+                      "expression": {
+                        "equals": [
+                          "@body('PA_|_MANUAL_|_Articlesearch_|_Update_metal_price_for_released_product')?['strstatus']",
+                          "400"
+                        ]
+                      },
+                      "actions": {
+                        "Set_error_bool_to_true_-_Update_metal_prices": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "Error_bool",
+                            "value": true
+                          },
+                          "metadata": {
+                            "operationMetadataId": "3f78cb1f-9655-4a80-9164-2730aef34ce5"
+                          }
+                        },
+                        "Append_log_on_error_-_Update_metal_prices": {
+                          "type": "AppendToStringVariable",
+                          "inputs": {
+                            "name": "Log_txt",
+                            "value": "[ERR] - [@{utcNow()}] - There was an error during Update metal prices. @{body('PA_|_MANUAL_|_Articlesearch_|_Update_metal_price_for_released_product')?['responsemsg']}\n@{decodeUriComponent('%0A')}"
+                          },
+                          "runAfter": {
+                            "Set_error_bool_to_true_-_Update_metal_prices": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "3de0c233-b82f-4666-ad63-7aec1459e511"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Set_boolPriceUpdate": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "boolPriceUpdate",
+                              "value": true
+                            },
+                            "metadata": {
+                              "operationMetadataId": "8fc3919f-e257-471f-99f8-8810c7f6ec1b"
+                            }
+                          },
+                          "Append_to_log_on_success_-_Update_metal_prices": {
+                            "type": "AppendToStringVariable",
+                            "inputs": {
+                              "name": "Log_txt",
+                              "value": "[SUC] - [@{utcNow()}] -  Prices updated successful. @{body('PA_|_MANUAL_|_Articlesearch_|_Update_metal_price_for_released_product')?['newprices']}@{decodeUriComponent('%0A')}"
+                            },
+                            "runAfter": {
+                              "Set_boolPriceUpdate": [
+                                "Succeeded"
+                              ]
+                            },
+                            "metadata": {
+                              "operationMetadataId": "13003e2d-d37e-4145-adc6-518e92b2a833"
+                            }
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "a38f311b-6c1d-4661-ba9a-1adb07d5e86f"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Update": [
+                      "Succeeded",
+                      "Failed",
+                      "TimedOut"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "152c3cb9-ed29-434b-9275-2472f979d5c0"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "metadata": {
+                "operationMetadataId": "6d262e16-db5d-48d0-9373-a8d0406a2639"
+              }
+            }
+          },
+          "runAfter": {
+            "Init_boolPriceUpdate": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "049919e2-cafc-402d-8a49-a9e950990a84"
+          }
+        },
+        "Init_boolDefaultOrderSettings": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "boolDefaultOrderSettings",
+                "type": "boolean"
+              }
+            ]
+          },
+          "runAfter": {
+            "Update_Main_Branch": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "901024cf-dda1-4c74-9e63-5dffe61b4f2e"
+          }
+        },
+        "Init_arrDefaultOrderSettings": {
+          "type": "InitializeVariable",
+          "description": "FinOps readable payload",
+          "inputs": {
+            "variables": [
+              {
+                "name": "arrDefaultOrderSettings",
+                "type": "object",
+                "value": {
+                  "ProcurementQuantityMultiples": "@triggerOutputs()?['body/hso_quantityinterval']",
+                  "MinimumProcurementOrderQuantity": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_minimumquantity']"
+                }
+              }
+            ]
+          },
+          "runAfter": {
+            "Init_boolDefaultOrderSettings": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e1492941-5418-42b4-ae1c-8fb391092553"
+          }
+        },
+        "Default_Order_Settings": {
+          "type": "Scope",
+          "actions": {
+            "Skip_default_order_settings": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@triggerOutputs()?['body/hso_skipperiphery_bool']",
+                  "@false"
+                ]
+              },
+              "actions": {
+                "Set_default_order_settings": {
+                  "type": "Scope",
+                  "actions": {
+                    "Append_to_string_variable": {
+                      "type": "AppendToStringVariable",
+                      "inputs": {
+                        "name": "Log_txt",
+                        "value": "[INF] - [@{utcNow()}] -Start default order settings update. @{decodeUriComponent('%0A')}"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "908b3ea8-7b8c-4751-ac2a-9c4223ecb7db"
+                      }
+                    },
+                    "PA_|_MANUAL_|_Articlesearch_|_Update_default_order_settings": {
+                      "type": "Workflow",
+                      "inputs": {
+                        "host": {
+                          "workflowReferenceName": "848ac6cb-6201-ef11-9f89-000d3ab4a000"
+                        },
+                        "body": {
+                          "text": "@variables('GlobalProductID_txt')",
+                          "text_1": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['tenantid']",
+                          "text_2": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['clientid']",
+                          "text_3": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['secret']",
+                          "text_4": "@string(variables('arrDefaultOrderSettings'))"
+                        }
+                      },
+                      "runAfter": {
+                        "Append_to_string_variable": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "2baddfe8-a000-4b60-825e-5badc1d676cb"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "a40de941-f9dd-4f0a-9018-b6e1387acad1"
+                  }
+                },
+                "Set_default_order_settings_[log]": {
+                  "type": "Scope",
+                  "actions": {
+                    "Check_for_errors_while_default_order_update": {
+                      "type": "If",
+                      "expression": {
+                        "equals": [
+                          "@body('PA_|_MANUAL_|_Articlesearch_|_Update_default_order_settings')?['status']",
+                          400
+                        ]
+                      },
+                      "actions": {
+                        "Set_error_true_-_Update_default_order_settings": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "Error_bool",
+                            "value": "@true"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "961dba32-261a-454b-a0e6-3e7c34b13f84"
+                          }
+                        },
+                        "Set_log_error_-_Update_default_order_settings": {
+                          "type": "AppendToStringVariable",
+                          "inputs": {
+                            "name": "Log_txt",
+                            "value": "[ERR] - [@{utcNow()}] - There was an error during Update default order settings. @{body('PA_|_MANUAL_|_Articlesearch_|_Update_default_order_settings')?['message']}\n@{decodeUriComponent('%0A')}"
+                          },
+                          "runAfter": {
+                            "Set_error_true_-_Update_default_order_settings": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "f9472b9c-da55-44e2-a84d-3859060f47bc"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Set_boolDefaultOrderSettings_true": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "boolDefaultOrderSettings",
+                              "value": "@true"
+                            },
+                            "metadata": {
+                              "operationMetadataId": "5c074e81-3fe0-4cc4-b14f-00def33f37f4"
+                            }
+                          },
+                          "Set_log_success_-_Update_default_order_settings": {
+                            "type": "AppendToStringVariable",
+                            "inputs": {
+                              "name": "Log_txt",
+                              "value": "[SUC] - [@{utcNow()}] - Update default order settings done. \n@{decodeUriComponent('%0A')}"
+                            },
+                            "runAfter": {
+                              "Set_boolDefaultOrderSettings_true": [
+                                "Succeeded"
+                              ]
+                            },
+                            "metadata": {
+                              "operationMetadataId": "667d9c35-4b4e-4e80-94c8-bd32e7eba050"
+                            }
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "a6b6bfec-d4ac-4fb6-a68a-1760890f7057"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Set_default_order_settings": [
+                      "Succeeded",
+                      "TimedOut",
+                      "Failed"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "8f765f07-40d6-4e1d-91ac-169d19c43374"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "metadata": {
+                "operationMetadataId": "cf5f3379-0a16-49a5-b817-4d0e9f377126"
+              }
+            }
+          },
+          "runAfter": {
+            "Init_arrDefaultOrderSettings": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "07cfed9a-057f-4554-92ec-ec17708da2b3"
+          }
+        },
+        "Init_boolGTINAssignment": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "boolGTINAssignement",
+                "type": "boolean"
+              }
+            ]
+          },
+          "runAfter": {
+            "Update_Main_Branch": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "09b7634f-d8bb-4030-b87f-29c03640c3cf"
+          }
+        },
+        "GTIN_Assignment": {
+          "type": "Scope",
+          "actions": {
+            "Skip_-_GTIN": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@triggerOutputs()?['body/hso_skipperiphery_bool']",
+                  "@false"
+                ]
+              },
+              "actions": {
+                "GTIN": {
+                  "type": "Scope",
+                  "actions": {
+                    "GTIN_not_created_yet": {
+                      "type": "If",
+                      "expression": {
+                        "equals": [
+                          "@outputs('Update_Product_Requirement_Detail_Main_data_done')?['body/hso_gtinassignmentcreated_bool']",
+                          false
+                        ]
+                      },
+                      "actions": {
+                        "Append_log_Start_GTIN": {
+                          "type": "AppendToStringVariable",
+                          "inputs": {
+                            "name": "Log_txt",
+                            "value": "[INF] - [@{utcNow()}] -Start GTIN Creation. @{decodeUriComponent('%0A')}"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "3dd773d1-28b6-43d9-8ea2-3dca99ae174e"
+                          }
+                        },
+                        "PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Create_GTIN_Assignment": {
+                          "type": "Workflow",
+                          "inputs": {
+                            "host": {
+                              "workflowReferenceName": "2f57d492-397f-ef11-ac20-6045bde11c9f"
+                            },
+                            "body": {
+                              "text": "@variables('GlobalProductID_txt')",
+                              "text_1": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['tenantid']",
+                              "text_2": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['clientid']",
+                              "text_3": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['secret']",
+                              "text_4": "@string(variables('ReleasingCompanies_arr'))",
+                              "text_5": "@outputs('Update_Product_Requirement_Detail_Main_data_done')?['body/hso_europeanarticlenumber']",
+                              "boolean": true,
+                              "text_6": "@outputs('Update_Product_Requirement_Detail_Main_data_done')?['body/_hso_orderunit_id_value@OData.Community.Display.V1.FormattedValue']"
+                            }
+                          },
+                          "runAfter": {
+                            "Append_log_Start_GTIN": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "deee3f16-996b-46d4-9b3e-51fa0825f398"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Set_boolGTIN_existing_": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "boolGTINAssignement",
+                              "value": true
+                            },
+                            "metadata": {
+                              "operationMetadataId": "a6f6088e-3c43-410c-84c5-7df20bc20931"
+                            }
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "8b11ad64-47d1-406b-ab95-5dc50e9696c1"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "0caca8c6-2331-495c-831f-4ce3ef9b24d8"
+                  }
+                },
+                "GTIN_(Log)": {
+                  "type": "Scope",
+                  "actions": {
+                    "Check_for_error_while_GTIN_processing": {
+                      "type": "If",
+                      "expression": {
+                        "equals": [
+                          "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Create_GTIN_Assignment')?['status']",
+                          "400"
+                        ]
+                      },
+                      "actions": {
+                        "Set_error_bool_to_true_-_GTIN": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "Error_bool",
+                            "value": true
+                          },
+                          "metadata": {
+                            "operationMetadataId": "3f78cb1f-9655-4a80-9164-2730aef34ce5"
+                          }
+                        },
+                        "Append_log_on_error_-_GTIN": {
+                          "type": "AppendToStringVariable",
+                          "inputs": {
+                            "name": "Log_txt",
+                            "value": "[ERR] - [@{utcNow()}] - There was an error during GTIN processing. @{body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Create_GTIN_Assignment')?['strresponse']}\n@{decodeUriComponent('%0A')}"
+                          },
+                          "runAfter": {
+                            "Set_error_bool_to_true_-_GTIN": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "3de0c233-b82f-4666-ad63-7aec1459e511"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Set_boolGTIN": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "boolGTINAssignement",
+                              "value": true
+                            },
+                            "metadata": {
+                              "operationMetadataId": "8fc3919f-e257-471f-99f8-8810c7f6ec1b"
+                            }
+                          },
+                          "Append_to_log_on_success_-_GTIN": {
+                            "type": "AppendToStringVariable",
+                            "inputs": {
+                              "name": "Log_txt",
+                              "value": "[SUC] - [@{utcNow()}] -  GTIN processing  finished successful. @{body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Create_GTIN_Assignment')?['strresponse']}@{decodeUriComponent('%0A')}"
+                            },
+                            "runAfter": {
+                              "Set_boolGTIN": [
+                                "Succeeded"
+                              ]
+                            },
+                            "metadata": {
+                              "operationMetadataId": "13003e2d-d37e-4145-adc6-518e92b2a833"
+                            }
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "a38f311b-6c1d-4661-ba9a-1adb07d5e86f"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "GTIN": [
+                      "Succeeded",
+                      "Failed",
+                      "TimedOut"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "152c3cb9-ed29-434b-9275-2472f979d5c0"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "metadata": {
+                "operationMetadataId": "6d262e16-db5d-48d0-9373-a8d0406a2639"
+              }
+            }
+          },
+          "runAfter": {
+            "Init_boolGTINAssignment": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "709f1fef-d685-42b8-a6c0-1d44fe5f2c6a"
+          }
+        },
+        "Global_log_[FINALIZE]": {
+          "type": "Scope",
+          "actions": {
+            "No_global_error": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@variables('Error_bool')",
+                      false
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Set_Log_on_global_success": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "Log_txt",
+                    "value": "[SUC] - [@{utcNow()}] - Flow run was successful. Log is cleaned up.\n"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "e2c383af-6679-40e2-91c5-46ac1056cc26"
+                  }
+                },
+                "Update_detail_on_global_success": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_productrequirementdetails",
+                      "recordId": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productrequirementdetailid']",
+                      "item/hso_extitemdescription_opt": "@variables('boolVendorDescriptionCreated')",
+                      "item/hso_gtinassignmentcreated_bool": "@variables('boolGTINAssignement')",
+                      "item/hso_tradeagreementjournalheader": "@coalesce(variables('strJournalNumbers'),'')",
+                      "item/hso_integrationsstatuslog_opt": 100000001,
+                      "item/hso_log": "@variables('Log_txt')",
+                      "item/hso_tradeagreementjournalline_opt": "@variables('boolTradeAgreementProcessed')",
+                      "item/hso_sqlproduct_opt": "@variables('boolSQL')",
+                      "item/hso_status": 3,
+                      "item/hso_productcategoryassignment_opt": "@variables('Init boolProductCategoryProcessed')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps_1"
+                    }
+                  },
+                  "runAfter": {
+                    "Set_Log_on_global_success": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "d08bfc6f-455a-46a1-ab5a-bba55716b1d1"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Update_detail_on_global_failure": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_productrequirementdetails",
+                        "recordId": "@outputs('Fetch_Product_Requirement_Detail_[ALL_INFORMATIONS]')?['body/hso_productrequirementdetailid']",
+                        "item/hso_extitemdescription_opt": "@variables('boolVendorDescriptionCreated')",
+                        "item/hso_gtinassignmentcreated_bool": "@variables('boolGTINAssignement')",
+                        "item/hso_tradeagreementjournalheader": "@coalesce(variables('strJournalNumbers'),'')",
+                        "item/hso_integrationsstatuslog_opt": 100000002,
+                        "item/hso_log": "@variables('Log_txt')",
+                        "item/hso_tradeagreementjournalline_opt": "@variables('boolTradeAgreementProcessed')",
+                        "item/hso_sqlproduct_opt": "@variables('boolSQL')",
+                        "item/hso_status": 3,
+                        "item/hso_productcategoryassignment_opt": "@variables('Init boolProductCategoryProcessed')"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateRecord",
+                        "connectionName": "shared_commondataserviceforapps_1"
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "dcc4ce14-db5d-4267-a91b-0f77649975b8"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "9603b385-5c3c-4452-bf33-a3f7ac979295"
+              }
+            }
+          },
+          "runAfter": {
+            "GTIN_Assignment": [
+              "Succeeded"
+            ],
+            "Default_Order_Settings": [
+              "Succeeded"
+            ],
+            "Update_metal_prices": [
+              "Succeeded"
+            ],
+            "Process_External_Item_Descriptions": [
+              "Succeeded"
+            ],
+            "Process_SQL": [
+              "Succeeded",
+              "Failed",
+              "TimedOut"
+            ],
+            "Process_Trade_Agreement": [
+              "Succeeded"
+            ],
+            "Process_category_assignement": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "4b2fe88a-7925-4b6d-8eea-3031e1aa2cc5"
+          }
+        }
+      },
+      "description": "This flow will check and process the article request detail when the button “Create product” is selected. This flow will create finance and operations data in two stages. “Main” will create the global and released products (cross-company). “Peripherical” will afterwards create additional data/Assignments like GTIN assignments, Trade Agreement Journal entries and more."
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

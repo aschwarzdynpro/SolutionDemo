@@ -1,0 +1,35 @@
+<appaction uniquename="hso__NurDrucken!e8b9dd62e3dc46e7874ba6d930d6814a!msdyn_FieldService!bookableresourcebooking!0">
+  <appmoduleid>
+    <uniquename>msdyn_FieldService</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Nur Drucken">
+    <label description="Nur Drucken" languagecode="1033" />
+  </buttonlabeltext>
+  <context>1</context>
+  <contextentity>
+    <logicalname>bookableresourcebooking</logicalname>
+  </contextentity>
+  <contextvalue>bookableresourcebooking</contextvalue>
+  <fonticon>$clientsvg:Print</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>0</location>
+  <name>NurDrucken!e8b9dd62e3dc46e7874ba6d930d6814a</name>
+  <onclickeventjavascriptfunctionname>ETO.BookingCommands.printReportAction</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":5},{"type":18,"value":false}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>70538546-81a6-ef11-b8e9-000d3adf95e4</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <parentappactionid>
+    <uniquename>hso__Main!e7815c2215e4411b9479474a11514d96!msdyn_FieldService!bookableresourcebooking!0</uniquename>
+  </parentappactionid>
+  <sequence>20000.0000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilitytype>0</visibilitytype>
+</appaction>

@@ -1,0 +1,147 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps_1": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "b1496d7b-0a1a-4358-830e-524a18cc15ad"
+          },
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          }
+        }
+      },
+      "actions": {
+        "List_Tax_Groups": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "04723882-905b-46de-9dcd-f4ca1a40433f"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps_1",
+              "operationId": "ListRecords"
+            },
+            "parameters": {
+              "entityName": "msdyn_taxgroups",
+              "$select": "msdyn_taxgroupid,msdyn_name"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Apply_to_each_Tax_Group": {
+          "foreach": "@outputs('List_Tax_Groups')?['body/value']",
+          "actions": {
+            "Is_\"INLAND\"": {
+              "actions": {
+                "Update_Tax_Group_with_Default_Sales_Tax_Code_19_percent": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "55b9bebf-6d71-4f14-91e8-8532b6fb8f49"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps_1",
+                      "operationId": "UpdateRecord"
+                    },
+                    "parameters": {
+                      "entityName": "msdyn_taxgroups",
+                      "recordId": "@items('Apply_to_each_Tax_Group')?['msdyn_taxgroupid']",
+                      "item/hso_defaultsalestaxcodepercentage": 19
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "runAfter": {},
+              "else": {
+                "actions": {
+                  "Update_Tax_Group_with_Default_Sales_Tax_Code_0_percent": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "090f045b-fc00-4e8c-9bb0-4b0bed9ca946"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "connectionName": "shared_commondataserviceforapps_1",
+                        "operationId": "UpdateRecord"
+                      },
+                      "parameters": {
+                        "entityName": "msdyn_taxgroups",
+                        "recordId": "@items('Apply_to_each_Tax_Group')?['msdyn_taxgroupid']",
+                        "item/hso_defaultsalestaxcodepercentage": 0
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "equals": [
+                  "@items('Apply_to_each_Tax_Group')?['msdyn_name']",
+                  "INLAND"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "72cdc726-1ec5-4383-8caf-ab33505e4113"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "List_Tax_Groups": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3612e658-1f45-4ab9-bf70-ece31bb5318a"
+          },
+          "type": "Foreach",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 20
+            }
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

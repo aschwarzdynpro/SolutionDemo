@@ -1,0 +1,683 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps_2": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_sharepointonline": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationSharePoint"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | PQC | GAEB API Subscription Key (hso_EnvVarPQCGAEBAPISubscriptionKey)": {
+          "defaultValue": "63fbdd2d43f944dbab43cf2dee6fac98",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarPQCGAEBAPISubscriptionKey",
+            "description": "The Subscription Key for the Azure API to process GAEB Import / Export "
+          }
+        },
+        "EnvVar | PQC | GAEB API Import Endpoint (hso_EnvVarPQCGAEBAPIImportEndpoint)": {
+          "defaultValue": "https://hsodeapimanagement.azure-api.net/gaeb/gaeb-import",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarPQCGAEBAPIImportEndpoint",
+            "description": "The API Endpoint called when importing a GAEB-File"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "title": "File Content",
+                  "type": "object",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GAEB file that has been uploaded",
+                  "x-ms-content-hint": "FILE",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "contentBytes": {
+                      "type": "string",
+                      "format": "byte"
+                    }
+                  }
+                },
+                "text": {
+                  "title": "Calculation",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The GUID of the created Calculation",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "description": "The GUID of the User that initiated the operation",
+                  "title": "User",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "d400eec7-fac4-4fab-b5ac-20b0e04f6c6a"
+          }
+        }
+      },
+      "actions": {
+        "Initialize_varLog": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varLog",
+                "type": "string",
+                "value": "[INF] - [@{utcNow()}] - Initializing Flow Run. @{decodeUriComponent('%0A')}"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "1247b7ac-73a8-42e3-85fb-b4aca47aa84a"
+          }
+        },
+        "Processing_Log": {
+          "type": "Scope",
+          "actions": {
+            "Create_Processing_Log": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "item/hso_name": "GAEB-Angebotsaufforderung importieren - @{body('Convert_time_zone')}",
+                  "item/hso_calculationid@odata.bind": "hso_calculations(@{triggerBody()?['text']})",
+                  "item/hso_flowrunurl": "@concat('https://emea.flow.microsoft.com/manage/environments/', workflow()?['tags']['environmentName'], '/flows/', workflow()?['name'], '/runs/', workflow()?['run']['name'])\n",
+                  "item/ownerid@odata.bind": "systemusers(@{triggerBody()?['text_1']})",
+                  "item/hso_processingstatus": 100000001,
+                  "item/hso_start_datetime": "@utcNow()",
+                  "item/hso_processingtask": 100000017
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps_2"
+                }
+              },
+              "runAfter": {
+                "Convert_time_zone": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9ebbbacb-26b7-4141-90d5-c2d219b550d9"
+              }
+            },
+            "Convert_time_zone": {
+              "type": "Expression",
+              "kind": "ConvertTimeZone",
+              "inputs": {
+                "baseTime": "@{utcNow()}",
+                "sourceTimeZone": "UTC",
+                "destinationTimeZone": "W. Europe Standard Time",
+                "formatString": "u"
+              },
+              "metadata": {
+                "operationMetadataId": "c2f001a2-f7ba-41e8-8675-3a971e2ac227"
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varSharePointDocumentRelativeURL": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e3a36bc3-b683-431f-8dff-b82281c81353"
+          }
+        },
+        "SharePoint_Document_Integration": {
+          "type": "Scope",
+          "actions": {
+            "List_Document_Locations": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "sharepointdocumentlocations",
+                  "fetchXml": "<fetch version=\"1.0\" output-format=\"xml-platform\" mapping=\"logical\" distinct=\"false\">\n  <entity name=\"sharepointdocumentlocation\">\n    <attribute name=\"name\" />\n    <attribute name=\"regardingobjectid\" />\n    <attribute name=\"parentsiteorlocation\" />\n    <attribute name=\"relativeurl\" />\n    <attribute name=\"absoluteurl\" />\n    <order attribute=\"name\" descending=\"false\" />\n    <filter type=\"and\">\n      <condition attribute=\"locationtype\" operator=\"eq\" value=\"0\" />\n      <condition attribute=\"servicetype\" operator=\"eq\" value=\"0\" />\n      <condition attribute=\"regardingobjectid\" operator=\"eq\" uitype=\"hso_calculation\" value=\"{@{outputs('Get_Calculation')?['body/hso_calculationid']}}\" />\n    </filter>\n  </entity>\n</fetch>"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps_2"
+                }
+              },
+              "runAfter": {
+                "Get_default_sharepoint_site": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "33ed9007-a31d-44da-84aa-c6600fb1e2bb"
+              }
+            },
+            "Document_Location_already_created": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@length(outputs('List_Document_Locations')?['body/value'])",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Append_existing_SharePoint_Document_Location_to_Log": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varLog",
+                    "value": "[INF] - [@{utcNow()}] - SharePoint Document Location found. @{decodeUriComponent('%0A')}"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "4ace8d31-303f-489b-bb34-d466058d9c8c"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Append_create_SharePoint_Document_Location_to_varLog": {
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "varLog",
+                      "value": "[INF] - [@{utcNow()}] - Create SharePoint Document Location for new Calculation. @{decodeUriComponent('%0A')}"
+                    },
+                    "metadata": {
+                      "operationMetadataId": "45d08227-baa7-4904-b4f6-4b977bb693b1"
+                    }
+                  },
+                  "Append_created_SharePoint_Document_Location_to_varLog": {
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "varLog",
+                      "value": "[INF] - [@{utcNow()}] - SharePoint Document Location created. @{decodeUriComponent('%0A')}"
+                    },
+                    "runAfter": {
+                      "Create_SharePoint_Folder_in_Document_Library": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "2febc37b-fa61-4275-a679-b6e5a39b06e1"
+                    }
+                  },
+                  "Get_Calculation_Document_Location": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "sharepointdocumentlocations",
+                        "fetchXml": "<fetch version=\"1.0\" output-format=\"xml-platform\" mapping=\"logical\" distinct=\"false\">\n  <entity name=\"sharepointdocumentlocation\">\n    <attribute name=\"name\" />\n    <attribute name=\"regardingobjectid\" />\n    <attribute name=\"parentsiteorlocation\" />\n    <attribute name=\"relativeurl\" />\n    <attribute name=\"absoluteurl\" />\n    <order attribute=\"name\" descending=\"false\" />\n    <filter type=\"and\">\n      <condition attribute=\"locationtype\" operator=\"eq\" value=\"0\" />\n      <condition attribute=\"servicetype\" operator=\"eq\" value=\"0\" />\n<condition attribute=\"relativeurl\" operator=\"eq\" value=\"hso_calculation\" />\n    </filter>\n  </entity>\n</fetch>",
+                        "$top": 1
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "ListRecords",
+                        "connectionName": "shared_commondataserviceforapps_2"
+                      }
+                    },
+                    "runAfter": {
+                      "Append_create_SharePoint_Document_Location_to_varLog": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "38cc5596-b124-4cf3-8f86-bf2b2c84cdab"
+                    }
+                  },
+                  "Create_Document_Location": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "sharepointdocumentlocations",
+                        "item/name": "@replace(\r\n    replace(\r\n        replace(\r\n            replace(\r\n                replace(\r\n                    replace(\r\n                        replace(\r\n                            replace(\r\n                                replace(\r\n                                    outputs('Get_Calculation')?['body/hso_name'],\r\n                                    '\"',\r\n                                    ''\r\n                                ),\r\n                                '#',\r\n                                ''\r\n                            ),\r\n                            '%',\r\n                            ''\r\n                        ),\r\n                        '&',\r\n                        ''\r\n                    ),\r\n                    '*',\r\n                    ''\r\n                ),\r\n                ':',\r\n                ''\r\n            ),\r\n            '?',\r\n            ''\r\n        ),\r\n        '/',\r\n        ''\r\n    ),\r\n    '\\',\r\n    ''\r\n)",
+                        "item/servicetype": 0,
+                        "item/description": "Generated via Power Automate",
+                        "item/locationtype": 0,
+                        "item/parentsiteorlocation_sharepointdocumentlocation@odata.bind": "sharepointdocumentlocations(@{first(outputs('Get_Calculation_Document_Location')?['body/value'])?['sharepointdocumentlocationid']})",
+                        "item/regardingobjectid_hso_calculation@odata.bind": "hso_calculations(@{outputs('Get_Calculation')?['body/hso_calculationid']})",
+                        "item/relativeurl": "@variables('varSharePointDocumentRelativeURL')"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "CreateRecord",
+                        "connectionName": "shared_commondataserviceforapps_2"
+                      }
+                    },
+                    "runAfter": {
+                      "Get_Calculation_Document_Location": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "f6f6f525-1900-4ef7-9081-e602ce2e231f"
+                    }
+                  },
+                  "Create_SharePoint_Folder_in_Document_Library": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "@first(outputs('Get_default_sharepoint_site')?['body/value'])?['absoluteurl']",
+                        "table": "Calculation",
+                        "parameters/path": "@variables('varSharePointDocumentRelativeURL')"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "CreateNewFolder",
+                        "connectionName": "shared_sharepointonline"
+                      }
+                    },
+                    "runAfter": {
+                      "Create_Document_Location": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "b137b231-0e98-40bc-8601-9e1c243292d7"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "List_Document_Locations": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "fb303f9f-1d17-413a-8f77-2167b90d2dcb"
+              }
+            },
+            "Append_SharePoint_Document_Location_Check_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - Remove special characters from Calculation Name: @{replace(\r\n    replace(\r\n        replace(\r\n            replace(\r\n                replace(\r\n                    replace(\r\n                        replace(\r\n                            replace(\r\n                                replace(\r\n                                    outputs('Get_Calculation')?['body/hso_name'],\r\n                                    '\"',\r\n                                    ''\r\n                                ),\r\n                                '#',\r\n                                ''\r\n                            ),\r\n                            '%',\r\n                            ''\r\n                        ),\r\n                        '&',\r\n                        ''\r\n                    ),\r\n                    '*',\r\n                    ''\r\n                ),\r\n                ':',\r\n                ''\r\n            ),\r\n            '?',\r\n            ''\r\n        ),\r\n        '/',\r\n        ''\r\n    ),\r\n    '\\',\r\n    ''\r\n)}\n[INF] - [@{utcNow()}] - Check SharePoint Document Location. @{decodeUriComponent('%0A')}"
+              },
+              "metadata": {
+                "operationMetadataId": "d5ac334c-10f3-47e5-8265-7bb944c79dbb"
+              }
+            },
+            "Append_Add_File_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - Add GAEB-File to Calculation specific folder. @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "Document_Location_already_created": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "8e4152b3-6021-4661-84b2-28294767bbe6"
+              }
+            },
+            "Append_added_File_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - GAEB-File added to Calculation specific folder. @{decodeUriComponent('%0A')}"
+              },
+              "runAfter": {
+                "Add_File_to_SharePoint_Folder_in_Document_Library": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "b0ce423d-4078-4ee9-a742-c2ff1589439c"
+              }
+            },
+            "Add_File_to_SharePoint_Folder_in_Document_Library": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "@first(outputs('Get_default_sharepoint_site')?['body/value'])?['absoluteurl']",
+                  "folderPath": "hso_calculation/@{variables('varSharePointDocumentRelativeURL')}",
+                  "name": "@triggerBody()?['file']?['name']",
+                  "body": "@triggerBody()?['file']?['contentBytes']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "CreateFile",
+                  "connectionName": "shared_sharepointonline"
+                }
+              },
+              "runAfter": {
+                "Append_Add_File_to_Log": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "contentTransfer": {
+                  "transferMode": "Chunked"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "d16a892d-b0bd-4c65-9b49-8fb8ed4f8751"
+              }
+            },
+            "Get_default_sharepoint_site": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "sharepointsites",
+                  "fetchXml": "<fetch version=\"1.0\" output-format=\"xml-platform\" mapping=\"logical\" distinct=\"false\" no-lock=\"false\">\n<entity name=\"sharepointsite\">\n<attribute name=\"absoluteurl\"/>\n<attribute name=\"name\"/>\n<attribute name=\"sharepointsiteid\"/>\n<filter type=\"and\">\n<condition attribute=\"statecode\" operator=\"eq\" value=\"0\"/>\n<condition attribute=\"servicetype\" operator=\"eq\" value=\"0\"/>\n<condition attribute=\"isdefault\" operator=\"eq\" value=\"1\"/>\n</filter>\n</entity>\n</fetch>"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps_2"
+                }
+              },
+              "runAfter": {
+                "Append_SharePoint_Document_Location_Check_to_Log": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "d2b1140e-6f43-48ce-abf5-9980a7e2acde"
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varSharePointDocumentRelativeURL": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "80eea317-8235-4bf4-b507-bf9324f0009c"
+          }
+        },
+        "Get_Calculation": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "hso_calculations",
+              "recordId": "@triggerBody()['text']",
+              "$select": "hso_name,hso_calculationid,_ownerid_value"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "connectionName": "shared_commondataserviceforapps_2"
+            }
+          },
+          "runAfter": {
+            "Initialize_varLog": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a857088e-a077-4497-b8d0-adef6db6cd96"
+          }
+        },
+        "Initialize_varSharePointDocumentRelativeURL": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varSharePointDocumentRelativeURL",
+                "type": "string",
+                "value": "@{replace(\r\n    replace(\r\n        replace(\r\n            replace(\r\n                replace(\r\n                    replace(\r\n                        replace(\r\n                            replace(\r\n                                replace(\r\n                                    outputs('Get_Calculation')?['body/hso_name'],\r\n                                    '\"',\r\n                                    ''\r\n                                ),\r\n                                '#',\r\n                                ''\r\n                            ),\r\n                            '%',\r\n                            ''\r\n                        ),\r\n                        '&',\r\n                        ''\r\n                    ),\r\n                    '*',\r\n                    ''\r\n                ),\r\n                ':',\r\n                ''\r\n            ),\r\n            '?',\r\n            ''\r\n        ),\r\n        '/',\r\n        ''\r\n    ),\r\n    '\\',\r\n    ''\r\n)}_@{toUpper(outputs('Get_Calculation')?['body/hso_calculationid'])}"
+              }
+            ]
+          },
+          "runAfter": {
+            "Get_Calculation": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "bcbb21ec-f902-44ae-86bd-654121955a66"
+          }
+        },
+        "Call_Azure_Function": {
+          "type": "Scope",
+          "actions": {
+            "Call_GAEB_API_Endpoint_to_process_Import": {
+              "type": "Http",
+              "inputs": {
+                "uri": "@parameters('EnvVar | PQC | GAEB API Import Endpoint (hso_EnvVarPQCGAEBAPIImportEndpoint)')",
+                "method": "POST",
+                "headers": {
+                  "Ocp-Apim-Subscription-Key": "@{parameters('EnvVar | PQC | GAEB API Subscription Key (hso_EnvVarPQCGAEBAPISubscriptionKey)')}"
+                },
+                "body": {
+                  "DataverseCalculationId": "@{outputs('Get_Calculation')?['body/hso_calculationid']}",
+                  "SharePointFilePath": "@{outputs('Add_File_to_SharePoint_Folder_in_Document_Library')?['body/Path']}",
+                  "DataverseProcessingLogId": "@{outputs('Create_Processing_Log')?['body/hso_processinglogid']}",
+                  "ProcessingLogString": "@{variables('varLog')}"
+                },
+                "retryPolicy": {
+                  "type": "none"
+                }
+              },
+              "runAfter": {
+                "Append_API_Endpoint_to_Log": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "contentTransfer": {
+                  "transferMode": "Chunked"
+                }
+              }
+            },
+            "Append_API_Endpoint_to_Log": {
+              "type": "AppendToStringVariable",
+              "inputs": {
+                "name": "varLog",
+                "value": "[INF] - [@{utcNow()}] - Call API Endpoint to process GAEB-Import. @{decodeUriComponent('%0A')}"
+              }
+            },
+            "Status_code_received": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@outputs('Call_GAEB_API_Endpoint_to_process_Import')?['statusCode']",
+                        "@null"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "actions": {
+                "Switch_on_GAEB_API_Endpoint_Status_code": {
+                  "type": "Switch",
+                  "expression": "@outputs('Call_GAEB_API_Endpoint_to_process_Import')?['statusCode']",
+                  "default": {
+                    "actions": {
+                      "GAEB_API_Endpoint_Status_code": {
+                        "type": "Compose",
+                        "inputs": "@outputs('Call_GAEB_API_Endpoint_to_process_Import')?['statusCode']"
+                      },
+                      "Respond_to_Power_App_with_Failure": {
+                        "type": "Response",
+                        "kind": "PowerApp",
+                        "inputs": {
+                          "schema": {
+                            "type": "object",
+                            "properties": {
+                              "result": {
+                                "title": "Result",
+                                "x-ms-dynamically-added": true,
+                                "type": "string"
+                              }
+                            },
+                            "additionalProperties": {}
+                          },
+                          "statusCode": 200,
+                          "body": {
+                            "result": "Error"
+                          }
+                        },
+                        "runAfter": {
+                          "GAEB_API_Endpoint_Status_code": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "5ae8b345-7f20-4df3-b3a2-8c2be8b1e2bd"
+                        }
+                      }
+                    }
+                  },
+                  "cases": {
+                    "Success": {
+                      "actions": {
+                        "Respond_to_Power_App_with_Success": {
+                          "type": "Response",
+                          "kind": "PowerApp",
+                          "inputs": {
+                            "schema": {
+                              "type": "object",
+                              "properties": {
+                                "result": {
+                                  "title": "Result",
+                                  "x-ms-dynamically-added": true,
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": {}
+                            },
+                            "statusCode": 200,
+                            "body": {
+                              "result": "Success"
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "5ae8b345-7f20-4df3-b3a2-8c2be8b1e2bd"
+                          }
+                        }
+                      },
+                      "case": 200
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Respond_to_Power_App_with_Timeout": {
+                    "type": "Response",
+                    "kind": "PowerApp",
+                    "inputs": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "result": {
+                            "title": "Result",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": {}
+                      },
+                      "statusCode": 200,
+                      "body": {
+                        "result": "Timeout"
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "5ae8b345-7f20-4df3-b3a2-8c2be8b1e2bd"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Call_GAEB_API_Endpoint_to_process_Import": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Failed"
+                ]
+              }
+            },
+            "Body_of_GAEB_API_Endpoint": {
+              "type": "Compose",
+              "inputs": "@body('Call_GAEB_API_Endpoint_to_process_Import')",
+              "runAfter": {
+                "Call_GAEB_API_Endpoint_to_process_Import": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              }
+            },
+            "Status_code_of_GAEB_API_Endpoint": {
+              "type": "Compose",
+              "inputs": "@outputs('Call_GAEB_API_Endpoint_to_process_Import')?['statusCode']",
+              "runAfter": {
+                "Call_GAEB_API_Endpoint_to_process_Import": [
+                  "Succeeded",
+                  "TimedOut",
+                  "Skipped",
+                  "Failed"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Processing_Log": [
+              "Succeeded"
+            ],
+            "SharePoint_Document_Integration": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "74755e09-9452-4eeb-91b9-dfe762672323"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

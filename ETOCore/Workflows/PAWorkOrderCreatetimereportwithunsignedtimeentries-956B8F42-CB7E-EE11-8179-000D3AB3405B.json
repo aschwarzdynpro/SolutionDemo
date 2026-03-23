@@ -1,0 +1,168 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_CRDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "dynamicscrmonline.organizationName": {
+          "defaultValue": "",
+          "type": "String"
+        },
+        "dynamicscrmonline.entityName": {
+          "defaultValue": "",
+          "type": "String"
+        }
+      },
+      "triggers": {
+        "When_a_row_is_added,_modified_or_deleted": {
+          "metadata": {
+            "operationMetadataId": "426794c4-f502-4bfa-8625-e27f86109a7f"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "msdyn_workorder",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "msdyn_systemstatus"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          }
+        }
+      },
+      "actions": {
+        "Condition": {
+          "actions": {
+            "List_rounded_time_reports": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "61926295-2c1c-43a2-9085-7ed6f0ed54eb"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "hso_roundedtimeentrieses",
+                  "fetchXml": "<fetch version=\"1.0\" mapping=\"logical\" savedqueryid=\"608e584c-9312-49e1-8c2e-b2690cf77fe4\" distinct=\"true\" no-lock=\"false\"><entity name=\"hso_roundedtimeentries\"><attribute name=\"hso_name\"/><attribute name=\"hso_roundedtimeentriesid\"/><attribute name=\"createdon\"/><attribute name=\"hso_duration\"/><attribute name=\"hso_workorder\"/><attribute name=\"hso_signed\"/><attribute name=\"hso_type\"/><attribute name=\"hso_bookableresourcebooking\"/><attribute name=\"hso_worksubtypecompleted\"/><filter type=\"and\"><condition attribute=\"statecode\" operator=\"eq\" value=\"0\"/><condition attribute=\"hso_timereport\" operator=\"null\"/><condition attribute=\"hso_workorder\" operator=\"eq\" value=\"{@{triggerOutputs()?['body/msdyn_workorderid']}}\" uiname=\"00057\" uitype=\"msdyn_workorder\"/><filter type=\"or\"><condition attribute=\"hso_worksubtypecompleted\" operator=\"eq\" value=\"0\"/><filter type=\"and\"><condition attribute=\"hso_worksubtypecompleted\" operator=\"eq\" value=\"1\"/><condition attribute=\"hso_type\" operator=\"like\" value=\"%|%\"/></filter></filter></filter></entity></fetch>"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Create_a_new_time_report": {
+              "runAfter": {
+                "List_rounded_time_reports": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "48ca9742-845e-4235-bd55-70cd9ee8ca6d"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "hso_timereportses",
+                  "item/hso_name": "Time report @{utcNow()}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Update_each_rounded_time_entry_with_the_newly_created_time_report": {
+              "foreach": "@outputs('List_rounded_time_reports')?['body/value']",
+              "actions": {
+                "Update_the_lookup": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "10d59561-79d2-4624-a26a-96a0a32bd9c7"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "hso_roundedtimeentrieses",
+                      "recordId": "@items('Update_each_rounded_time_entry_with_the_newly_created_time_report')?['hso_roundedtimeentriesid']"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "runAfter": {
+                "Create_a_new_time_report": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "91e3e757-a2b5-4919-af06-44fae2893f1a"
+              },
+              "type": "Foreach"
+            }
+          },
+          "runAfter": {},
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@triggerOutputs()?['body/msdyn_systemstatus']",
+                  690970003
+                ]
+              },
+              {
+                "equals": [
+                  "@triggerOutputs()?['body/_msdyn_workordertype_value@Microsoft.Dynamics.CRM.lookuplogicalname']",
+                  "e72f1e87-cb97-ee11-be37-000d3ab3c80c"
+                ]
+              }
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "40c4d40f-fc34-4f4b-9749-12a3056d21e9"
+          },
+          "type": "If"
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

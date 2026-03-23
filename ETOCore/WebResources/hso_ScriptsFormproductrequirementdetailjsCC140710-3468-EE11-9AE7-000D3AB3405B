@@ -1,0 +1,210 @@
+if (typeof (hso) === "undefined") { hso = {}; };
+if (typeof (hso.ProductRequirementDetailForm) === "undefined") { hso.ProductRequirementDetailForm = {}; }
+
+//Global variables
+const ArrRequiredFields = [ // Fields requiered for FinOps Creation
+    "hso_company_id",
+    "hso_itemgroup",
+    "hso_storagedimensiongroup_id",
+    "hso_reservationhierarchy",
+    "hso_trackingdimensiongroup_id",
+    "hso_itemmodelgroup_opt",
+    "hso_purchasetaxgroup_id",
+    "hso_salestaxgroup_id",
+    "hso_unitsequencegroup",
+    "hso_storageunit_ref",
+    "hso_orderunit_id",
+    "hso_projectcategory_id",
+    "hso_manufacturer_id",
+    "hso_supplier_id",
+    "hso_productname",
+    "hso_productdescription",
+    "hso_productcategory_id",
+    "hso_manufacturername",
+    "hso_suppliername",
+    "hso_defaultordertype_opt"
+];
+
+var OptionSetValue = 2; // Fields to be disabled while FinOps Creation.
+var arrMissing = []; // Will be used in different scopes, therfore global.
+var FetchXMLCompany = ""; //Global becaused used in iteration.
+
+
+hso.ProductRequirementDetailForm.onLoad = (executionContext) => {
+    formContext = executionContext.getFormContext();
+    //hso.ProductRequirementDetailForm.registerEvents(formContext);
+    hso.ProductRequirementDetailForm.LockAllFieldsProductCreation(executionContext);
+
+};
+
+
+hso.ProductRequirementDetailForm.LockAllFieldsProductCreation = (executionContext) => {
+
+    let formContext = executionContext.getFormContext();
+
+    if (formContext.getAttribute("hso_status").getValue() == OptionSetValue) {
+        console.log("Form fields will be disabled because of record hso_status.");
+        hso.ProductRequirementDetailForm.LockAllFields(formContext, true);
+    }
+};
+
+
+// Code is executed when ribbon "Create Product" is pressed.
+// Checks if required fields are filled. Cancel and message if not, update field hso_status if true.
+// hso_status will trigger Power Automate Flow
+hso.ProductRequirementDetailForm.CreateProduct = async (PrimaryControl) => {
+    let tempFieldValue = ""; // temp
+    let tempFieldName = ""; // temp
+    arrMissing = []; // Reset of global array
+    const globalContext = Xrm.Utility.getGlobalContext();
+    const userLcid = globalContext.userSettings.languageId;
+
+    // Entferne vorherige Benachrichtigungen
+    PrimaryControl.ui.clearFormNotification("MissingFieldMessage");
+
+    // Prüfe Pflichtfelder
+    for (const fieldName of ArrRequiredFields) {
+        tempFieldValue = PrimaryControl.getAttribute(fieldName).getValue();
+        PrimaryControl.getControl(fieldName).clearNotification(fieldName);
+
+        if (!tempFieldValue) {
+            arrMissing.push(fieldName);
+        }
+    }
+
+    // Überprüfe Metallwerte
+    PrimaryControl.getControl("hso_manualmetalsurcharge").clearNotification("hso_manualmetalsurcharge");
+    const manualSurcharge = PrimaryControl.getAttribute("hso_manualmetalsurcharge").getValue();
+    const surchargeQuantity = PrimaryControl.getAttribute("hso_metalsurchargepricequantity").getValue();
+    if (manualSurcharge && (!surchargeQuantity || surchargeQuantity === 0)) {
+        arrMissing.push("hso_metalsurchargepricequantity");
+    }
+
+    for (let ii = 1; ii <= 3; ii++) {
+        const surchargeType = PrimaryControl.getAttribute(`hso_metalsurchargetype${ii}`).getValue();
+        const metalQuantity = PrimaryControl.getAttribute(`hso_metalquantity${ii}_dec`).getValue();
+
+        PrimaryControl.getControl(`hso_metalquantity${ii}_dec`).clearNotification(`hso_metalquantity${ii}_dec`);
+        if (!manualSurcharge && surchargeType && (!metalQuantity || metalQuantity === 0)) {
+            arrMissing.push(`hso_metalquantity${ii}_dec`);
+        }
+    }
+
+    // Prüfe Produktkategorie
+    const isCategoryValid = await hso.ProductRequirementDetailForm.CheckProductcategory(PrimaryControl);
+
+    // Hauptlogik
+    if (arrMissing.length === 0 && isCategoryValid) {
+        console.log("Required fields are filled. Power Automate will be executed.");
+        
+        PrimaryControl.getAttribute("hso_status").setValue(OptionSetValue);
+        await PrimaryControl.data.entity.save(); // Warte auf das Speichern
+        hso.ProductRequirementDetailForm.LockAllFields(PrimaryControl, true); // Felder sperren
+    } else {
+        let message = "";
+        switch (userLcid) {
+            case 1031: // Deutsch
+                message = "Produkt kann nicht angelegt werden, bitte fehlende Pflichtfelder ausfüllen.";
+                break;
+            default: // Andere Sprachen
+                message = "Product cannot be created, please fill in missing mandatory fields.";
+                break;
+        }
+
+        console.log("Some required fields are missing or the category check failed.");
+        PrimaryControl.ui.setFormNotification(message, "INFO", "MissingFieldMessage");
+
+        // Setze Benachrichtigungen auf den fehlenden Feldern
+        for (const field of arrMissing) {
+            PrimaryControl.getControl(field).setNotification("*", field);
+        }
+    }
+};
+
+
+//Helper function - Disables all fields
+//Disable fields and drop message
+hso.ProductRequirementDetailForm.LockAllFields = (formContext, fieldmode) => {
+
+    let formControls = formContext.ui.controls;
+    let globalContext = Xrm.Utility.getGlobalContext();
+    let userLcid = globalContext.userSettings.languageId;
+
+    if (fieldmode == true) {
+        let message = "";
+        switch (userLcid) {
+            case 1031:
+                message = "Der Datensatz wird derzeit verarbeitet und ist währenddessen für weitere Bearbeitung gesperrt.";
+                break;
+            default:
+                message = "The data set is currently being processed and is blocked for further processing in the meantime. ";
+                break;
+        }
+        formContext.ui.setFormNotification(message, "INFO", "StatusRunningMessage");
+    }
+
+    formControls.forEach(control => {
+        if (control.getName() != "" && control.getName() != null) {
+            control.setDisabled(fieldmode);
+        }
+    });
+
+};
+
+hso.ProductRequirementDetailForm.CheckProductcategory = async (_PrimaryControl) => {
+    const globalContext = Xrm.Utility.getGlobalContext();
+    const userLcid = globalContext.userSettings.languageId;
+
+    // Mehrsprachige Texte für den Bestätigungsdialog
+    let confirmStrings = {};
+    switch (userLcid) {
+        case 1031: // Deutsch
+            confirmStrings = {
+                text: "Die Produktkategorie hat keinen gültigen Zuschlag. Möchten Sie trotzdem fortfahren?",
+                title: "Bestätigungsdialog"
+            };
+            break;
+        default: // Englisch als Standard
+            confirmStrings = {
+                text: "The product category does not have a valid surcharge. Do you want to proceed anyway?",
+                title: "Confirmation Dialog"
+            };
+            break;
+    }
+
+    const confirmOptions = { height: 200, width: 450 };
+
+    const categoryAttribute = _PrimaryControl.getAttribute("hso_productcategory_id");
+    if (!categoryAttribute || categoryAttribute.getValue() === null) {
+        console.log("Product category is not set.");
+        return false;
+    }
+
+    const CatGuid = categoryAttribute.getValue()[0].id;
+    //console.log("Category GUID:", CatGuid);
+
+    try {
+        const result = await Xrm.WebApi.retrieveRecord("msdyn_productcategory", CatGuid, "?$select=hso_salespercentmarkup");
+        console.log("Retrieved values: Sales Percent Markup:", result.hso_salespercentmarkup);
+
+        if (!result.hso_salespercentmarkup) {
+            const dialogResult = await Xrm.Navigation.openConfirmDialog(confirmStrings, confirmOptions);
+            if (dialogResult.confirmed) {
+                console.log("Dialog confirmed.");
+                return true;
+            } else {
+                console.log("Dialog canceled.");
+                return false;
+            }
+        }
+
+        console.log("Sales percent markup is valid.");
+        return true;
+    } catch (error) {
+        console.error("Error retrieving product category:", error.message);
+        await Xrm.Navigation.openAlertDialog({ text: "An error occurred: " + error.message });
+        return false;
+    }
+};
+
+

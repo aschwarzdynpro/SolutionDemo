@@ -1,0 +1,40 @@
+<appaction uniquename="hso__BesttigeImport!c3624a11b0dd4505aae4fb519e49537e!hso_ArticleRequirement!hso_catalogueimport!0">
+  <appmoduleid>
+    <uniquename>hso_ArticleRequirement</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Run Validation">
+    <label description="Run Validation" languagecode="1033" />
+  </buttonlabeltext>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_catalogueimport</logicalname>
+  </contextentity>
+  <contextvalue>hso_catalogueimport</contextvalue>
+  <fonticon>$clientsvg:RunWorkflow</fonticon>
+  <hidden>0</hidden>
+  <iconwebresourceid>
+    <webresourceid>ec1b85e3-7de7-ee11-904d-000d3ab1b3e1</webresourceid>
+  </iconwebresourceid>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>0</location>
+  <name>BesttigeImport!c3624a11b0dd4505aae4fb519e49537e</name>
+  <onclickeventformulacomponentlibraryid>
+    <name>hso_articlerequirementdefaultcommandlibrary_8890c</name>
+  </onclickeventformulacomponentlibraryid>
+  <onclickeventformulacomponentname>44b90bc9fb5a44ca8462f24b597098c1</onclickeventformulacomponentname>
+  <onclickeventformulafunctionname>OnSelect</onclickeventformulafunctionname>
+  <onclickeventtype>1</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100100005.5000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>hso_articlerequirementdefaultcommandlibrary_8890c</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>44b90bc9fb5a44ca8462f24b597098c1</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

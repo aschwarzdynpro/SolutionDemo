@@ -1,0 +1,166 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+if (typeof (ETO.ProcessingLogForm) === "undefined") { ETO.ProcessingLogForm = {}; };
+
+// Show or Hide specific sections of the Form based on the Processing Task set
+ETO.ProcessingLogForm.onLoadDisplayFormSections = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+    var ProcessingTask = formContext.getAttribute('hso_processingtask').getValue();
+    if (ProcessingTask == 100000005) { // Processing Task = Create FinOps Project
+        showSection('projectcontract_section');
+        showSection('project_section');
+        showSection('billingrule_section');
+        hideSection('projectbucket_section');
+        hideSection('projecthour_section');
+        hideSection('externalservice_section');
+        hideSection('itemplanning_section');
+        hideSection('calculationmetalprice_section');
+        hideSection('calculationprojectproduct_section');
+        hideSection('calculationsurchargegroup_section');
+        hideSection('calculationposition_section');
+        hideSection('calculation_section');
+        hideSection('calculationpaymentterm_section');
+    } else if (ProcessingTask == 100000006) { // Processing Task = Create Project Tasks
+        hideSection('projectcontract_section');
+        hideSection('project_section');
+        hideSection('billingrule_section');
+        showSection('projectbucket_section');
+        showSection('projecthour_section');
+        showSection('externalservice_section');
+        hideSection('itemplanning_section');
+        hideSection('calculationmetalprice_section');
+        hideSection('calculationprojectproduct_section');
+        hideSection('calculationsurchargegroup_section');
+        hideSection('calculationposition_section');
+        hideSection('calculation_section');
+        hideSection('calculationpaymentterm_section');
+    } else if (ProcessingTask == 100000007) { // Processing Task = Create Project Item Planning
+        hideSection('projectcontract_section');
+        hideSection('project_section');
+        hideSection('billingrule_section');
+        hideSection('projectbucket_section');
+        hideSection('projecthour_section');
+        hideSection('externalservice_section');
+        showSection('itemplanning_section');
+        hideSection('calculationmetalprice_section');
+        hideSection('calculationprojectproduct_section');
+        hideSection('calculationsurchargegroup_section');
+        hideSection('calculationposition_section');
+        hideSection('calculation_section');
+        hideSection('calculationpaymentterm_section');
+    } else if (ProcessingTask == 100000000) { // Processing Task = Copy Calculation  
+        hideSection('projectcontract_section');
+        hideSection('project_section');
+        hideSection('billingrule_section');
+        hideSection('projectbucket_section');
+        hideSection('projecthour_section');
+        hideSection('externalservice_section');
+        hideSection('itemplanning_section');
+        showSection('calculationmetalprice_section');
+        showSection('calculationprojectproduct_section');
+        showSection('calculationsurchargegroup_section');
+        showSection('calculationposition_section');
+        hideSection('calculation_section');
+        showSection('calculationpaymentterm_section');
+    } else if (ProcessingTask == 100000001) { // Processing Task = Create Calculation from Template  
+        hideSection('projectcontract_section');
+        hideSection('project_section');
+        hideSection('billingrule_section');
+        hideSection('projectbucket_section');
+        hideSection('projecthour_section');
+        hideSection('externalservice_section');
+        hideSection('itemplanning_section');
+        showSection('calculationmetalprice_section');
+        showSection('calculationprojectproduct_section');
+        showSection('calculationsurchargegroup_section');
+        showSection('calculationposition_section');
+        hideSection('calculation_section');
+        hideSection('calculationpaymentterm_section');
+    } else if (ProcessingTask == 100000004) { // Processing Task = Create Template 
+        hideSection('projectcontract_section');
+        hideSection('project_section');
+        hideSection('billingrule_section');
+        hideSection('projectbucket_section');
+        hideSection('projecthour_section');
+        hideSection('externalservice_section');
+        hideSection('itemplanning_section');
+        hideSection('calculationmetalprice_section');
+        showSection('calculationprojectproduct_section');
+        hideSection('calculationsurchargegroup_section');
+        showSection('calculationposition_section');
+        hideSection('calculation_section');
+        hideSection('calculationpaymentterm_section');
+    } else if (ProcessingTask == 100000002) { // Processing Task = Update Surchargegroups 
+        hideSection('projectcontract_section');
+        hideSection('project_section');
+        hideSection('billingrule_section');
+        hideSection('projectbucket_section');
+        hideSection('projecthour_section');
+        hideSection('externalservice_section');
+        hideSection('itemplanning_section');
+        hideSection('calculationmetalprice_section');
+        hideSection('calculationprojectproduct_section');
+        showSection('calculationsurchargegroup_section');
+        showSection('calculationposition_section');
+        hideSection('calculation_section');
+        hideSection('calculationpaymentterm_section');
+    } else if (ProcessingTask == 100000003) { // Processing Task = Update Metalprice 
+        hideSection('projectcontract_section');
+        hideSection('project_section');
+        hideSection('billingrule_section');
+        hideSection('projectbucket_section');
+        hideSection('projecthour_section');
+        hideSection('externalservice_section');
+        hideSection('itemplanning_section');
+        showSection('calculationmetalprice_section');
+        hideSection('calculationprojectproduct_section');
+        hideSection('calculationsurchargegroup_section');
+        showSection('calculationposition_section');
+        hideSection('calculation_section');
+        hideSection('calculationpaymentterm_section');
+    } else if (ProcessingTask == 100000009) { // Processing Task = Update Salestax 
+        hideSection('projectcontract_section');
+        hideSection('project_section');
+        hideSection('billingrule_section');
+        hideSection('projectbucket_section');
+        hideSection('projecthour_section');
+        hideSection('externalservice_section');
+        hideSection('itemplanning_section');
+        hideSection('calculationmetalprice_section');
+        hideSection('calculationprojectproduct_section');
+        hideSection('calculationsurchargegroup_section');
+        hideSection('calculationposition_section');
+        showSection('calculation_section');
+        hideSection('calculationpaymentterm_section');
+    } else if (ProcessingTask == 100000010) { // Processing Task = Create Calculation Details 
+        hideSection('projectcontract_section');
+        hideSection('project_section');
+        hideSection('billingrule_section');
+        hideSection('projectbucket_section');
+        hideSection('projecthour_section');
+        hideSection('externalservice_section');
+        hideSection('itemplanning_section');
+        hideSection('calculationprojectproduct_section');
+        hideSection('calculationposition_section');
+        hideSection('calculation_section');
+        hideSection('serviceitem_section');
+        hideSection('expenseplanning_section');
+        showSection('calculationpaymentterm_section');
+        showSection('calculationsalesprice_section');
+        showSection('calculationsurchargegroup_section');
+        showSection('calculationmetalprice_section');
+    };
+};
+
+// Generic function to show a specific section
+// Function called by other functions from within this library
+function showSection(sectionName) {
+    Xrm.Page.ui.tabs.get("general_tab").sections.get(sectionName).setVisible(true);
+    //formContext.ui.tabs.get("general_tab").sections.get(sectionName).setVisible(true);
+};
+
+// Generic function to hide a specific section
+// Function called by other functions from within this library
+function hideSection(sectionName) {
+    Xrm.Page.ui.tabs.get("general_tab").sections.get(sectionName).setVisible(false);
+    //formContext.ui.tabs.get("general_tab").sections.get(sectionName).setVisible(false);
+};

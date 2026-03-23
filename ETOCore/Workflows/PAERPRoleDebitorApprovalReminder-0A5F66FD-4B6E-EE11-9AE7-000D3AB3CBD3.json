@@ -1,0 +1,234 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps_1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_CRDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_approvals_1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_sharedapprovals_7ced5"
+        },
+        "api": {
+          "name": "shared_approvals"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "Wenn_eine_Zeile_hinzugefügt,_geändert_oder_gelöscht_wird": {
+          "metadata": {
+            "operationMetadataId": "2b279af5-6694-4f67-a5c0-16396aeb233d"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps_1",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "hso_erprole",
+              "subscriptionRequest/scope": 4
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Get_Notification_Team": {
+          "runAfter": {
+            "Get_Company": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "deca9582-b88c-4083-9e38-4151169f7cc5"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps_1",
+              "operationId": "ListRecords",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "teams",
+              "$filter": "name eq 'Freigabeteam Finance'"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Get_Members_of_Team": {
+          "foreach": "@outputs('Get_Notification_Team')?['body/value']",
+          "actions": {
+            "Get_Members_of_Notification_Team": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "459578a6-f0ba-42ad-8061-bd8786dd83fd"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps_1",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "systemusers",
+                  "fetchXml": "<fetch>\n  <entity name=\"systemuser\">\n    <attribute name=\"fullname\" />\n    <attribute name=\"internalemailaddress\" />\n    <link-entity name=\"teammembership\" from=\"systemuserid\" to=\"systemuserid\" intersect=\"true\">\n      <link-entity name=\"team\" from=\"teamid\" to=\"teamid\" alias=\"TeamGUID\" intersect=\"true\">\n        <filter>\n          <condition attribute=\"teamid\" operator=\"eq\" value=\"@{items('Get_Members_of_Team')?['teamid']}\" />\n        </filter>\n      </link-entity>\n    </link-entity>\n  </entity>\n</fetch>"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Get_Emailadresses_of_Teammembers": {
+              "foreach": "@outputs('Get_Members_of_Notification_Team')?['body/value']",
+              "actions": {
+                "Add_Emailadresses_to_Variable": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "191d23c1-11ff-4fae-9c1b-88418ee468b0"
+                  },
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "Emailadresses",
+                    "value": "@{items('Get_Emailadresses_of_Teammembers')?['internalemailaddress']};"
+                  }
+                }
+              },
+              "runAfter": {
+                "Get_Members_of_Notification_Team": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "a95d4211-20b6-44a7-a2a2-f7e4454904ab"
+              },
+              "type": "Foreach"
+            }
+          },
+          "runAfter": {
+            "Get_Notification_Team": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2cbe5696-251d-40e3-b433-f126f4d64555"
+          },
+          "type": "Foreach"
+        },
+        "Emailadresses": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "d5403fdb-8634-4717-8ebc-f9136f330fe2"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Emailadresses",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Starten_und_auf_Genehmigung_warten": {
+          "runAfter": {
+            "Get_User_that_created_the_ERP_Role": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "aa23ab01-c06c-4427-9307-97cadc853974"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_approvals_1",
+              "operationId": "StartAndWaitForAnApproval",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals"
+            },
+            "parameters": {
+              "approvalType": "Basic",
+              "WebhookApprovalCreationInput/title": "Debitorenfreigabe",
+              "WebhookApprovalCreationInput/assignedTo": "@variables('Emailadresses')",
+              "WebhookApprovalCreationInput/details": "# Neuer Debitor in Mandant @{body('Get_Company')?['cdm_companycode']}\n\nBenutzer @{body('Get_User_that_created_the_ERP_Role')?['fullname']} hat einen neuen Debitor angelegt. Bitte prüfen Sie die Details und geben Sie den Datensatz zur weiteren Verwendung frei.\n\n**Nummer:** @{triggerOutputs()?['body/hso_partynumber_str']}\n**Name:** @{triggerBody()?['hso_name_str']}\n**UST-ID:** @{triggerOutputs()?['body/hso_vatid_str']}\n\nDer anfordernde Benutzer wird eine Nachricht erhalten sobald Sie die Aufgabe als erledigt markieren.",
+              "WebhookApprovalCreationInput/requestor": "@body('Get_User_that_created_the_ERP_Role')?['internalemailaddress']",
+              "WebhookApprovalCreationInput/enableNotifications": true,
+              "WebhookApprovalCreationInput/enableReassignment": true
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Get_User_that_created_the_ERP_Role": {
+          "runAfter": {
+            "Get_Members_of_Team": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e85fe914-ec8e-4afe-8f09-967b6bf87368"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps_1",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "systemusers",
+              "recordId": "@triggerBody()?['_createdby_value']"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Get_Company": {
+          "runAfter": {
+            "Emailadresses": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3b396802-025c-43ed-b6db-b4be9daffbcb"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps_1",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "cdm_companies",
+              "recordId": "@triggerBody()?['_hso_company_ref_value']",
+              "$select": "cdm_name,cdm_companycode"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,9 @@
+<customapiresponseproperty uniquename="hso_nonworkingtimeid">
+  <displayname default="Absence Id">
+    <label description="Absence Id" languagecode="1033" />
+  </displayname>
+  <iscustomizable>0</iscustomizable>
+  <logicalentityname>hso_nonworkingtime</logicalentityname>
+  <name>Absence Id</name>
+  <type>5</type>
+</customapiresponseproperty>

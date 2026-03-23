@@ -1,0 +1,40 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+
+ETO.AgreementForm = {
+    
+    onLoad: function(executionContext) {
+        ETO.AgreementForm.setAgreementDefaults(executionContext);
+    },
+
+    setAgreementDefaults: function(executionContext) {
+        let formContext = executionContext.getFormContext();
+        let companyAttribute = formContext.getAttribute("hso_company_id");
+        let costcenterAttribute = formContext.getAttribute("hso_orgunit_id")
+    
+        if (!companyAttribute?.getValue()) {
+            let userId = Xrm.Utility.getGlobalContext().userSettings?.userId;
+            userId = userId.substring(1, userId.length - 1);
+    
+            Xrm.WebApi.retrieveRecord("systemuser", userId, "?$select=cdm_Company,hso_organizationalunit_ref&$expand=cdm_Company($select=cdm_companyid,cdm_name),hso_organizationalunit_ref($select=msdyn_organizationalunitid,msdyn_name)")
+                .then(result => {
+                    if (result?.cdm_Company?.cdm_companyid && result?.cdm_Company?.cdm_name) {
+                        companyAttribute?.setValue([{
+                            entityType: "cdm_company",
+                            id: result.cdm_Company.cdm_companyid,
+                            name: result.cdm_Company.cdm_name
+                        }]);
+                    };
+
+                    if (result?.hso_organizationalunit_ref?.msdyn_organizationalunitid && result?.hso_organizationalunit_ref?.msdyn_name) {
+                        costcenterAttribute?.setValue([{
+                            entityType: "msdyn_organizationalunit",
+                            id: result.hso_organizationalunit_ref.msdyn_organizationalunitid,
+                            name: result.hso_organizationalunit_ref.msdyn_name
+                        }]);
+                    };
+                }, error => {
+                    console.log(error.message); // TODO: implement better error approach.
+            });
+        }        
+    }
+};

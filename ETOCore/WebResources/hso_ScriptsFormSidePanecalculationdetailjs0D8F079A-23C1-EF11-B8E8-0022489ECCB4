@@ -1,0 +1,653 @@
+var formContext = "";
+var saveForm = "false";
+
+if (typeof (ETO) === "undefined") { ETO = {}; };
+if (typeof (ETO.CalculationPositionForm) === "undefined") { ETO.CalculationPositionForm = {}; }
+
+ETO.CalculationPositionForm.formOnLoad = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+    // Register onChange Events for Main Forms
+    ETO.CalculationPositionForm.registerEvents_SidePanelForm(executionContext, formContext);
+    // Show / Hide Fields for Side Panel Forms
+    ETO.CalculationPositionForm.setFieldVisibility_SidePanel(formContext);
+    // Show / Hide Metal Fields
+    ETO.CalculationPositionForm.setFieldVisibility_Metallabels(formContext);
+    // Restrict options to set Calculation Type
+    ETO.CalculationPositionForm.filterCalculationTypeOptions(formContext);
+};
+
+// Register onChange Events for Side Panel Form
+ETO.CalculationPositionForm.registerEvents_SidePanelForm = (executionContext, formContext) => {
+    // onChange Event Handler for modifying the Cost Price or Base Price per Unit
+    formContext.getAttribute("hso_product_basepricewithoutmetalsurcharge")?.addOnChange(ETO.CalculationPositionForm.onChangeBasePriceWithoutMetalSurcharge);
+    //formContext.getAttribute("hso_costpriceperunit")?.addOnChange(ETO.CalculationPositionForm.OnChangeCalculatedCostPricePerUnit);
+    formContext.getAttribute("hso_costpriceperunit")?.addOnChange(ETO.CalculationPositionForm.onChangeCostPricePerUnit);
+    // onChange Event Handler for modifying the Quantity
+    formContext.getAttribute("hso_quantity")?.addOnChange(ETO.CalculationPositionForm.onChangeQuantity);
+};
+
+// initially all Fields that are visible or hidden for Main Form
+// Function called by 'formOnLoad' from within this library
+ETO.CalculationPositionForm.setFieldVisibility_SidePanel = (formContext) => {
+    let ElementType = formContext.getAttribute('hso_positionelementtype').getValue();
+    let Status = formContext.getAttribute('statecode').getValue();
+    let GAEBPriceComponent = formContext.getAttribute('hso_pricecomponentbreakdown').getValue();
+    // show / hide section - if price component breack down 
+    if (GAEBPriceComponent == true) { showSectionGAEB('gaeb_pricecomponent_section') } else { hideSectionGAEB('gaeb_pricecomponent_section') };
+    // show / hide fields - if contains data
+    if (formContext.getAttribute("hso_gaeb_ordinalnumber").getValue() != null) {
+        showField(formContext, 'header_hso_gaeb_ordinalnumber');
+    } else { hideField(formContext, 'header_hso_gaeb_ordinalnumber'); };
+    // switch on Element Type to show / hide fields
+    if (Status == 0) {
+        switch (ElementType) {
+            case 100000006: //Position Element Type 'Title'
+                disableField(formContext, 'hso_costpriceperunit');
+                break;
+            /*  case 100000009: // Position Element Type 'BOM'
+                  disableField(formContext, 'hso_costpriceperunit');
+                  break;*/
+            case 100000000: // Position Element Type 'Product'
+                enableField(formContext, 'hso_costpriceperunit');
+                break;
+            case 100000002: // Position Element Type 'Project Product'
+                enableField(formContext, 'hso_costpriceperunit');
+                break;
+            case 100000003: // Position Element Type 'Production Hour'
+                enableField(formContext, 'hso_costpriceperunit');
+                break;
+            case 100000004: // Position Element Type 'Project Hour'
+                enableField(formContext, 'hso_costpriceperunit');
+                break;
+            case 100000007: // Position Element Type 'Project Expense'
+                enableField(formContext, 'hso_costpriceperunit');
+                break;
+            case 100000008: // Position Element Type 'External Service'
+                enableField(formContext, 'hso_costpriceperunit');
+                break;
+            case 100000010: // Position Element Type 'Hinweistext'
+                formContext.ui.tabs.get("details_tab").setVisible(false);
+                formContext.ui.tabs.get("notes_tab").setVisible(false);
+                break;
+        };
+
+    };
+};
+
+// initially Metal Fields that are visible or hidden 
+// Function called by 'formOnLoad' from within this library
+// Function called by other function (retrieve Calculation Metal Prices for Product/ProjectProduct) from within this library
+ETO.CalculationPositionForm.setFieldVisibility_Metallabels = (formContext) => {
+    // Create an array of the fields that need to be hidden
+    let fieldsToHide = [
+        'hso_product_basepricewithoutmetalsurcharge',
+        'hso_product_metalsurchargeperunit',
+        'hso_product_metalsurchargeperunit_2',
+        'hso_product_metalsurchargeperunit_3'
+    ];
+    // Loop through the array and hide each field
+    fieldsToHide.forEach(function (fieldName) {
+        hideField(formContext, fieldName);
+    });
+    // Display Metal Price relevant fields if set
+    if (formContext.getAttribute("hso_product_metallabelid").getValue() != null || formContext.getAttribute("hso_product_metallabelid_2").getValue() != null || formContext.getAttribute("hso_product_metallabelid_3").getValue() != null) {
+        showField(formContext, 'hso_product_basepricewithoutmetalsurcharge');
+    };
+    if (formContext.getAttribute("hso_product_metalsurchargeperunit").getValue() != null && formContext.getAttribute("hso_product_metalsurchargeperunit").getValue() != 0) {
+        showField(formContext, 'hso_product_metalsurchargeperunit');
+    };
+    if (formContext.getAttribute("hso_product_metalsurchargeperunit_2").getValue() != null && formContext.getAttribute("hso_product_metalsurchargeperunit_2").getValue() != 0) {
+        showField(formContext, 'hso_product_metalsurchargeperunit_2');
+    };
+    if (formContext.getAttribute("hso_product_metalsurchargeperunit_3").getValue() != null && formContext.getAttribute("hso_product_metalsurchargeperunit_3").getValue() != 0) {
+        showField(formContext, 'hso_product_metalsurchargeperunit_3');
+    };
+};
+
+// !!!!!!! HINWEIS - OLD BOM Logic
+// Filter available Calculation Type options
+// Function called by other function 'formOnLoad' from within this library
+ETO.CalculationPositionForm.filterCalculationTypeOptions = (formContext) => {
+    // Get required information from selected position
+    let ElementType = formContext.getAttribute('hso_positionelementtype').getValue();
+    let CalculationType = formContext.getAttribute('hso_calculationtype').getValue();
+    let ProjectType = formContext.getAttribute('hso_projecttype').getValue();
+    let PositionLevel = formContext.getAttribute('hso_level').getValue();
+    // Get Option Set Values for Calculation Type
+    let CalculationTypeOptions = formContext.getControl("hso_calculationtype").getOptions();
+    if (CalculationType != 100000002) {
+        // switch between Project Types to set available Option Set Values
+        switch (ProjectType) {
+            case 100000000: // Project Type 'Aufwand'
+                // Clear choices for Calculation Type
+                formContext.getControl("hso_calculationtype").clearOptions();
+                // add choices that should be available for selection
+                let optionUseDefaultPrice = CalculationTypeOptions[1]; // Standardpreis verwenden
+                formContext.getControl("hso_calculationtype").addOption(optionUseDefaultPrice);
+                break;
+            default: // Project Type 'Aufmaß' or 'Festpreis'
+                if (PositionLevel == 1) {
+                    // Clear choices for Calculation Type
+                    formContext.getControl("hso_calculationtype").clearOptions();
+                    // add choices that should be available for selection
+                    let optionUseDefaultPrice = CalculationTypeOptions[1]; // Standardpreis verwenden
+                    let optionOverwriteDefaultPrice = CalculationTypeOptions[2]; // Standardpreis überschreiben
+                    formContext.getControl("hso_calculationtype").addOption(optionUseDefaultPrice);
+                    formContext.getControl("hso_calculationtype").addOption(optionOverwriteDefaultPrice);
+                } else if (PositionLevel != 1) {
+                    if (formContext.getAttribute("hso_calculationdetail_parentid").getValue() != null) {
+                        // get the current Calculation
+                        let Calculation = formContext.getAttribute("hso_calculationid").getValue()[0].id;
+                        // format Calculation GUID
+                        Calculation = Calculation.replace(/[{}]/g, "");
+                        // Get Parent Calculationposition Line Number Level
+                        let PositionLineNumber = formContext.getAttribute("hso_linenumber").getValue();
+                        let ParentLineNumberLevel = parseInt(PositionLineNumber);
+                        // get Calculation Type of Parent Position 
+                        ETO.CalculationPositionForm.retrieveTopLevelCalculationType(formContext, Calculation, ParentLineNumberLevel).then(function (Retrieved_TopLevelNode_CalculationType) {
+                            if (Retrieved_TopLevelNode_CalculationType == 100000001) { //Parent Position Calculation Type 'Overwrite Default Price'
+                                if (ElementType == 100000006 || ElementType == 100000009) {// Position Element Type 'Node' or 'BOM'
+                                    disableField(formContext, 'hso_calculationtype');
+                                    /*// Clear choices for Calculation Type
+                                    formContext.getControl("hso_calculationtype").clearOptions();
+                                    // add choices that should be available for selection
+                                    let optionAutomaticCalculationDefaultPrice = CalculationTypeOptions[3]; // Automatische Berechnung
+                                    formContext.getControl("hso_calculationtype").addOption(optionAutomaticCalculationDefaultPrice);*/
+                                };
+                            } else {
+                                if (ElementType == 100000006 || ElementType == 100000009) {// Position Element Type 'Node' or 'BOM'
+                                    // Clear choices for Calculation Type
+                                    formContext.getControl("hso_calculationtype").clearOptions();
+                                    // add choices that should be available for selection
+                                    let optionUseDefaultPrice = CalculationTypeOptions[1]; // Standardpreis verwenden
+                                    let optionOverwriteDefaultPrice = CalculationTypeOptions[2]; // Standardpreis überschreiben
+                                    formContext.getControl("hso_calculationtype").addOption(optionUseDefaultPrice);
+                                    formContext.getControl("hso_calculationtype").addOption(optionOverwriteDefaultPrice);
+                                };
+                            };
+                        }).catch(function (error) {
+                            alert(error.message)
+                        })
+                    }
+                }
+        }
+
+    } else { 
+        disableField(formContext, 'hso_calculationtype');
+    };
+
+};
+
+
+// Set Default Duration in Minutes for Calculation Position
+// Function called by other function 'Set Default Quantity'/ 'On Change Quantity' from within this library
+// Function called by other function 'Calculate Position Quantity' / 'Retrieve Parent Calculation Position'from within this library
+ETO.CalculationPositionForm.setDurationInMinutes = (formContext) => {
+    // get the form context
+    // var formContext = executionContext.getFormContext();
+    // get selected Position Element Type
+    let ElementType = formContext.getAttribute("hso_positionelementtype").getValue();
+    // get Quantity (if already set)
+    let Quantity = formContext.getAttribute("hso_quantity").getValue();
+    // get Parent Position Quantity
+    let ParentCalculationPosition_PositionQuantity = formContext.getAttribute("hso_parentquantity").getValue();
+    // calculate Duration in Minutes only for Position Element Types 'Production Hour'/ 'Project Hour' / 'External Service'
+    if (ElementType == 100000003 || ElementType == 100000004 || ElementType == 100000008) {
+        // calculate Duration in Minutes 
+        let calculatedDurationInMinutes = Quantity * 60;
+        calculatedDurationInMinutes = Number(calculatedDurationInMinutes.toFixed(2));
+        // calculate Position Duration in Minutes with Position Quantity
+        let calculatedDurationInMinutesPosition = calculatedDurationInMinutes * ParentCalculationPosition_PositionQuantity;
+        calculatedDurationInMinutesPosition = Number(calculatedDurationInMinutesPosition.toFixed(2));
+        // set Duration in Minutes
+        formContext.getAttribute("hso_durationinminutes").setValue(calculatedDurationInMinutes);
+        formContext.getAttribute("hso_durationinminutes_positionquantity").setValue(calculatedDurationInMinutesPosition);
+
+    } else { // reset Position Duration in Minutes for other Element Types
+        formContext.getAttribute("hso_durationinminutes").setValue(null);
+        formContext.getAttribute("hso_durationinminutes_positionquantity").setValue(null);
+    };
+};
+
+// The function allows manual adjustment of the price for items with a metal price. If the "Base price without surcharges" is changed, the price is recalculated.
+// Re-Calculate Cost Price per Unit with changed Base Price without Metal Surcharge
+// Function triggered in the Calculation Position form onChange event handler for field hso_product_basepricewithoutmetalsurcharge
+ETO.CalculationPositionForm.onChangeBasePriceWithoutMetalSurcharge = (executionContext) => {
+    // get the form context
+    var formContext = executionContext.getFormContext();
+    // get changed Base Price without Metal Surcharge
+    let SelectedProduct_BasePriceWithoutMetalSurcharge = formContext.getAttribute("hso_product_basepricewithoutmetalsurcharge").getValue()
+    // get Element Type
+    let ElementType = formContext.getAttribute("hso_positionelementtype").getValue();
+    // get the Position Quantity
+    let Quantity = formContext.getAttribute("hso_positionquantity").getValue();
+    // Position Element Type - 'Product' or 'Project Product' 
+    if (ElementType == 100000000 || ElementType == 100000002) {// only check for Products and Project Products
+        // get Metallabelid 
+        let SelectedProduct_MetalLabel = formContext.getAttribute("hso_product_metallabelid").getValue();
+        let SelectedProduct_MetalLabel2 = formContext.getAttribute("hso_product_metallabelid_2").getValue();
+        let SelectedProduct_MetalLabel3 = formContext.getAttribute("hso_product_metallabelid_3").getValue();
+        if (SelectedProduct_MetalLabel != null) { product_metalsurchargeperunit = formContext.getAttribute("hso_product_metalsurchargeperunit").getValue(); } else { product_metalsurchargeperunit = 0 };
+        if (SelectedProduct_MetalLabel2 != null) { product_metalsurchargeperunit_2 = formContext.getAttribute("hso_product_metalsurchargeperunit_2").getValue(); } else { product_metalsurchargeperunit_2 = 0 };
+        if (SelectedProduct_MetalLabel3 != null) { product_metalsurchargeperunit_3 = formContext.getAttribute("hso_product_metalsurchargeperunit_3").getValue(); } else { product_metalsurchargeperunit_3 = 0 };
+        let CalculatedCostPricePerUnit = SelectedProduct_BasePriceWithoutMetalSurcharge + (product_metalsurchargeperunit + product_metalsurchargeperunit_2 + product_metalsurchargeperunit_3);
+        // set Cost Price per Unit with Calculated Cost Price per Unit based on Metal Price
+        formContext.getAttribute("hso_costpriceperunit").setValue(CalculatedCostPricePerUnit);
+        ETO.CalculationPositionForm.calculateCostPrice(formContext, Quantity, "onChangeBasePriceWithoutMetalSurcharge");
+    }
+};
+
+// Re-Calculate Cost Price
+// Function triggered in the Calculation Position form onChange event handler for field hso_costpriceperunit
+ETO.CalculationPositionForm.onChangeCostPricePerUnit = (executionContext) => {
+    console.log("onChangeCostPricePerUnit triggered...");
+    // get the form context
+    var formContext = executionContext.getFormContext();
+    // get the Cost Price per unit
+    let CalculatedCostPricePerUnit = formContext.getAttribute("hso_costpriceperunit").getValue()
+    // get the Element Type
+    let ElementType = formContext.getAttribute("hso_positionelementtype").getValue();
+    // get the Position Quantity
+    let Quantity = formContext.getAttribute("hso_positionquantity").getValue();
+    if (ElementType == 100000000 || ElementType == 100000002) {
+        // get Metallabels
+        let SelectedProduct_MetalLabel = formContext.getAttribute("hso_product_metallabelid").getValue();
+        let SelectedProduct_MetalLabel2 = formContext.getAttribute("hso_product_metallabelid_2").getValue();
+        let SelectedProduct_MetalLabel3 = formContext.getAttribute("hso_product_metallabelid_3").getValue();
+        // if without Metallabels
+        if (SelectedProduct_MetalLabel == null && SelectedProduct_MetalLabel2 == null && SelectedProduct_MetalLabel3 == null) {
+            ETO.CalculationPositionForm.calculateCostPrice(formContext, Quantity, "onChangeCostPricePerUnit");
+        } else { // if with Metallabels
+            if (SelectedProduct_MetalLabel != null) { product_metalsurchargeperunit = formContext.getAttribute("hso_product_metalsurchargeperunit").getValue(); } else { product_metalsurchargeperunit = 0 };
+            if (SelectedProduct_MetalLabel2 != null) { product_metalsurchargeperunit_2 = formContext.getAttribute("hso_product_metalsurchargeperunit_2").getValue(); } else { product_metalsurchargeperunit_2 = 0 };
+            if (SelectedProduct_MetalLabel3 != null) { product_metalsurchargeperunit_3 = formContext.getAttribute("hso_product_metalsurchargeperunit_3").getValue(); } else { product_metalsurchargeperunit_3 = 0 };
+            let SelectedProduct_BasePriceWithoutMetalSurcharge = CalculatedCostPricePerUnit - (product_metalsurchargeperunit + product_metalsurchargeperunit_2 + product_metalsurchargeperunit_3);
+            formContext.getAttribute("hso_product_basepricewithoutmetalsurcharge").setValue(SelectedProduct_BasePriceWithoutMetalSurcharge);
+            ETO.CalculationPositionForm.calculateCostPrice(formContext, Quantity, "onChangeCostPricePerUnit");
+        };
+    } else { // Another Element Types
+        ETO.CalculationPositionForm.calculateCostPrice(formContext, Quantity, "onChangeCostPricePerUnit");
+    };
+};
+
+// Re-Calculate Position Quantity, Cost Price, Cost of Materials, Sales Price and Quote Price when the Quantity is changed
+// Function triggered in the Calculation Position form onChange event handler for field hso_quantity
+// Function called by other functions 'calculateQuantityDurationInMinutes' from within this library 
+ETO.CalculationPositionForm.onChangeQuantity = (executionContext) => {
+    // proceed with the calculation of the Position Quantity
+    ETO.CalculationPositionForm.calculatePositionQuantity(executionContext);
+};
+
+// FETCH LINE Infos
+// Get Calculation Type of Node located on the highest level
+// Function called by other function 'filterCalculationTypeOptions' from within this library
+ETO.CalculationPositionForm.retrieveTopLevelCalculationType = function (formContext, param_Calculation, param_CalculationPosition_LineNumber) {
+    return new Promise(function (resolve, reject) {
+        // Search for Top Level Node of specific Calculation Position
+        Xrm.WebApi.retrieveMultipleRecords("hso_calculationdetail", "?$select=hso_calculationdetailid,hso_name,hso_linenumber,hso_calculationtype&$filter=_hso_calculationid_value eq '" + param_Calculation + "' and hso_level eq 1 and hso_linenumber_level eq '" + param_CalculationPosition_LineNumber + "'").then(
+            result => {
+                for (var i = 0; i < result.entities.length; i++) {
+                }
+                if (result != null) {
+                    let TopLevelNode_CalculationType = result.entities[0].hso_calculationtype;
+                    resolve(TopLevelNode_CalculationType);
+                }
+            },
+            error => {
+                reject(error);
+            }
+        );
+    })
+};
+
+// (Re-) Calculate the Position Quantity
+// Function called by other function 'onChangeQuantity' from within this library
+ETO.CalculationPositionForm.calculatePositionQuantity = (executionContext) => {
+    // get the form context
+    let formContext = executionContext.getFormContext();
+    // check if Quantity is set
+    if (formContext.getAttribute("hso_quantity").getValue() != null) {
+        let Quantity = formContext.getAttribute("hso_quantity").getValue();
+        if (formContext.getAttribute("hso_calculationdetail_parentid").getValue() != null) {
+            // Parent Position Quantity
+            let ParentCalculationPosition_PositionQuantity = formContext.getAttribute("hso_parentquantity").getValue();
+            // calculate Position Quantity
+            let calculatedPositionQuantity = Quantity * ParentCalculationPosition_PositionQuantity;
+            calculatedPositionQuantity = Number(calculatedPositionQuantity.toFixed(5));
+            formContext.getAttribute("hso_positionquantity").setValue(calculatedPositionQuantity);
+            // Set Default Duration in Minutes Position Quantity for Calculation Position 
+            ETO.CalculationPositionForm.setDurationInMinutes(formContext);
+        } else {
+            // if Parent Calculation Position is not set, set Position Quantity to Quantity
+            // set Position Quantity to Quantity
+            let calculatedPositionQuantity = Quantity;
+            calculatedPositionQuantity = Number(calculatedPositionQuantity.toFixed(5));
+            formContext.getAttribute("hso_positionquantity").setValue(calculatedPositionQuantity);
+            // Set Default Duration in Minutes Position Quantity for Calculation Position 
+            ETO.CalculationPositionForm.setDurationInMinutes(formContext);
+            // proceed with the calculation of the Cost Price
+            ETO.CalculationPositionForm.calculateCostPrice(formContext, calculatedPositionQuantity, "calculatePositionQuantity");
+        };
+    } else {
+        if (formContext.getAttribute("hso_calculationdetail_parentid").getValue() != null) {
+            // Parent Position Quantity
+            let ParentCalculationPosition_PositionQuantity = formContext.getAttribute("hso_parentquantity").getValue();
+            // calculate Position Quantity
+            let calculatedPositionQuantity = 1 * ParentCalculationPosition_PositionQuantity;
+            calculatedPositionQuantity = Number(calculatedPositionQuantity.toFixed(5));
+            formContext.getAttribute("hso_positionquantity").setValue(calculatedPositionQuantity);
+            // Set Default Duration in Minutes Position Quantity for Calculation Position 
+            ETO.CalculationPositionForm.setDurationInMinutes(formContext);
+        } else {
+            // if Parent Calculation Position is not set, set Position Quantity to Quantity
+            // set Position Quantity to Quantity
+            let calculatedPositionQuantity = 1;
+            calculatedPositionQuantity = Number(calculatedPositionQuantity.toFixed(5));
+            formContext.getAttribute("hso_positionquantity").setValue(calculatedPositionQuantity);
+            // Set Default Duration in Minutes Position Quantity for Calculation Position 
+            ETO.CalculationPositionForm.setDurationInMinutes(formContext);
+            // proceed with the calculation of the Cost Price
+            ETO.CalculationPositionForm.calculateCostPrice(formContext, calculatedPositionQuantity, "calculatePositionQuantity");
+        }
+    };
+};
+
+// Re-Calculate Position Quantity
+// Function triggered in the Calculation Position form onChange event handler for field hso_durationinminutes
+ETO.CalculationPositionForm.calculateQuantityDurationInMinutes = (executionContext) => {
+    // get the form context
+    let formContext = executionContext.getFormContext();
+    // get selected Position Element Type
+    let ElementType = formContext.getAttribute("hso_positionelementtype").getValue();
+    // get Quantity (if already set)
+    let Quantity = formContext.getAttribute("hso_quantity").getValue();
+    // get Quantity (if already set)
+    let DurationInMinutes = formContext.getAttribute("hso_durationinminutes").getValue();
+    if (ElementType == 100000003 || ElementType == 100000004 || ElementType == 100000008 && DurationInMinutes != null) {
+        // Position Element Type 'Production Hour' 'Project Hour' and 'External Service'
+        // calculate Position Quantity
+        Quantity = DurationInMinutes / 60;
+        Quantity = Number(Quantity);
+        formContext.getAttribute("hso_quantity").setValue(Quantity);
+        // proceed with the calculation of the Position Quantity
+        ETO.CalculationPositionForm.onChangeQuantity(executionContext);;
+    } else if (ElementType != 100000006) {
+        formContext.getAttribute("hso_quantity").setValue(null);
+    };
+};
+
+// (Re-) Calculate the Cost Price
+// Function called by other functions from within this library
+// (by functions - formOnSave, onChangeBasePriceWithoutMetalSurcharge, onChangeCostPricePerUnit, retrieveCalculationSurchargegroups, retrieveCalculationMetalPrices)
+// (by functions - retrieveCalculationSalesPrice_Category, retrieveParentCalculationPosition, calculatePositionQuantity, retrieveCalculationSalesPrice_Product)
+ETO.CalculationPositionForm.calculateCostPrice = (formContext, Quantity, TriggerBy) => {
+    // check if Cost Price per Unit and Position Quantity are set
+    var calculatedCostPrice;
+    if (formContext.getAttribute("hso_costpriceperunit").getValue() != null && Quantity != null) {
+        let CostPricePerUnit = formContext.getAttribute("hso_costpriceperunit").getValue();
+        CostPricePerUnit = Number(CostPricePerUnit.toFixed(2));
+        // Calculate the CostPrice
+        calculatedCostPrice = Quantity * CostPricePerUnit;
+    } else {
+        // set the CostPrice to zero
+        calculatedCostPrice = 0;
+    };
+    // set the CostPrice to the calculated value
+    formContext.getAttribute("hso_costprice").setValue(calculatedCostPrice);
+    // check whether Cost Price is Zero  
+    if (calculatedCostPrice == 0) {
+        // in case the Cost Price is 0 (zero) no further calculations are required because all other values are 0 (zero) as well
+        ETO.CalculationPositionForm.calculateCostOfZero(formContext)
+    } else {
+        // proceed with the calculation of the Cost of Materials
+        ETO.CalculationPositionForm.calculateCostOfMaterials(formContext)
+    };
+};
+
+// (Re-) Calculate Cost of Materials / Set All Zero
+// Function called by other function 'calculateCostPrice' from within this library
+ETO.CalculationPositionForm.calculateCostOfZero = (formContext) => {
+    // set Overhead Surcharge to the calculated value
+    formContext.getAttribute("hso_overheadsurcharge").setValue(0);
+    // set Cost of Materials to the calculated value
+    formContext.getAttribute("hso_costofmaterials").setValue(0);
+    // set Cost of Materials per Unit to the calculated value
+    formContext.getAttribute("hso_costofmaterialsperunit").setValue(0);
+    // set Profit Surcharge to the calculated value
+    formContext.getAttribute("hso_profitsurcharge").setValue(0);
+    // set Sales Price to the calculated value
+    formContext.getAttribute("hso_salesprice").setValue(0);
+    // set Sales Price per Unit to the calculated value
+    formContext.getAttribute("hso_salespriceperunit").setValue(0);
+    // set Contribution Margin Sales Price Percentage to the calculated value
+    formContext.getAttribute("hso_contributionmargintargetsalespricepercent").setValue(0);
+    // set Discount to the calculated value
+    formContext.getAttribute("hso_discount").setValue(0);
+    // set Quoted Price to the calculated value
+    formContext.getAttribute("hso_quotedprice").setValue(0);
+    // set Quoted Price per Unit to the calculated value
+    formContext.getAttribute("hso_quotedpriceperunit").setValue(0);
+    // set Negotiation Surcharge Percentage to the calculated value
+    formContext.getAttribute("hso_negotiationsurchargepercentage").setValue(0);
+    // set Margin to the calculated value
+    formContext.getAttribute("hso_margin").setValue(0);
+    // set Margin Percentage to the calculated value
+    formContext.getAttribute("hso_marginpercentage").setValue(0);
+};
+
+// (Re-) Calculate Cost of Materials
+// Function called by other functions 'calculateCostPrice'/'onChangeOverheadsurchargePercentage' from within this library
+ETO.CalculationPositionForm.calculateCostOfMaterials = (formContext) => {
+    var Quantity = formContext.getAttribute("hso_positionquantity").getValue();
+    var CostPrice = formContext.getAttribute("hso_costprice").getValue();
+    var CostPricePerUnit = formContext.getAttribute("hso_costpriceperunit").getValue();
+    CostPricePerUnit = Number(CostPricePerUnit.toFixed(2));
+    // check if Cost Price and Overhead Surcharge Percentage are set
+    if (formContext.getAttribute("hso_costprice").getValue() != null && formContext.getAttribute("hso_costprice").getValue() != 0 && formContext.getAttribute("hso_overheadsurchargepercentage").getValue() != null && formContext.getAttribute("hso_overheadsurchargepercentage").getValue() != 0) {
+        let OverheadSurchargePercentage = formContext.getAttribute("hso_overheadsurchargepercentage").getValue();
+        // calculate Cost of Materials per Unit
+        var calculatedCostOfMaterialsPerUnit = CostPricePerUnit * (1 + OverheadSurchargePercentage / 100);
+    } else {
+        // set Cost of Materials per Unit to Cost Price per Unit
+        var calculatedCostOfMaterialsPerUnit = CostPricePerUnit;
+    };
+    // Set Cost of Materials per Unit
+    calculatedCostOfMaterialsPerUnit = Number(calculatedCostOfMaterialsPerUnit.toFixed(2));
+    formContext.getAttribute("hso_costofmaterialsperunit").setValue(calculatedCostOfMaterialsPerUnit);
+    // calculate Cost of Materials
+    let calculatedCostOfMaterials = calculatedCostOfMaterialsPerUnit * Quantity;
+    calculatedCostOfMaterials = Number(calculatedCostOfMaterials.toFixed(2));
+    formContext.getAttribute("hso_costofmaterials").setValue(calculatedCostOfMaterials);
+    // calculate Overhead Surcharge
+    let calculatedOverheadSurcharge = calculatedCostOfMaterials - CostPrice;
+    formContext.getAttribute("hso_overheadsurcharge").setValue(calculatedOverheadSurcharge);
+    // proceed with the calculation of the Sales Price
+    ETO.CalculationPositionForm.calculateSalesPrice(formContext);
+};
+
+// (Re-) Calculate Sales Price
+// Function called by other functions 'calculateCostOfMaterials'/'onChangeProfitsurchargePercentage' from within this library
+ETO.CalculationPositionForm.calculateSalesPrice = (formContext) => {
+    var Quantity = formContext.getAttribute("hso_positionquantity").getValue();
+    var CostOfMaterials = formContext.getAttribute("hso_costofmaterials").getValue();
+    var CostOfMaterialsPerUnit = formContext.getAttribute("hso_costofmaterialsperunit").getValue();
+    CostOfMaterialsPerUnit = Number(CostOfMaterialsPerUnit.toFixed(2));
+    // check if Cost of Materials and Profit Surcharge Percentage are set
+    if (formContext.getAttribute("hso_costofmaterials").getValue() != null && formContext.getAttribute("hso_costofmaterials").getValue() != 0 && formContext.getAttribute("hso_profitsurchargepercentage").getValue() != null && formContext.getAttribute("hso_profitsurchargepercentage").getValue() != 0) {
+        let ProfitSurchargePercentage = formContext.getAttribute("hso_profitsurchargepercentage").getValue();
+        // calculate Sales Price per Unit
+        var calculatedSalesPricePerUnit = CostOfMaterialsPerUnit * (1 + ProfitSurchargePercentage / 100);
+
+    } else {
+        // set calculated Sales Price per Unit to Cost of Materials per Unit
+        var calculatedSalesPricePerUnit = CostOfMaterialsPerUnit;
+    };
+    // set Sales Price per Unit to the calculated value
+    calculatedSalesPricePerUnit = Number(calculatedSalesPricePerUnit.toFixed(2));
+    formContext.getAttribute("hso_salespriceperunit").setValue(calculatedSalesPricePerUnit);
+    // calculate Sales Price
+    let calculatedSalesPrice = calculatedSalesPricePerUnit * Quantity;
+    calculatedSalesPrice = Number(calculatedSalesPrice.toFixed(2));
+    formContext.getAttribute("hso_salesprice").setValue(calculatedSalesPrice);
+    // calculate Profit Surcharge
+    let calculatedProfitSurcharge = calculatedSalesPrice - CostOfMaterials;
+    formContext.getAttribute("hso_profitsurcharge").setValue(calculatedProfitSurcharge);
+    // calculate Contribution Margin Sales Price Percentage
+    let calculatedContributionMarginSalesPricePercentage = calculatedProfitSurcharge / calculatedSalesPrice * 100;
+    calculatedContributionMarginSalesPricePercentage = Number(calculatedContributionMarginSalesPricePercentage.toFixed(2));
+    formContext.getAttribute("hso_contributionmargintargetsalespricepercent").setValue(calculatedContributionMarginSalesPricePercentage);
+    // proceed with the calculation of the Quote Price
+    ETO.CalculationPositionForm.calculateQuotePrice(formContext);
+};
+
+// (Re-) Calculate Quote Price
+// Function called by other functions 'calculateSalesPrice'/'onChangeDiscountPercentage' from within this library
+ETO.CalculationPositionForm.calculateQuotePrice = (formContext) => {
+    var Quantity = formContext.getAttribute("hso_positionquantity").getValue();
+    var SalesPrice = formContext.getAttribute("hso_salesprice").getValue();
+    var SalesPricePerUnit = formContext.getAttribute("hso_salespriceperunit").getValue();
+    SalesPricePerUnit = Number(SalesPricePerUnit.toFixed(2));
+    var DiscountPercentage = formContext.getAttribute("hso_discountpercentage").getValue();
+    var CostOfMaterials = formContext.getAttribute("hso_costofmaterials").getValue();
+    CostOfMaterials = Number(CostOfMaterials.toFixed(2));
+    let ProjectType = formContext.getAttribute("hso_projecttype").getValue();
+    if (ProjectType == 100000000) {
+        // if Project Type "Aufwand" then the Quoted Price is not calculated but retrieved from the Calculation Sales Price
+        // get Quoted Price per Unit
+        let QuotePricePerUnit = formContext.getAttribute("hso_quotedpriceperunit").getValue();
+        // calculate Quoted Price
+        let calculatedQuotePrice = Quantity * QuotePricePerUnit;
+        calculatedQuotePrice = Number(calculatedQuotePrice.toFixed(2));
+        formContext.getAttribute("hso_quotedprice").setValue(calculatedQuotePrice);
+        // calculate Discount
+        let calculatedDiscount = calculatedQuotePrice - SalesPrice;
+        calculatedDiscount = Number(calculatedDiscount.toFixed(2));
+        formContext.getAttribute("hso_discount").setValue(calculatedDiscount);
+        // calculate Negotiation Surcharge Percentage
+        let calculatedNegotiationSurchargePercentage = calculatedDiscount / SalesPrice * 100;
+        calculatedNegotiationSurchargePercentage = Number(calculatedNegotiationSurchargePercentage.toFixed(2));
+        formContext.getAttribute("hso_negotiationsurchargepercentage").setValue(calculatedNegotiationSurchargePercentage);
+        // calculate Margin and Margin Percentage
+        let calculatedMargin = calculatedQuotePrice - CostOfMaterials;
+        calculatedMargin = Number(calculatedMargin.toFixed(2));
+        formContext.getAttribute("hso_margin").setValue(calculatedMargin);
+        if (calculatedMargin < 0) {
+            formContext.getAttribute("hso_marginpercentage").setValue(0);
+        } else {
+            let calculateMarginPercentage = calculatedMargin / calculatedQuotePrice * 100;
+            calculateMarginPercentage = Number(calculateMarginPercentage.toFixed(2));
+            formContext.getAttribute("hso_marginpercentage").setValue(calculateMarginPercentage);
+        };
+    } else if (ProjectType != 100000000 && SalesPrice != null && SalesPrice != 0 && DiscountPercentage != null && DiscountPercentage != 0) {
+        // calculate Quoted Price per Unit
+        let calculatedQuotePricePerUnit = SalesPricePerUnit / (1 - (DiscountPercentage / 100));
+        calculatedQuotePricePerUnit = Number(calculatedQuotePricePerUnit.toFixed(2));
+        formContext.getAttribute("hso_quotedpriceperunit").setValue(calculatedQuotePricePerUnit);
+        // calculate Quoted Price 
+        let calculatedQuotePrice = calculatedQuotePricePerUnit * Quantity;
+        calculatedQuotePrice = Number(calculatedQuotePrice.toFixed(2));
+        formContext.getAttribute("hso_quotedprice").setValue(calculatedQuotePrice);
+        // calculate Discount
+        let calculatedDiscount = calculatedQuotePrice - SalesPrice;
+        calculatedDiscount = Number(calculatedDiscount.toFixed(2));
+        formContext.getAttribute("hso_discount").setValue(calculatedDiscount);
+        // calculate Negotiation Surcharge Percentage
+        let calculatedNegotiationSurchargePercentage = calculatedDiscount / SalesPrice * 100;
+        calculatedNegotiationSurchargePercentage = Number(calculatedNegotiationSurchargePercentage.toFixed(2));
+        formContext.getAttribute("hso_negotiationsurchargepercentage").setValue(calculatedNegotiationSurchargePercentage);
+        // calculate Margin and Margin Percentage
+        let calculatedMargin = calculatedQuotePrice - CostOfMaterials;
+        calculatedMargin = Number(calculatedMargin.toFixed(2));
+        formContext.getAttribute("hso_margin").setValue(calculatedMargin);
+        if (calculatedMargin < 0) {
+            formContext.getAttribute("hso_marginpercentage").setValue(0);
+        } else {
+            let calculateMarginPercentage = calculatedMargin / calculatedQuotePrice * 100;
+            calculateMarginPercentage = Number(calculateMarginPercentage.toFixed(2));
+            formContext.getAttribute("hso_marginpercentage").setValue(calculateMarginPercentage);
+        };
+    } else {
+        // set calculated Discount to zero
+        let calculatedDiscount = 0;
+        formContext.getAttribute("hso_discount").setValue(calculatedDiscount);
+        // set calculated Quote Price to Sales Price
+        let calculatedQuotePrice = SalesPrice;
+        formContext.getAttribute("hso_quotedprice").setValue(calculatedQuotePrice);
+        // calculate Quoted Price per Unit
+        let calculatedQuotePricePerUnit = calculatedQuotePrice / Quantity;
+        formContext.getAttribute("hso_quotedpriceperunit").setValue(calculatedQuotePricePerUnit);
+        // set Negotiation Surcharge Percentage to zero
+        let calculatedNegotiationSurchargePercentage = 0;
+        formContext.getAttribute("hso_negotiationsurchargepercentage").setValue(calculatedNegotiationSurchargePercentage);
+        // set Margin and Margin Percentage to zero
+        let calculatedMargin = 0;
+        formContext.getAttribute("hso_margin").setValue(calculatedMargin);
+        let calculateMarginPercentage = 0;
+        formContext.getAttribute("hso_marginpercentage").setValue(calculateMarginPercentage);
+    };
+
+    console.log("saveForm = " + saveForm);
+    if (saveForm == "true") {
+        let FormType = formContext.ui.getFormType();
+        if (FormType == 2) {// only when updating an already existing record
+            formContext.data.save(1).then(
+                result => {
+                    console.log("Successfully Saved!");
+                },
+                error => {
+                    alert("Failed while saving!");
+                });
+        };
+        // Reset saveForm
+        saveForm = "false";
+    }
+
+};
+
+// Generic function to show a specific field
+// Function called by other functions from within this library
+function showField(formContext, fieldName) {
+    formContext.getControl(fieldName).setVisible(true);
+};
+
+// Generic function to hide a specific field
+// Function called by other functions from within this library
+function hideField(formContext, fieldName) {
+    formContext.getControl(fieldName).setVisible(false);
+};
+
+// Generic function to enable a specific field
+// Function called by other functions from within this library
+function enableField(formContext, fieldName) {
+    formContext.getControl(fieldName).setDisabled(false);
+};
+
+// Generic function to disable a specific field
+// Function called by other functions from within this library
+function disableField(formContext, fieldName) {
+    formContext.getControl(fieldName).setDisabled(true);
+};
+
+// Generic function to disabled Fileds in Tab
+// Function called by other functions from within this library
+function hideTab(formContext, tab) {
+    formContext.ui.tabs.get(tab).setVisible(false)
+};
+
+// Generic function to disabled Fileds in Tab
+// Function called by other functions from within this library
+function showTab(formContext, tab) {
+    formContext.ui.tabs.get(tab).setVisible(true)
+};
+
+// Generic function to hide a specific section
+// Function called by other functions from within this library
+function hideSectionGAEB(sectionName) {
+    Xrm.Page.ui.tabs.get("gaeb_tab").sections.get(sectionName).setVisible(false);
+};
+
+// Generic function to hide a specific section for details_tab
+// Function called by other functions from within this library
+function showSectionGAEB(sectionName) {
+    Xrm.Page.ui.tabs.get("gaeb_tab").sections.get(sectionName).setVisible(true);
+};

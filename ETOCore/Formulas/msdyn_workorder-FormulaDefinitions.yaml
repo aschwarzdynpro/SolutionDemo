@@ -1,0 +1,10 @@
+hso_projectcustomer: =hso_project_ref.msdyn_customer.name
+hso_projectid: =hso_project_ref.hso_projectnumber
+hso_projectname: =hso_project_ref.msdyn_subject
+hso_workorderandassemblyproject: |-
+    =If(
+        msdyn_workordertype.msdyn_name = "Montage",  
+            msdyn_name & " | " & hso_project_ref.hso_projectnumber & " " & hso_project_ref.msdyn_subject,
+            msdyn_name
+    )
+hso_workordersymbol: =If(msdyn_workordertype.msdyn_name = "Montage", "🧑‍🔧", "🚚")

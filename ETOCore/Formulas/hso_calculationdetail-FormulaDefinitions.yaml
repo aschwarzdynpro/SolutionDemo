@@ -1,0 +1,101 @@
+hso_displayname: |-
+    =Concatenate(
+        If(
+            hso_positionelementtype <> global_hso_hsopositionelementtype.'100000010',
+            If(hso_processingstatus = hso_calculationdetail_hso_calculationdetail_hso_processingstatus.'1', "✅", "❌"),
+            "📄"
+        ),
+        " ",
+        hso_linenumber,
+          If(!IsBlank(hso_gaeb_ordinalnumber), " [" & hso_gaeb_ordinalnumber & "]", ""),
+        " - ",
+        
+            Text(hso_positionquantity, "#" )
+        ,
+        " ",
+        If(
+            !IsBlank(hso_gaeb_unit),
+            hso_gaeb_unit,
+            If(!IsBlank(hso_uomid), hso_uomid.msdyn_symbol, "x")
+        ),
+        " - ",
+        Switch(
+            hso_positiondetails,
+            global_hso_hsopositiondetails.'100000002', " [Alt.: " & hso_calculationdetail_alternativeid.hso_linenumber & "] ",
+            global_hso_hsopositiondetails.'100000000', " [Opt.] ",
+            global_hso_hsopositiondetails.'100000001', " [Sup.] ",
+            ""
+        ),
+        hso_name
+    )
+hso_formattedlinenumber_level: =Text(Value(hso_linenumber_level), "000")
+hso_linenumber_level_depth: =Len(hso_linenumber_level)
+hso_parent_linenumber_check: =ThisRecord.hso_calculationdetail_parentid.hso_sortinglinenumber
+hso_print_displayname: |-
+    =Concatenate(
+        If(
+            hso_printposition,
+            "🖨️",
+            ""
+        ),
+        " ",
+        If(
+            hso_printprice,
+            "💲",
+            ""
+        ),
+        " ",
+        " ",
+        hso_linenumber,
+        " ",
+        hso_name,
+        Switch(
+            hso_positiondetails,
+            global_hso_hsopositiondetails.'100000002',
+            " [Alt.: " & hso_calculationdetail_alternativeid.hso_linenumber & "]",
+            global_hso_hsopositiondetails.'100000000',
+            " [Opt.]",
+            global_hso_hsopositiondetails.'100000001',
+            " [Bei.]",
+            ""
+        )
+    )
+hso_productlifecyclewarning: |-
+    =If(
+        And(
+            ThisRecord.hso_positionelementtype = global_hso_hsopositionelementtype.'100000000', 
+            ThisRecord.hso_productid.hso_productlifecyclestate_calc <> "Aktiv"
+            ), 
+            1, 
+            0
+        ) 
+hso_projecttype_value: |-
+    =Switch(
+                ThisRecord.hso_projecttype,
+                global_hso_hsoprojecttype.'100000001',
+                100000001,
+                global_hso_hsoprojecttype.'100000000',
+                100000000,
+                global_hso_hsoprojecttype.'100000002',
+                100000002
+            )
+hso_sortinglinenum_check: |-
+    =If(
+        hso_calculationdetail_parentid_sortinglinenum = hso_parent_linenumber_check, 
+        true, 
+        false
+    )
+hso_sortinglinenumber: |-
+    =If(
+        hso_level = 1, 
+        hso_formattedlinenumber_level,
+        If(
+            Not(IsBlank(hso_calculationdetail_parentid_sortinglinenum)), 
+            Concatenate(
+                hso_calculationdetail_parentid_sortinglinenum, 
+                ".", 
+                hso_formattedlinenumber_level
+            ),
+            "Error"
+        )
+    )

@@ -1,0 +1,371 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_webcontents": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverseHTTPwithAzureAD"
+        },
+        "api": {
+          "name": "shared_webcontents"
+        }
+      },
+      "shared_commondataserviceforapps_1": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_azuredatafactory_1": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_CRDataFactory"
+        },
+        "api": {
+          "name": "shared_azuredatafactory"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "EnvVar | Articlesearch | ADF Settings Price List (hso_EnvVarArticlesearchADFSettingsPriceList)": {
+          "defaultValue": {
+            "subscriptionId": "8790cc66-141b-4331-9d82-819de3725970",
+            "resourceGroupName": "rg_dwh_uat",
+            "dataFactoryName": "adf-dwh-uat-de",
+            "pipelineName": "UATUploadPricelist"
+          },
+          "type": "Object",
+          "metadata": {
+            "schemaName": "hso_EnvVarArticlesearchADFSettingsPriceList"
+          }
+        },
+        "EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)": {
+          "defaultValue": "operations-d365-ETO-int-11.crm4.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarDataverseInstance",
+            "description": "The Dataverse Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "When_a_row_is_added,_modified_or_deleted": {
+          "metadata": {
+            "operationMetadataId": "93247067-e88a-41ce-ac64-099b201ad5af"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps_1",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "hso_pricegroupimport",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "hso_vendorid",
+              "subscriptionRequest/filterexpression": "_hso_vendorid_value ne null"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Parse_ADF_Settings": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "feb497b3-520c-4110-8def-44012ee2da6a"
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@parameters('EnvVar | Articlesearch | ADF Settings Price List (hso_EnvVarArticlesearchADFSettingsPriceList)')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "subscriptionId": {
+                  "type": "string"
+                },
+                "resourceGroupName": {
+                  "type": "string"
+                },
+                "dataFactoryName": {
+                  "type": "string"
+                },
+                "pipelineName": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "Validate": {
+          "actions": {
+            "Mappings_exists": {
+              "actions": {
+                "Upsert_Import_Job_-_healthy": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "f06b598a-728a-4dbb-89a4-335a2d54260d"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_webcontents",
+                      "operationId": "InvokeHttp",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents"
+                    },
+                    "parameters": {
+                      "request/method": "PATCH",
+                      "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_pricegroupimports(hso_runid='@{triggerOutputs()?['body/hso_runid']}')",
+                      "request/headers": {
+                        "OData-MaxVersion": "4.0",
+                        "OData-Version": "4.0",
+                        "If-None-Match": "null",
+                        "Accept": "application/json",
+                        "Content-Type": "application/json"
+                      },
+                      "request/body": "{\n\"hso_message\": \"✅ Prüfung erfolgreich. Pipeline wird gestartet.\",\n\"hso_status\": \"Running\"\n}"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "runAfter": {
+                "Fetch_filtered_mappings": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Upsert_Import_Job_-_missing": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "f06b598a-728a-4dbb-89a4-335a2d54260d"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_webcontents",
+                        "operationId": "InvokeHttp",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents"
+                      },
+                      "parameters": {
+                        "request/method": "PATCH",
+                        "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_pricegroupimports(hso_runid='@{triggerOutputs()?['body/hso_runid']}')",
+                        "request/headers": {
+                          "OData-MaxVersion": "4.0",
+                          "OData-Version": "4.0",
+                          "If-None-Match": "null",
+                          "Accept": "application/json",
+                          "Content-Type": "application/json"
+                        },
+                        "request/body": "{\n\"hso_message\": \"❗ Prüfung fehlgeschlagen. Bitte Einträge in Preislisten Mapping hinzufügen und Lieferant @{outputs('Fetch_vendornumber')?['body/msdyn_vendoraccountnumber']} erneut auswählen.\",\n\"hso_status\": \"Pending\",\n\"hso_vendorid\": null\n}"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  },
+                  "Terminate_missing_mapping": {
+                    "runAfter": {
+                      "Upsert_Import_Job_-_missing": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "5fbe1b15-7300-43fe-a8b6-d0ef1b54653e"
+                    },
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Cancelled"
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "greater": [
+                  "@length(outputs('Fetch_filtered_mappings')?['body/value'])",
+                  0
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "d5818455-de84-4a98-8a78-f8611095a01d"
+              },
+              "type": "If"
+            },
+            "Fetch_vendornumber": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "b5872411-1c5d-44d2-b16f-fbaf6c07b6c7"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps_1",
+                  "operationId": "GetItem",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "msdyn_vendors",
+                  "recordId": "@triggerOutputs()?['body/_hso_vendorid_value']",
+                  "$select": "msdyn_vendoraccountnumber"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Fetch_filtered_mappings": {
+              "runAfter": {
+                "Fetch_vendornumber": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "38ae9bac-b9c2-4e85-9179-e6e714af6af2"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps_1",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "hso_pricegroupmappings",
+                  "$filter": "hso_vendornumber eq '@{outputs('Fetch_vendornumber')?['body/msdyn_vendoraccountnumber']}'"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "runAfter": {
+            "Parse_ADF_Settings": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "156fb027-0dda-4bd0-99af-85207353da4b"
+          },
+          "type": "Scope"
+        },
+        "Execute_Pipeline": {
+          "actions": {
+            "Pipelineausführung_erstellen": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "63b8515b-d93b-4bb9-8a03-e53577dd0d43"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_azuredatafactory_1",
+                  "operationId": "CreatePipelineRun",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_azuredatafactory"
+                },
+                "parameters": {
+                  "subscriptionId": "@body('Parse_ADF_Settings')?['subscriptionId']",
+                  "resourceGroupName": "@body('Parse_ADF_Settings')?['resourceGroupName']",
+                  "dataFactoryName": "@body('Parse_ADF_Settings')?['dataFactoryName']",
+                  "pipelineName": "@body('Parse_ADF_Settings')?['pipelineName']",
+                  "parameters": {
+                    "vendorNumber": "@{outputs('Fetch_vendornumber')?['body/msdyn_vendoraccountnumber']}",
+                    "fileName": "@{triggerOutputs()?['body/hso_filename']}",
+                    "runId": "@{triggerOutputs()?['body/hso_runid']}"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Upsert_Import_Job_-_Started": {
+              "runAfter": {
+                "Pipelineausführung_erstellen": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "f06b598a-728a-4dbb-89a4-335a2d54260d"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_webcontents",
+                  "operationId": "InvokeHttp",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents"
+                },
+                "parameters": {
+                  "request/method": "PATCH",
+                  "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_pricegroupimports(hso_runid='@{triggerOutputs()?['body/hso_runid']}')",
+                  "request/headers": {
+                    "OData-MaxVersion": "4.0",
+                    "OData-Version": "4.0",
+                    "If-None-Match": "null",
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                  },
+                  "request/body": "{\n\"hso_status\": \"Running\",\n\"hso_message\": \"Pipeline erfolgreich gestartet.\"\n}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Upsert_Import_Job_-_healthy_2": {
+              "runAfter": {
+                "Pipelineausführung_erstellen": [
+                  "Failed",
+                  "TimedOut"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "f06b598a-728a-4dbb-89a4-335a2d54260d"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_webcontents",
+                  "operationId": "InvokeHttp",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents"
+                },
+                "parameters": {
+                  "request/method": "PATCH",
+                  "request/url": "https://@{parameters('EnvVar | Dataverse Instance (hso_EnvVarDataverseInstance)')}/api/data/v9.2/hso_pricegroupimports(hso_runid='@{triggerOutputs()?['body/hso_runid']}')",
+                  "request/headers": {
+                    "OData-MaxVersion": "4.0",
+                    "OData-Version": "4.0",
+                    "If-None-Match": "null",
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                  },
+                  "request/body": "{\n\"hso_status\": \"Failure\",\n\"hso_message\": \"Fehler beim Ausführen der Pipeline.\"\n}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "runAfter": {
+            "Validate": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "924fa64c-dc69-4440-8f0b-706e7829cb77"
+          },
+          "type": "Scope"
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

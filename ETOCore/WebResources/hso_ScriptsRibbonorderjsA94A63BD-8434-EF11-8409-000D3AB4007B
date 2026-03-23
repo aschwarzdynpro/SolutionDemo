@@ -1,0 +1,72 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+
+ETO.OrderCommands = {
+    
+    printOrder: function(formContext) {
+        
+        var uniqueMessageId = "orderprintmessage";
+
+        var confirmStrings = { text:"Should the order be printed?", title:"Order printing" };
+        var confirmOptions = { height: 200, width: 250 };
+        Xrm.Navigation.openConfirmDialog(confirmStrings, confirmOptions).then(
+        function (success) {    
+            if (success.confirmed)
+            {
+                formContext.getAttribute("hso_lastprintdate_dat").setValue(new Date());
+                formContext.data.save();
+                
+                var notification = 
+                {
+                    type: 1,
+                    level: 4, // information
+                    message: "Order printing was started."
+                }
+                Xrm.App.addGlobalNotification(notification);
+            }
+        });  
+    },
+
+    approveOrder: function(formContext) {
+        
+        var uniqueMessageId = "orderapprovemessage";
+        Xrm.Utility.showProgressIndicator("Positions are checked...");
+
+        var salesOrderId = formContext.data.entity.getId();
+        Xrm.WebApi.retrieveMultipleRecords("salesorderdetail", "?$select=_msdyn_shippingsite_value,_msdyn_shippingwarehouse_value&$filter=_salesorderid_value eq '"+salesOrderId+"' and (_msdyn_shippingwarehouse_value eq null or _msdyn_shippingsite_value eq null)").then(
+            function success(result) {
+                Xrm.Utility.closeProgressIndicator();
+
+                if (result.entities.length > 0)
+                {
+                    var alertStrings = { confirmButtonLabel: "Ok", text: "Shipping storage location and delivery location is not set for all items.", title: "⛔ Incomplete data ⛔" };
+                    var alertOptions = { height: 120, width: 260 };
+                    Xrm.Navigation.openAlertDialog(alertStrings, alertOptions);
+                }
+                else
+                {
+                    var confirmStrings = { text:"Should the order be released? ATTENTION: This step is irreversible.", title:"Order release" };
+                    var confirmOptions = { height: 200, width: 250 };
+                    Xrm.Navigation.openConfirmDialog(confirmStrings, confirmOptions).then(
+                    function (success) {    
+                        if (success.confirmed)
+                        {
+                            formContext.getAttribute("hso_orderreleased_bol").setValue(true);
+                            formContext.data.save();
+                            
+                            var notification = 
+                            {
+                                type: 1,
+                                level: 4, // information
+                                message: "Order has been released."
+                            }
+                            Xrm.App.addGlobalNotification(notification);
+                        }
+                    });  
+                }
+            },
+            function (error) {
+                console.log(error.message);
+            }
+        );
+    }
+};

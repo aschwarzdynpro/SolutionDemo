@@ -1,0 +1,11 @@
+<customapiresponseproperty uniquename="hso_CalculationApiResponseProp">
+  <description default="Response of the performed operation">
+    <label description="Response of the performed operation" languagecode="1033" />
+  </description>
+  <displayname default="HSO - Calculation API Response">
+    <label description="HSO - Calculation API Response" languagecode="1033" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <name>HSO - Calculation API Response</name>
+  <type>10</type>
+</customapiresponseproperty>

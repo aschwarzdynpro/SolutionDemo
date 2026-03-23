@@ -1,0 +1,839 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_webcontents-1": {
+        "api": {
+          "name": "shared_webcontents"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationHTTPwithAzureAD"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)": {
+          "defaultValue": "hso-d365-devtest.sandbox.operations.eu.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarUnifiedOperationsInstance",
+            "description": "The Unified Operations Instance to connect to within a Flow when using Web API Calls"
+          }
+        },
+        "EnvVar | PQC | Project Line Property (hso_EnvVarPQCProjectLineProperty)": {
+          "defaultValue": {
+            "Effort": "BILL",
+            "Measurement": "NONBILL",
+            "FixedPrice": "NONBILL"
+          },
+          "type": "Object",
+          "metadata": {
+            "schemaName": "hso_EnvVarPQCProjectLineProperty",
+            "description": "The Line Property required within the Project Creation to create Project Item and Project Expense Plannings"
+          }
+        },
+        "EnvVar | PQC | Project Expense Forecast Model (hso_EnvVarPQCProjectExpenseForecastModel)": {
+          "defaultValue": "SLS",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarPQCProjectExpenseForecastModel",
+            "description": "The Forecast Model required to create FinOps Project Expense Forecasts Lines within the Project Creation"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "Project Number",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The Project Number of the new FinOps Project",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "title": "Company GUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The Company selected for the Quotation / Calculation",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_2": {
+                  "title": "Calculation GUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The Calculation that is processed",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_3": {
+                  "title": "Parent Processing Log GUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The Processing Log that will be used as Parent",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "number": {
+                  "title": "Project Type",
+                  "type": "number",
+                  "x-ms-dynamically-added": true,
+                  "description": "The Project Type that is used to group the Level 1 Calculation Position Nodes",
+                  "x-ms-content-hint": "NUMBER"
+                },
+                "text_4": {
+                  "title": "Project Type Name",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The Project Type Name (only for debugging purposes)",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_5": {
+                  "title": "dataAreaId",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The Legal Entity the Project is created for ",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2",
+                "text_3",
+                "number",
+                "text_4",
+                "text_5"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "19c52ede-3d87-4537-aa6e-f40d12de352c"
+          }
+        }
+      },
+      "actions": {
+        "Processing_Log": {
+          "type": "Scope",
+          "actions": {
+            "Convert_time_zone": {
+              "type": "Expression",
+              "kind": "ConvertTimeZone",
+              "inputs": {
+                "baseTime": "@{utcNow()}",
+                "sourceTimeZone": "UTC",
+                "destinationTimeZone": "W. Europe Standard Time",
+                "formatString": "s"
+              },
+              "metadata": {
+                "operationMetadataId": "a9370a39-6898-4538-a922-035d77fd38a2"
+              }
+            },
+            "Get_Parent_Processing_Log": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "recordId": "@triggerBody()['text_3']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "Convert_time_zone": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "967941d7-506d-4dd0-bfe2-c4f07b15d810"
+              }
+            },
+            "Create_Processing_Log": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "item/hso_name": "Ausgabenplanung für Projekt '@{triggerBody()['text']}' erstellen - @{body('Convert_time_zone')}",
+                  "item/hso_calculationid@odata.bind": "hso_calculations(@{outputs('Get_Parent_Processing_Log')?['body/_hso_calculationid_value']})",
+                  "item/hso_projectexpenseplanning_create": true,
+                  "item/hso_flowrunurl": "@concat('https://emea.flow.microsoft.com/manage/environments/', workflow()?['tags']['environmentName'], '/flows/', workflow()?['name'], '/runs/', workflow()?['run']['name'])",
+                  "item/ownerid@odata.bind": "systemusers(@{outputs('Get_Parent_Processing_Log')?['body/_ownerid_value']})",
+                  "item/hso_processingstatus": 100000001,
+                  "item/hso_start_datetime": "@utcNow()",
+                  "item/hso_parentprocessinglogid@odata.bind": "hso_processinglogs(@{outputs('Get_Parent_Processing_Log')?['body/hso_processinglogid']})",
+                  "item/hso_processingtask": 100000013
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "Get_Parent_Processing_Log": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "8999d5d5-d34c-49f3-9935-dd8038078535"
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varErrorMessage": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "df860936-ddc9-4594-95d6-4bf1746a44a5"
+          }
+        },
+        "Calculation_Positions": {
+          "type": "Scope",
+          "actions": {
+            "List_Calculation_Position_Nodes_with_required_Project_Type": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_calculationdetails",
+                  "$select": "hso_formattedlinenumber_level",
+                  "$filter": "_hso_calculationid_value eq @{triggerBody()['text_2']} and hso_projecttype eq @{triggerBody()['number']} and hso_positionelementtype eq 100000006 and hso_subproject eq true and hso_level eq 1"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "2366ef4a-fffe-4da7-b81b-1f4ca9ab19c2"
+              }
+            },
+            "Apply_to_each_Level_1_Node_to_fetch_Expenses": {
+              "type": "Foreach",
+              "foreach": "@outputs('List_Calculation_Position_Nodes_with_required_Project_Type')?['body/value']",
+              "actions": {
+                "List_Calculation_Positions_of_Type_Project_Expense": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_calculationdetails",
+                      "$select": "hso_calculationdetailid,hso_name,_hso_projectexpenseid_value,hso_positionquantity,hso_costpriceperunit,hso_quotedpriceperunit",
+                      "$filter": "_hso_calculationid_value eq @{triggerBody()['text_2']} and hso_positionelementtype eq 100000007 and startswith(hso_sortinglinenumber, '@{items('Apply_to_each_Level_1_Node_to_fetch_Expenses')?['hso_formattedlinenumber_level']}') and hso_positiondetails eq null",
+                      "$expand": "hso_projectexpenseid($select=hso_name;$expand=hso_uomid($select=name),hso_projectcategoryid($select=hso_category,hso_categoryname))"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "e7f67088-a441-4bea-8baf-ddf39cda977d"
+                  }
+                },
+                "Apply_to_each_Calculation_Position_of_Type_Project_Expense": {
+                  "type": "Foreach",
+                  "foreach": "@outputs('List_Calculation_Positions_of_Type_Project_Expense')?['body/value']",
+                  "actions": {
+                    "Create_Project_Expense_Forecast_Line": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "request/method": "POST",
+                          "request/url": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/data/ProjectExpenseForecasts",
+                          "request/headers": {
+                            "Accept": "application/json"
+                          },
+                          "request/body": "{\n            \"dataAreaId\": \"@{triggerBody()['text_5']}\",\n            \"ProjectID\": \"@{triggerBody()['text']}\",\n            \"InvoiceDate\": \"@{body('GET_FinOps_Project')?['ProjectedStartDate']}\",\n            \"SalesCurrency\": \"@{body('GET_FinOps_Project')?['HSOCurrencyCode']}\",\n             \"ProjectDate\": \"@{body('GET_FinOps_Project')?['ProjectedStartDate']}\",\n            \"CostPrice\": @{items('Apply_to_each_Calculation_Position_of_Type_Project_Expense')?['hso_costpriceperunit']},\n            \"Category\": \"@{items('Apply_to_each_Calculation_Position_of_Type_Project_Expense')?['hso_projectexpenseid/hso_projectcategoryid/hso_category']}\",\n            \"Description\": \"@{items('Apply_to_each_Calculation_Position_of_Type_Project_Expense')?['hso_name']}\",\n            \"SalesPrice\": @{items('Apply_to_each_Calculation_Position_of_Type_Project_Expense')?['hso_quotedpriceperunit']},\n            \"ForecastModel\": \"@{parameters('EnvVar | PQC | Project Expense Forecast Model (hso_EnvVarPQCProjectExpenseForecastModel)')}\",\n            \"LineProperty\": \"@{variables('varProjectExpensePlanning_LineProperty')}\",\n            \"Quantity\": @{items('Apply_to_each_Calculation_Position_of_Type_Project_Expense')?['hso_positionquantity']},\n            \"DefaultDimensionDisplayValue\": \"@{body('GET_FinOps_Project')?['DimensionDisplayValue']}\"\n        }"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                          "operationId": "InvokeHttp",
+                          "connectionName": "shared_webcontents-1"
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "9861c60d-1972-4577-af0a-a603b269a251"
+                      }
+                    },
+                    "Increment_varExpensePlannings_Processed_by_1": {
+                      "type": "IncrementVariable",
+                      "inputs": {
+                        "name": "varExpensePlannings_Processed",
+                        "value": 1
+                      },
+                      "runAfter": {
+                        "Create_Project_Expense_Forecast_Line": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "678527e2-03f9-4341-8a85-48ec1c2c90d4"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Increment_varExpensePlannings_ToProcess": [
+                      "Succeeded"
+                    ]
+                  },
+                  "runtimeConfiguration": {
+                    "concurrency": {
+                      "repetitions": 15
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "1a1e2b56-8562-4ea3-b4c2-f8b01d28c5f7"
+                  }
+                },
+                "Increment_varExpensePlannings_ToProcess": {
+                  "type": "IncrementVariable",
+                  "inputs": {
+                    "name": "varExpensePlannings_ToProcess",
+                    "value": "@length(outputs('List_Calculation_Positions_of_Type_Project_Expense')?['body/value'])"
+                  },
+                  "runAfter": {
+                    "List_Calculation_Positions_of_Type_Project_Expense": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "51040692-84f8-4bae-95ad-1af68a56d58e"
+                  }
+                },
+                "Apply_to_each_Calculation_Position_of_Type_Project_Expense_-_Error": {
+                  "type": "Scope",
+                  "actions": {
+                    "Filter_Results_for_failed_actions_[Apply_to_each_Project_Expense]": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@result('Apply_to_each_Calculation_Position_of_Type_Project_Expense')?['outputs']",
+                        "where": "@equals(item()['status'], 'Failed')"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "019df8a5-5264-4070-858e-24c3200b8850"
+                      }
+                    },
+                    "Select_Error_Summary_[Apply_to_each_Project_Expense]": {
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Filter_Results_for_failed_actions_[Apply_to_each_Project_Expense]')?['outputs']",
+                        "select": {
+                          "Action": "@item()?['name']",
+                          "Code": "@item()?['code']",
+                          "Status": "@item()?['status']",
+                          "StatusCode": "@item()?['outputs']?['statusCode']",
+                          "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')\r\n"
+                        }
+                      },
+                      "runAfter": {
+                        "Filter_Results_for_failed_actions_[Apply_to_each_Project_Expense]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "0a9a9fc9-5ee2-405b-bea7-2546561dd611"
+                      }
+                    },
+                    "Apply_to_each_Error_Summary_[Apply_to_each_Project_Expense]": {
+                      "type": "Foreach",
+                      "foreach": "@body('Select_Error_Summary_[Apply_to_each_Project_Expense]')",
+                      "actions": {
+                        "Append_Error_Summary_[Apply_to_each_Project_Expense]": {
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "varError",
+                            "value": "@items('Apply_to_each_Error_Summary_[Apply_to_each_Project_Expense]')"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "2087a253-233c-45bd-bf95-785d7182180a"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Select_Error_Summary_[Apply_to_each_Project_Expense]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "runtimeConfiguration": {
+                        "concurrency": {
+                          "repetitions": 20
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "f0a6290b-d9b8-42a2-b2d6-fce7f92bbec5"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Apply_to_each_Calculation_Position_of_Type_Project_Expense": [
+                      "Failed",
+                      "TimedOut"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "1889248a-900a-46db-b625-4adbf5e95171"
+                  }
+                }
+              },
+              "runAfter": {
+                "List_Calculation_Position_Nodes_with_required_Project_Type": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 10
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "4f70740e-745c-409d-8f43-900bed2d293b"
+              }
+            }
+          },
+          "runAfter": {
+            "Fetch_Information": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "4a635d8d-60ea-4274-9ebc-60dbbfd7e758"
+          }
+        },
+        "Fetch_Information": {
+          "type": "Scope",
+          "actions": {
+            "GET_FinOps_Project": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "request/method": "GET",
+                  "request/url": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/data/Projects(dataAreaId='@{triggerBody()['text_5']}',ProjectID='@{triggerBody()['text']}')?cross-company=true",
+                  "request/headers": {
+                    "Accept": "application/json"
+                  }
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+                  "operationId": "InvokeHttp",
+                  "connectionName": "shared_webcontents-1"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "3e89f512-ebc5-49c0-bb0b-d1eb2963e95b"
+              }
+            },
+            "Switch_on_Project_Type": {
+              "type": "Switch",
+              "expression": "@triggerBody()['number']",
+              "default": {
+                "actions": {}
+              },
+              "cases": {
+                "Effort": {
+                  "actions": {
+                    "Set_Line_Property_for_Effort": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varProjectExpensePlanning_LineProperty",
+                        "value": "@body('Parse_JSON_Project_Line_Property')?['Effort']"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "ec6f7ea3-6fe9-4f44-8dd7-ae4a7c880bcd"
+                      }
+                    }
+                  },
+                  "case": 100000000
+                },
+                "Measurement": {
+                  "actions": {
+                    "Set_Line_Property_for_Measurement": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varProjectExpensePlanning_LineProperty",
+                        "value": "@body('Parse_JSON_Project_Line_Property')?['Measurement']"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "8aa46027-bcf2-4d74-b898-165744fc9848"
+                      }
+                    }
+                  },
+                  "case": 100000001
+                },
+                "Fixed_Price": {
+                  "actions": {
+                    "Set_Line_Property_for_Fixed_Price": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "varProjectExpensePlanning_LineProperty",
+                        "value": "@body('Parse_JSON_Project_Line_Property')?['FixedPrice']"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "325b79a9-8426-4f36-a30c-e4c548293e4c"
+                      }
+                    }
+                  },
+                  "case": 100000002
+                }
+              },
+              "runAfter": {
+                "Parse_JSON_Project_Line_Property": [
+                  "SUCCEEDED"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "97888f95-710a-45b3-a9ec-d450a2a88c06"
+              }
+            },
+            "Parse_JSON_Project_Line_Property": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@parameters('EnvVar | PQC | Project Line Property (hso_EnvVarPQCProjectLineProperty)')",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Effort": {
+                      "type": "string"
+                    },
+                    "Measurement": {
+                      "type": "string"
+                    },
+                    "FixedPrice": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "GET_FinOps_Project": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "8ec84f05-162e-4217-8680-e27c026679d1"
+          }
+        },
+        "Initialize_varProjectExpensePlanning_LineProperty": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varProjectExpensePlanning_LineProperty",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "92e5ac1a-225c-49a8-ab5e-b4edf4a16daf"
+          }
+        },
+        "Initialize_varExpensePlannings_ToProcess": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varExpensePlannings_ToProcess",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varProjectExpensePlanning_LineProperty": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "48587921-c5a3-42ae-97d5-4bd02e405b56"
+          }
+        },
+        "Initialize_varExpensePlannings_Processed": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varExpensePlannings_Processed",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varExpensePlannings_ToProcess": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2c805f3c-63cc-4db9-830d-6ae283a77413"
+          }
+        },
+        "Initialize_varError": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varError",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varExpensePlannings_Processed": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d079a5e8-bf18-4b30-9337-b66fa0e217a4"
+          }
+        },
+        "Initialize_varErrorMessage": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorMessage",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_varError": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "0f2eaa2f-e4e0-4007-89a2-605fb3afc9db"
+          }
+        },
+        "Summary": {
+          "type": "Scope",
+          "actions": {
+            "Expense_Plannings_successfully_processed": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@variables('varExpensePlannings_ToProcess')",
+                  "@variables('varExpensePlannings_Processed')"
+                ]
+              },
+              "actions": {
+                "Update_Processing_Log_[Success]": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_processinglogs",
+                      "recordId": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']",
+                      "item/hso_end_datetime": "@utcNow()",
+                      "item/hso_projectexpenseplanning_target": "@variables('varExpensePlannings_ToProcess')",
+                      "item/hso_projectexpenseplanning_actual": "@variables('varExpensePlannings_Processed')",
+                      "item/hso_projectexpenseplanning_created": true,
+                      "item/hso_processingstatus": 100000002
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "82eef7de-483b-43b9-99d5-1d83421f3cd3"
+                  }
+                },
+                "Respond_to_Parent_Flow_[Success]": {
+                  "type": "Response",
+                  "kind": "PowerApp",
+                  "inputs": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "processing": {
+                          "title": "Processing",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        },
+                        "expenses_toprocess": {
+                          "title": "Expenses_ToProcess",
+                          "x-ms-dynamically-added": true,
+                          "type": "number"
+                        },
+                        "expenses_processed": {
+                          "title": "Expenses_Processed",
+                          "x-ms-dynamically-added": true,
+                          "type": "number"
+                        }
+                      },
+                      "additionalProperties": {}
+                    },
+                    "statusCode": 200,
+                    "body": {
+                      "processing": "Success",
+                      "expenses_toprocess": "@{variables('varExpensePlannings_ToProcess')}",
+                      "expenses_processed": "@{variables('varExpensePlannings_Processed')}"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_Processing_Log_[Success]": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "a31c6a8a-4b00-470a-818f-fff6edd0090d"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Apply_to_each_Error_Summary": {
+                    "type": "Foreach",
+                    "foreach": "@variables('varError')",
+                    "actions": {
+                      "Append_Error_Message": {
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varErrorMessage",
+                          "value": "[ERROR] - Action '@{items('Apply_to_each_Error_Summary')?['Action']}' failed with error message: @{items('Apply_to_each_Error_Summary')?['Message']} (Status: @{items('Apply_to_each_Error_Summary')?['Status']} / Status Code: @{items('Apply_to_each_Error_Summary')?['StatusCode']})"
+                        },
+                        "metadata": {
+                          "operationMetadataId": "8331c39a-f122-4b78-9c99-aaa4c69254b9"
+                        }
+                      }
+                    },
+                    "runtimeConfiguration": {
+                      "concurrency": {
+                        "repetitions": 20
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "90ec041a-c2b5-4ff7-a75b-efa8ad908c6a"
+                    }
+                  },
+                  "Update_Processing_Log_[Failure]": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_processinglogs",
+                        "recordId": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']",
+                        "item/hso_end_datetime": "@utcNow()",
+                        "item/hso_flowerror": "@variables('varErrorMessage')",
+                        "item/hso_projectexpenseplanning_target": "@variables('varExpensePlannings_ToProcess')",
+                        "item/hso_projectexpenseplanning_actual": "@variables('varExpensePlannings_Processed')",
+                        "item/hso_projectexpenseplanning_created": false,
+                        "item/hso_processingstatus": 100000003
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateRecord",
+                        "connectionName": "shared_commondataserviceforapps"
+                      }
+                    },
+                    "runAfter": {
+                      "Apply_to_each_Error_Summary": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "d88f8881-4dc3-4527-980f-5c7d272d55ca"
+                    }
+                  },
+                  "Respond_to_Parent_Flow_[Failure]": {
+                    "type": "Response",
+                    "kind": "PowerApp",
+                    "inputs": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "processing": {
+                            "title": "Processing",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          },
+                          "expenses_toprocess": {
+                            "title": "Expenses_ToProcess",
+                            "x-ms-dynamically-added": true,
+                            "type": "number"
+                          },
+                          "expenses_processed": {
+                            "title": "Expenses_Processed",
+                            "x-ms-dynamically-added": true,
+                            "type": "number"
+                          }
+                        },
+                        "additionalProperties": {}
+                      },
+                      "statusCode": 200,
+                      "body": {
+                        "processing": "Failure",
+                        "expenses_toprocess": "@{variables('varExpensePlannings_ToProcess')}",
+                        "expenses_processed": "@{variables('varExpensePlannings_Processed')}"
+                      }
+                    },
+                    "runAfter": {
+                      "Update_Processing_Log_[Failure]": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "d41c3c81-09dd-453c-a2ee-328d1c41f6cf"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "abf27467-a12d-4d54-a7d3-d5884f894c8b"
+              }
+            }
+          },
+          "runAfter": {
+            "Calculation_Positions": [
+              "Succeeded",
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7d373ed1-4922-4c00-9461-b173beb238ed"
+          }
+        }
+      },
+      "description": "Create the project expense planning for the (sub) projects that were created for a calculation.\nThis child flow is called up by the parent flow \"PA | AUTO | Project Creation | Create FinOps Project for active Calculation when a Quote is won\"."
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

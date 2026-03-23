@@ -1,0 +1,1 @@
+hso_partynumber_str: =If(!IsBlank(hso_account_ref), hso_account_ref.accountnumber, hso_contact_id.msdyn_contactnumber)

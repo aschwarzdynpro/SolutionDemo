@@ -1,0 +1,43 @@
+<appaction uniquename="hso__DeleteBulk!1cfa16bc1858460699e5b739420a3bec!msdynce_saleshub!hso_calculationdetail!2">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Delete Position(s)">
+    <label description="Delete Position(s)" languagecode="1033" />
+  </buttonlabeltext>
+  <buttontooltipdescription default="All selected positions are deleted and the remaining positions are re-numbered.">
+    <label description="All selected positions are deleted and the remaining positions are re-numbered." languagecode="1033" />
+  </buttontooltipdescription>
+  <buttontooltiptitle default="Delete calculation positions">
+    <label description="Delete calculation positions" languagecode="1033" />
+  </buttontooltiptitle>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculationdetail</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculationdetail</contextvalue>
+  <fonticon>DeleteBulk</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>2</location>
+  <name>DeleteBulk!1cfa16bc1858460699e5b739420a3bec</name>
+  <onclickeventjavascriptfunctionname>ETO.CalculationPositionRibbon.callCustomAPIExecuteOperation_BulkDelete</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":5},{"type":23},{"type":21,"value":"BulkDelete"},{"type":19,"value":1}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>36ff4f4d-c662-ee11-8df0-000d3ab3405b</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100100005.5000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>hso_saleshubdefaultcommandlibrary_a87a9</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>72931385764148e888499b7f75674a1e</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

@@ -1,0 +1,548 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sql": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConRefArticlesearchSQL"
+        },
+        "api": {
+          "name": "shared_sql"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "c5f0185f-8796-495d-a464-3ab654adfdf9"
+          },
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "Freetext",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Please enter your input",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "title": "Manufacturer",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Please enter your input",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_2": {
+                  "title": "Supplier",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Please enter your input",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_3": {
+                  "title": "Eclass",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Please enter your input",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "boolean": {
+                  "title": "DirectSearch",
+                  "type": "boolean",
+                  "x-ms-dynamically-added": true,
+                  "description": "Please select yes or no",
+                  "x-ms-content-hint": "BOOLEAN"
+                }
+              },
+              "required": []
+            }
+          }
+        }
+      },
+      "actions": {
+        "Respond_to_a_PowerApp_or_flow": {
+          "runAfter": {
+            "Scope_-_Run_SQL_Query": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3a1ab115-dd0b-48f6-abf6-d8cde773cd02"
+          },
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "statusCode": 200,
+            "body": {
+              "products_extended": "@{string(body('SQL_-_Run_SQL_Query')?['ResultSets']?['Table1'])}",
+              "products_values": "@{body('SQL_-_Run_SQL_Query')?['ResultSets']?['Table2']}"
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "products_extended": {
+                  "title": "Products_Extended",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                },
+                "products_values": {
+                  "title": "Products_Values",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "Initialize_variable_-_MANUFACTURER_PID": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "fab21e4e-a357-458b-8b9b-c9b343f10290"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "MANUFACTURER_PID",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Scope_-_Define_Search_Criteria": {
+          "actions": {
+            "Condition_-_DirectSearch": {
+              "actions": {
+                "Append_to_string_variable_-_Direct_Search": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "23934d5e-fe13-48f8-8195-15603db7a1da"
+                  },
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varSQLWhere",
+                    "value": " AND MANUFACTURER_PID_EXT = '@{triggerBody()?['text']}'"
+                  }
+                }
+              },
+              "runAfter": {},
+              "else": {
+                "actions": {
+                  "Condition_-_Manufacturer_Name": {
+                    "actions": {
+                      "Append_to_string_variable_-_Manufacturer_Name_Clause": {
+                        "runAfter": {},
+                        "metadata": {
+                          "operationMetadataId": "7ba0116c-9888-4c51-8ac0-f4f8bb9f63ea"
+                        },
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varSQLWhere",
+                          "value": " AND MANUFACTURER_NAME_EXT = '@{triggerBody()?['text_1']}'"
+                        }
+                      }
+                    },
+                    "runAfter": {},
+                    "expression": {
+                      "not": {
+                        "equals": [
+                          "@triggerBody()?['text_1']",
+                          "skip"
+                        ]
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "891668d4-4344-4612-971a-a5635abc26c7"
+                    },
+                    "type": "If"
+                  },
+                  "Condition_-_Supplier_Name_": {
+                    "actions": {
+                      "Append_to_string_variable": {
+                        "runAfter": {},
+                        "metadata": {
+                          "operationMetadataId": "bc376428-d4c2-4569-bdc1-c59da85930f3"
+                        },
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varSQLWhere",
+                          "value": " AND SUPPLIER_NAME_EXT = '@{triggerBody()?['text_2']}'"
+                        }
+                      }
+                    },
+                    "runAfter": {
+                      "Condition_-_Manufacturer_Name": [
+                        "Succeeded"
+                      ]
+                    },
+                    "expression": {
+                      "not": {
+                        "equals": [
+                          "@triggerBody()?['text_2']",
+                          "skip"
+                        ]
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "2bc91516-5d38-4d4c-ac3e-16b960d10c16"
+                    },
+                    "type": "If"
+                  },
+                  "Condition_-_EClass_Name": {
+                    "actions": {
+                      "Append_to_string_variable_-_EClass_Clause": {
+                        "runAfter": {},
+                        "metadata": {
+                          "operationMetadataId": "485f648a-7326-422b-838e-e9df9b2f2334"
+                        },
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varSQLWhere",
+                          "value": " AND ECLASS_EXT = '@{triggerBody()?['text_3']}'"
+                        }
+                      }
+                    },
+                    "runAfter": {
+                      "Condition_-_Supplier_Name_": [
+                        "Succeeded"
+                      ]
+                    },
+                    "expression": {
+                      "not": {
+                        "equals": [
+                          "@triggerBody()?['text_3']",
+                          "skip"
+                        ]
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "7f206fc4-f92a-4b6b-9672-4ad3c749087e"
+                    },
+                    "type": "If"
+                  },
+                  "Condition_-_Freetext": {
+                    "actions": {
+                      "Append_to_string_variable_-_Freetext_Clause_[FULLTEXT]": {
+                        "runAfter": {
+                          "Compose": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "485f648a-7326-422b-838e-e9df9b2f2334"
+                        },
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varSQLWhere",
+                          "value": " AND contains(Searchcolumn_EXT, '@{outputs('Compose')}')"
+                        }
+                      },
+                      "Append_to_string_variable_-_Freetext_Clause_[DEPRECATED]": {
+                        "runAfter": {
+                          "Append_to_string_variable_-_Freetext_Clause_[FULLTEXT]": [
+                            "TimedOut"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "485f648a-7326-422b-838e-e9df9b2f2334"
+                        },
+                        "type": "AppendToStringVariable",
+                        "inputs": {
+                          "name": "varSQLWhere",
+                          "value": " AND CHARINDEX('@{triggerBody()?['text']}', DESCRIPTION_SHORT_EXT) > 0"
+                        }
+                      },
+                      "Compose": {
+                        "runAfter": {
+                          "Freetext_correcture_-_Split_spaces": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "925940e9-30c5-417e-af26-e63c6a9b842e"
+                        },
+                        "type": "Compose",
+                        "inputs": "@replace(variables('txt_FreetextCorrected'),'#', ' and ')"
+                      },
+                      "Freetext_correcture_-_Split_spaces": {
+                        "runAfter": {
+                          "Freetext_correcture_-_clear_spaces": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "7817d471-cc90-417e-9b96-78f12969f0de"
+                        },
+                        "type": "Compose",
+                        "inputs": "@variables('txt_FreetextCorrected')"
+                      },
+                      "Freetext_correcture_-_replace_spaces": {
+                        "runAfter": {},
+                        "metadata": {
+                          "operationMetadataId": "fcf0ba01-f193-4aeb-bd40-786da16d1420"
+                        },
+                        "type": "Compose",
+                        "inputs": "@replace(triggerBody()?['text'],' ','%')"
+                      },
+                      "Freetext_correcture_-_clear_spaces": {
+                        "foreach": "@body('Filter_array_-_no_spaces')",
+                        "actions": {
+                          "First_word_-_no_space": {
+                            "actions": {
+                              "Append_to_FreetextCorrected_-_first": {
+                                "runAfter": {},
+                                "metadata": {
+                                  "operationMetadataId": "1cc22347-950f-41d8-ac68-22c46b4072f3"
+                                },
+                                "type": "AppendToStringVariable",
+                                "inputs": {
+                                  "name": "txt_FreetextCorrected",
+                                  "value": "@{uriComponentToString('%22')}@{items('Freetext_correcture_-_clear_spaces')}*@{uriComponentToString('%22')}"
+                                }
+                              },
+                              "Increment_FreetextCounter": {
+                                "runAfter": {
+                                  "Append_to_FreetextCorrected_-_first": [
+                                    "Succeeded"
+                                  ]
+                                },
+                                "metadata": {
+                                  "operationMetadataId": "d62891b1-ef5a-4a7f-a452-439da07df708"
+                                },
+                                "type": "IncrementVariable",
+                                "inputs": {
+                                  "name": "int_FreetextCounter",
+                                  "value": 1
+                                }
+                              }
+                            },
+                            "runAfter": {},
+                            "else": {
+                              "actions": {
+                                "Append_to_FreetextCorrected_-_followup": {
+                                  "runAfter": {},
+                                  "metadata": {
+                                    "operationMetadataId": "080c79ba-34bf-43cc-86fc-e43d784088eb"
+                                  },
+                                  "type": "AppendToStringVariable",
+                                  "inputs": {
+                                    "name": "txt_FreetextCorrected",
+                                    "value": "#@{uriComponentToString('%22')}@{items('Freetext_correcture_-_clear_spaces')}*@{uriComponentToString('%22')}"
+                                  }
+                                }
+                              }
+                            },
+                            "expression": {
+                              "equals": [
+                                "@variables('int_FreetextCounter')",
+                                0
+                              ]
+                            },
+                            "metadata": {
+                              "operationMetadataId": "6f81abaf-5b9e-46fc-9ad8-74e653092609"
+                            },
+                            "type": "If"
+                          }
+                        },
+                        "runAfter": {
+                          "Filter_array_-_no_spaces": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "5ca8bf22-6bb1-4c6f-b873-f04bab9e3530"
+                        },
+                        "type": "Foreach"
+                      },
+                      "Filter_array_-_no_spaces": {
+                        "runAfter": {
+                          "Freetext_correcture_-_replace_spaces": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "9ceb3190-f3ee-4271-948a-55c2c873e0a9"
+                        },
+                        "type": "Query",
+                        "inputs": {
+                          "from": "@split(outputs('Freetext_correcture_-_replace_spaces'),'%')",
+                          "where": "@equals(empty(item()), false)"
+                        }
+                      }
+                    },
+                    "runAfter": {
+                      "Condition_-_EClass_Name": [
+                        "Succeeded"
+                      ]
+                    },
+                    "expression": {
+                      "greater": [
+                        "@triggerBody()?['text']",
+                        ""
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "7f206fc4-f92a-4b6b-9672-4ad3c749087e"
+                    },
+                    "type": "If"
+                  }
+                }
+              },
+              "expression": {
+                "equals": [
+                  "@triggerBody()?['boolean']",
+                  true
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "7eb4a1f9-fff2-4c72-b5fd-41735ef877ac"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "txt_FreetextCorrected": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3e57fbc3-3fc2-4ddd-97b3-c690d43639a3"
+          },
+          "type": "Scope"
+        },
+        "Scope_-_Build_SQL_Statement": {
+          "actions": {
+            "Compose_-_Build_SQL_Query_Statement": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "376653c7-d13d-4511-b4eb-c188ef69f513"
+              },
+              "type": "Compose",
+              "inputs": "SELECT o.*, i.FINOPS_ID_P, i.PURCHASEPRICEERP_P\nFROM Products_Extended o\nLEFT JOIN Products i\non o.PRODUCTS_NK_EXT = i.PRODUCTS_NK_P\n@{variables('varSQLWhere')}\n\nSELECT i.*\nFROM Products_Extended o\nINNER JOIN Products_Values i\non o.PRODUCTS_NK_EXT = i.PRODUCTS_NK_V\n@{variables('varSQLWhere')}\n"
+            }
+          },
+          "runAfter": {
+            "Scope_-_Define_Search_Criteria": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f0e07a52-e3ef-4714-ba2e-77e743d23272"
+          },
+          "type": "Scope"
+        },
+        "Scope_-_Run_SQL_Query": {
+          "actions": {
+            "SQL_-_Run_SQL_Query": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "debaca42-7e96-4803-bcf5-97115db5f32e"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sql",
+                  "operationId": "ExecutePassThroughNativeQuery_V2",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sql"
+                },
+                "parameters": {
+                  "server": "default",
+                  "database": "default",
+                  "query/query": "@outputs('Compose_-_Build_SQL_Query_Statement')"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "runAfter": {
+            "Scope_-_Build_SQL_Statement": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "11219765-c689-4122-a65f-210b1179c5ca"
+          },
+          "type": "Scope"
+        },
+        "Initialize_variable_-_varSQLWhere": {
+          "runAfter": {
+            "Initialize_variable_-_MANUFACTURER_PID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "5c5c4691-cd1f-49cc-84db-a4092f205f58"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varSQLWhere",
+                "type": "string",
+                "value": "WHERE MANUFACTURER_PID_EXT IS NOT NULL"
+              }
+            ]
+          }
+        },
+        "int_FreetextCounter": {
+          "runAfter": {
+            "Initialize_variable_-_varSQLWhere": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d88163a9-c615-4dda-98b8-d947c74ef92a"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "int_FreetextCounter",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "txt_FreetextCorrected": {
+          "runAfter": {
+            "int_FreetextCounter": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f25d0a99-5ae0-4755-bd59-11766e2be6ca"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "txt_FreetextCorrected",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

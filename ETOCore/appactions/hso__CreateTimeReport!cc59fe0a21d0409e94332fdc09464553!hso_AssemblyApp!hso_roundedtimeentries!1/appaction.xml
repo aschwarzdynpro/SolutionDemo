@@ -1,0 +1,43 @@
+<appaction uniquename="hso__CreateTimeReport!cc59fe0a21d0409e94332fdc09464553!hso_AssemblyApp!hso_roundedtimeentries!1">
+  <appmoduleid>
+    <uniquename>hso_AssemblyApp</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Create Time Report">
+    <label description="Create Time Report" languagecode="1033" />
+  </buttonlabeltext>
+  <buttontooltipdescription default="Erstellt für die gewählten Zeilen einen Zeitnachweis.">
+    <label description="Erstellt für die gewählten Zeilen einen Zeitnachweis." languagecode="1033" />
+  </buttontooltipdescription>
+  <buttontooltiptitle default="Zeitnachweis erstellen">
+    <label description="Zeitnachweis erstellen" languagecode="1033" />
+  </buttontooltiptitle>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_roundedtimeentries</logicalname>
+  </contextentity>
+  <contextvalue>hso_roundedtimeentries</contextvalue>
+  <fonticon>RecentMeeting</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>1</location>
+  <name>CreateTimeReport!cc59fe0a21d0409e94332fdc09464553</name>
+  <onclickeventjavascriptfunctionname>ETO.TimeEntriesRibbon.createTimeReport</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":12}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>e4580b9a-7343-ef11-a316-000d3a6557ed</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <sequence>1000100005.5000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>hso_assemblyappdefaultcommandlibrary_2491d</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>139ecd6df92d42278044d0cb0717f3e1</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

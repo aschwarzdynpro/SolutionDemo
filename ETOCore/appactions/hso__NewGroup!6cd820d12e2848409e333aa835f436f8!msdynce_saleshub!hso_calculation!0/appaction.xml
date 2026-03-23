@@ -1,0 +1,28 @@
+<appaction uniquename="hso__NewGroup!6cd820d12e2848409e333aa835f436f8!msdynce_saleshub!hso_calculation!0">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculation</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculation</contextvalue>
+  <grouptitle default="Calculation Version (Group)">
+    <label description="Calculation Version (Group)" languagecode="1033" />
+  </grouptitle>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>1</isgrouptitlehidden>
+  <location>0</location>
+  <name>NewGroup!6cd820d12e2848409e333aa835f436f8</name>
+  <onclickeventtype>0</onclickeventtype>
+  <origin>0</origin>
+  <parentappactionid>
+    <uniquename>hso__Kalkulationsversi!0071ebe8fea74c2ca1a22ebca97143e9!msdynce_saleshub!hso_calculation!0</uniquename>
+  </parentappactionid>
+  <sequence>10000.0000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>3</type>
+</appaction>

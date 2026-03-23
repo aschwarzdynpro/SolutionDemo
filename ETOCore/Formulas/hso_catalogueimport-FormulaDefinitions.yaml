@@ -1,0 +1,6 @@
+hso_success_pfx: |-
+    =If
+    (hso_status= "Success" || hso_status= "Pending",
+    true,
+    false
+     )

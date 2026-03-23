@@ -1,0 +1,12 @@
+<customapirequestparameter uniquename="hso_CalculationApiPayload">
+  <description default="Payload for the calculation API, contains operation type and list of ids">
+    <label description="Payload for the calculation API, contains operation type and list of ids" languagecode="1033" />
+  </description>
+  <displayname default="HSO - Calculation API Payload">
+    <label description="HSO - Calculation API Payload" languagecode="1033" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <isoptional>0</isoptional>
+  <name>HSO - Calculation API Payload</name>
+  <type>10</type>
+</customapirequestparameter>

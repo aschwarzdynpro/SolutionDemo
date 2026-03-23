@@ -1,0 +1,46 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+
+ETO.ProjectForm = {
+    
+    onLoad: function(executionContext) {
+
+    },
+
+    validateProjectTasks: async function (executionContext) {
+        
+        let formContext = executionContext.getFormContext();
+        let uniqueMessageId = "validate_project_tasks_result";
+
+        let fetchXml = [
+            "<fetch version='1.0' mapping='logical' distinct='true' no-lock='false'>",
+            "<entity name='msdyn_projecttask'>",
+            "<attribute name='hso_tasknumber'/>",
+            "<attribute name='msdyn_subject'/>",
+            "<order attribute='msdyn_subject' descending='false'/>",
+            "<attribute name='msdyn_projecttaskid'/>",
+            "<filter type='and'>",
+            "<condition attribute='msdyn_project' operator='eq' value='"+Xrm.Page.data.entity.getId()+"' />",
+            "<condition attribute='hso_projectcategoryid' operator='null'/>",
+            "</filter>",
+            "<link-entity name='msdyn_projecttask' alias='aa' link-type='outer' from='msdyn_parenttask' to='msdyn_projecttaskid'/>",
+            "<filter type='and'>",
+            "<condition attribute='msdyn_parenttask' operator='null' entityname='aa'/>",
+            "</filter>",
+            "</entity>",
+            "</fetch>"
+        ].join("");
+
+        let results = await Xrm.WebApi.retrieveMultipleRecords("msdyn_projecttask", "?fetchXml=" + encodeURIComponent(fetchXml));
+
+        if (results.entities.length > 0)
+        {
+            let warningMessage = "No project category was selected for the following project tasks: ";
+            for (var i = 0; i < results.entities.length; i++) {
+                warningMessage += results.entities[i].msdyn_subject + " (" + results.entities[i].hso_tasknumber + ")";
+                if (results.entities.length > (i + 1))
+                    warningMessage += ", ";
+            }
+            formContext.ui.setFormNotification(warningMessage, "WARNING", uniqueMessageId);
+        } 
+    }
+};

@@ -1,0 +1,174 @@
+
+if (typeof (ETO) === "undefined") { ETO = {}; };
+if (typeof (ETO.CalculationPositionRibbon) === "undefined") { ETO.CalculationPositionRibbon = {}; }
+
+// open the Article Search App from Subgrid of selected Calculation Position
+ETO.CalculationPositionRibbon.openItemSearchApp = (formContext) => {
+    console.log("Open Article Search App initiated...");
+    console.log("InputParameter: " + formContext);
+    //Get Calculation Position GUID and remove {}
+    var selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "");
+    console.log("Calculation Position GUID: " + selectedRecordID);
+
+    Xrm.WebApi.retrieveMultipleRecords("canvasapp", "?$filter=name eq 'hso_vendorcatalogmanagementmaster_1ea70'&$select=uniquecanvasappid")
+        .then(results => {
+            if (results.entities && results.entities.length > 0) {
+                var articleSearchAppRecord = results.entities[0];
+                var RetrieveEnvironmentVariableValueRequestResponse = articleSearchAppRecord.uniquecanvasappid;
+
+                console.log("Articlesearch App ID = " + articleSearchAppRecord.uniquecanvasappid);
+
+                var CompanyName = formContext.getAttribute("hso_companyid").getValue()[0].name;
+                console.log("Company Name = " + CompanyName);
+                var URL = "https://apps.powerapps.com/play/" + RetrieveEnvironmentVariableValueRequestResponse + "?source=iframe&cmp=" + CompanyName + "&EntityId=QC%23" + selectedRecordID
+                console.log("URL = " + URL);
+                //Creating An Object For Storing Window Height & Width
+                var openUrlOptions = {
+                    height: 1366,
+                    width: 1024
+                };
+                //Using openURL Client API To Open The Website.
+                Xrm.Navigation.openUrl(URL, openUrlOptions);
+            }
+        }, error => {
+            Xrm.Utility.alertDialog(error.message);
+        }
+        );
+};
+
+// call custom API to delete all selected records in bulk
+ETO.CalculationPositionRibbon.callCustomAPIExecuteOperation_BulkDelete = (PrimaryControl, SelectedControlSelectedItemIds, OperationName, OperationType) => {
+    console.log("Operation: " + OperationName + " (" + OperationType + ")");
+    // Operation Types
+    // 0 - SingleDelete
+    // 1 - BulkDelete
+    // 2 - BulkSetDefaultValues
+    // 3 - BulkRecalculateNode
+
+    // Confirm action with the user
+    var confirmStrings = { text: "Would you like to delete the selected positions? This action cannot be undone.", title: "Confirm deletion of calculation positions" };
+    var confirmOptions = { height: 200, width: 450 };
+    Xrm.Navigation.openConfirmDialog(confirmStrings, confirmOptions).then(
+        function (success) {
+            if (success.confirmed) {
+                // Get Grid context
+                let gridContext = PrimaryControl.getControl("subordinentposition_subgrid");
+                console.log(gridContext);
+
+                // Show Progress Indicator
+                Xrm.Utility.showProgressIndicator("Deleting calculation positions in progress...");
+
+                // Prepare the payload
+                const payload = {
+                    OperationType: OperationType,
+                    Records: SelectedControlSelectedItemIds
+                };
+
+                const payloadString = JSON.stringify(payload);
+                console.log("Payload to send:", payloadString);
+
+                // Create the API request
+                let hso_CalculationdetailExecuteOperationAPIRequest = new ETO.CalculationPositionRibbon.hso_CalculationdetailExecuteOperation(payloadString);
+
+                // Call the Custom API
+                Xrm.WebApi.online.execute(hso_CalculationdetailExecuteOperationAPIRequest).then(
+                    function (result) {
+                        result.json().then(
+                            function (response) {
+                                // Custom logic after successful API call
+                                console.log("Custom API successfully called with records to delete");
+                                console.log("Response from API:", response);
+                                Xrm.Utility.closeProgressIndicator();
+                                // Refresh Grid
+                                gridContext.refresh();
+                            }
+                        );
+                    },
+                    function (error) {
+                        console.error("Error calling the Custom API:", error);
+                        Xrm.Utility.closeProgressIndicator();
+                        Xrm.Navigation.openErrorDialog({
+                            details: error.message,
+                            message: 'An error occurred while calling the hso_CalculationdetailApi Custom API.'
+                        });
+                    }
+                );
+            }
+        });
+};
+
+// call custom API to delete selected record (single)
+ETO.CalculationPositionRibbon.callCustomAPIExecuteOperation_SingleDelete = (PrimaryControl, FirstPrimaryItemId, OperationName, OperationType) => {
+    console.log("Operation: " + OperationName + " (" + OperationType + ")");
+    // Operation Types
+    // 0 - SingleDelete
+    // 1 - BulkDelete
+    // 2 - BulkSetDefaultValues
+    // 3 - BulkRecalculateNode
+
+    // Confirm action with the user
+    var confirmStrings = { text: "Would you like to delete the position? This action cannot be undone.", title: "Confirm deletion of calculation position" };
+    var confirmOptions = { height: 200, width: 450 };
+    Xrm.Navigation.openConfirmDialog(confirmStrings, confirmOptions).then(
+        function (success) {
+            if (success.confirmed) {
+                // Show Progress Indicator
+                Xrm.Utility.showProgressIndicator("Deleting calculation position in progress...");
+
+                // Prepare the payload
+                let RecordToDelete = FirstPrimaryItemId.replace(/[{}]/g, "");
+                const payload = {
+                    OperationType: OperationType,
+                    Records: [RecordToDelete]
+                };
+
+                const payloadString = JSON.stringify(payload);
+                console.log("Payload to send:", payloadString);
+
+                // Create the API request
+                let hso_CalculationdetailExecuteOperationAPIRequest = new ETO.CalculationPositionRibbon.hso_CalculationdetailExecuteOperation(payloadString);
+
+                // Call the Custom API
+                Xrm.WebApi.online.execute(hso_CalculationdetailExecuteOperationAPIRequest).then(
+                    function (result) {
+                        result.json().then(
+                            function (response) {
+                                // Custom logic after successful API call
+                                console.log("Custom API successfully called with record to delete");
+                                console.log("Response from API:", response);
+                                Xrm.Utility.closeProgressIndicator();
+                            }
+                        );
+                    },
+                    function (error) {
+                        console.error("Error calling the Custom API:", error);
+                        Xrm.Utility.closeProgressIndicator();
+                        Xrm.Navigation.openErrorDialog({
+                            details: error.message,
+                            message: 'An error occurred while calling the hso_CalculationdetailApi Custom API.'
+                        });
+                    }
+                );
+            }
+        });
+};
+
+// Custom API to execute several plug-ins for a list of records
+ETO.CalculationPositionRibbon.hso_CalculationdetailExecuteOperation = function (hso_CalculationdetailApiPayload) {
+    this.hso_CalculationdetailApiPayload = hso_CalculationdetailApiPayload;
+};
+
+// Attach metadata to the custom API prototype
+ETO.CalculationPositionRibbon.hso_CalculationdetailExecuteOperation.prototype.getMetadata = function () {
+    return {
+        boundParameter: null,
+        parameterTypes: {
+            'hso_CalculationdetailApiPayload': {
+                'typeName': 'Edm.String',
+                'structuralProperty': 1 // Primitive Type
+            }
+        },
+        operationType: 0, // Action (0 = Action, 1 = Function, 2 = CRUD)
+        operationName: 'hso_CalculationdetailApi',
+    };
+};

@@ -1,0 +1,52 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+if (typeof (ETO.OpportunityForm) === "undefined") { ETO.OpportunityForm = {}; }
+
+ETO.OpportunityForm.onLoad = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    ETO.OpportunityForm.registerEvents(formContext);
+
+    ETO.OpportunityForm.setDebitorDefaults(executionContext);
+
+    ETO.OpportunityForm.setTypeReadOnly(executionContext);
+};
+ETO.OpportunityForm.registerEvents = (formContext) => {
+    formContext.getAttribute("hso_opportunityprocessstage_opt")?.addOnChange(ETO.OpportunityForm.setDebitorDefaults);
+};
+ETO.OpportunityForm.onSave = (executionContext) => {
+    ETO.OpportunityForm.setTypeReadOnly(executionContext);
+};
+ETO.OpportunityForm.setTypeReadOnly = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+
+    if (formContext.getAttribute("hso_opportunitytype_opt").getValue() != null) {
+        formContext.getControl("hso_opportunitytype_opt").setDisabled(true);
+        formContext.getControl("header_process_hso_opportunitytype_opt").setDisabled(true);
+    }
+};
+ETO.OpportunityForm.setDebitorDefaults = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    let processStageValue = formContext.getAttribute("hso_opportunityprocessstage_opt")?.getValue();
+
+    if (processStageValue == 867520002) { //3 - Angebotserstellung
+
+        let companyAttribute = formContext.getAttribute("msdyn_company");
+
+        if (!companyAttribute?.getValue()) {
+            let userId = Xrm.Utility.getGlobalContext().userSettings?.userId;
+            userId = userId.substring(1, userId.length - 1);
+
+            Xrm.WebApi.retrieveRecord("systemuser", userId, "?$select=cdm_Company&$expand=cdm_Company($select=cdm_companyid,cdm_name)")
+                .then(result => {
+                    if (result?.cdm_Company?.cdm_companyid && result?.cdm_Company?.cdm_name) {
+                        companyAttribute?.setValue([{
+                            entityType: "cdm_company",
+                            id: result.cdm_Company.cdm_companyid,
+                            name: result.cdm_Company.cdm_name
+                        }]);
+                    }
+                }, error => {
+                    console.log(error.message); // TODO: implement better error approach.
+                });
+        }
+    }
+};

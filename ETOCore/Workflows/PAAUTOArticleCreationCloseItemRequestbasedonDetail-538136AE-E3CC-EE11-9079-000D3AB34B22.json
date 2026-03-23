@@ -1,0 +1,125 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_CRDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_an_item_request_is_closed": {
+          "metadata": {
+            "operationMetadataId": "be341f1e-d93c-4d06-b1dc-5ca86c526030"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "hso_productrequirementdetail",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "hso_status",
+              "subscriptionRequest/filterexpression": "(hso_status eq 3 or hso_status eq 4 or hso_status eq 5)"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Fetch_open_item_request_details": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "c713c04f-f41a-4e3a-b0c7-7559f6913d06"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "hso_productrequirementdetails",
+              "$select": "hso_synclog",
+              "$filter": "_hso_requirementid_id_value eq '@{triggerOutputs()?['body/_hso_requirementid_id_value']}' and (hso_status eq 1 or hso_status eq 2 or hso_status eq 6)"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Processing": {
+          "actions": {
+            "No_open_item_request_details": {
+              "actions": {
+                "Close_item_request": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "4c61b11f-782f-4621-a247-38f520cdbebd"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "hso_productrequirements",
+                      "recordId": "@triggerOutputs()?['body/_hso_requirementid_id_value']",
+                      "item/hso_status": 3
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "runAfter": {},
+              "expression": {
+                "equals": [
+                  "@length(outputs('Fetch_open_item_request_details')?['body/value'])",
+                  0
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "1b75f01c-4d4a-4574-b3b8-c25912b846bb"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Fetch_open_item_request_details": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "ab2d8906-0796-4b6e-ad82-e301fbdf0072"
+          },
+          "type": "Scope"
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,13 @@
+<catalog uniquename="hso_Integration">
+  <description default="ETO Integration">
+    <label description="ETO Integration" languagecode="1033" />
+  </description>
+  <displayname default="ETO Integration">
+    <label description="ETO Integration" languagecode="1033" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <name>ETOIntegration</name>
+  <parentcatalogid>
+    <uniquename>hso_Core</uniquename>
+  </parentcatalogid>
+</catalog>

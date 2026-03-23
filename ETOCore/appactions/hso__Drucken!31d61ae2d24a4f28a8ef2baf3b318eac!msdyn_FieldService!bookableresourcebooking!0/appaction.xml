@@ -1,0 +1,27 @@
+<appaction uniquename="hso__Drucken!31d61ae2d24a4f28a8ef2baf3b318eac!msdyn_FieldService!bookableresourcebooking!0">
+  <appmoduleid>
+    <uniquename>msdyn_FieldService</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Drucken">
+    <label description="Drucken" languagecode="1033" />
+  </buttonlabeltext>
+  <context>1</context>
+  <contextentity>
+    <logicalname>bookableresourcebooking</logicalname>
+  </contextentity>
+  <contextvalue>bookableresourcebooking</contextvalue>
+  <fonticon>$clientsvg:Print</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>0</location>
+  <name>Drucken!31d61ae2d24a4f28a8ef2baf3b318eac</name>
+  <onclickeventtype>0</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100100063.7500000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>1</type>
+  <visibilitytype>0</visibilitytype>
+</appaction>

@@ -1,0 +1,315 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_CRDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_dynamicsax-2": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_CRFinOps"
+        },
+        "api": {
+          "name": "shared_dynamicsax"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)": {
+          "defaultValue": "d365-ETO-int-11b9dbaf056743afd3devaos.axcloud.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarUnifiedOperationsInstance",
+            "description": "The Unified Operations Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "When_a_row_is_added,_modified_or_deleted": {
+          "metadata": {
+            "operationMetadataId": "4386b49c-af20-498c-ae04-bb7ee487208d"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 4,
+              "subscriptionRequest/entityname": "bookableresource",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "msdyn_displayonscheduleboard, name, msdyn_displayonscheduleassistant, statecode, statuscode",
+              "subscriptionRequest/filterexpression": "resourcetype eq 3"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Get_user_for_bookable_resource": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "5c5a0c6c-adc8-4608-8587-4aac966ecbe5"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "systemusers",
+              "recordId": "@triggerOutputs()?['body/_userid_value']",
+              "$select": "azureactivedirectoryobjectid, internalemailaddress,_cdm_company_value,systemuserid"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "List_System_Users_in_FO": {
+          "runAfter": {
+            "Get_user_for_bookable_resource": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "fcfdaea8-ed16-4f2a-ab58-210be5b907ef"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_dynamicsax-2",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicsax"
+            },
+            "parameters": {
+              "dataset": "@parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')",
+              "table": "SystemUsers",
+              "$filter": "Alias eq '@{outputs('Get_user_for_bookable_resource')?['body/internalemailaddress']}'",
+              "$select": "UserID,Company"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "System_User_Found": {
+          "actions": {
+            "Get_Worker_Personnel_Number": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "19523494-295e-47de-ad80-538a4a244ffa"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_dynamicsax-2",
+                  "operationId": "GetItems",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicsax"
+                },
+                "parameters": {
+                  "dataset": "@parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')",
+                  "table": "Workers",
+                  "$filter": "User eq '@{outputs('List_System_Users_in_FO')?['body/value']?[0]?['UserID']}'",
+                  "$select": "PersonnelNumber",
+                  "cross-company": true
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Worker_found": {
+              "actions": {
+                "Send_Success_Notification": {
+                  "runAfter": {
+                    "Update_Bookable_Resource": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "01c17c35-a700-4a5a-96e5-99cd38792345"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "CreateRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "appnotifications",
+                      "item/title": "Personalnummer für Ressource @{triggerOutputs()?['body/name']} wurde gefunden und zugeordnet.",
+                      "item/ttlinseconds": 5,
+                      "item/icontype": 100000001,
+                      "item/toasttype": 200000000
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
+                "Update_Bookable_Resource": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "743f6d2c-2804-424a-af8b-6a47fc4633d3"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "bookableresources",
+                      "recordId": "@triggerOutputs()?['body/bookableresourceid']",
+                      "item/hso_personnelnumber_str": "@first(outputs('Get_Worker_Personnel_Number')?['body/value'])?['PersonnelNumber']"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "runAfter": {
+                "Get_Worker_Personnel_Number": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Send_Notification_for_missing_Worker": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "0c7158cc-f78d-43e7-99bf-3f634fb14e6c"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_commondataserviceforapps",
+                        "operationId": "CreateRecord",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                      },
+                      "parameters": {
+                        "entityName": "appnotifications",
+                        "item/title": "Personalnummer für Ressource @{triggerOutputs()?['body/name']} konnte nicht gefunden werden.",
+                        "item/ttlinseconds": 5,
+                        "item/icontype": 100000002,
+                        "item/toasttype": 200000000
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "greater": [
+                  "@length(outputs('Get_Worker_Personnel_Number')?['body/value'])",
+                  0
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "829dee98-f5d4-4eb1-b3be-597b1cfd9418"
+              },
+              "type": "If"
+            },
+            "If_company_on_user_is_empty": {
+              "actions": {
+                "Set_company_on_user": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "120cd643-85fb-43f1-a58a-31d9f89b3467"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "systemusers",
+                      "recordId": "@outputs('Get_user_for_bookable_resource')?['body/systemuserid']",
+                      "item/cdm_Company@odata.bind": "cdm_companies(cdm_companycode='@{first(outputs('List_System_Users_in_FO')?['body/value'])?['Company']}')"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "runAfter": {
+                "Worker_found": [
+                  "Succeeded"
+                ]
+              },
+              "expression": {
+                "equals": [
+                  "@outputs('Get_user_for_bookable_resource')?['body/_cdm_company_value']",
+                  "@null"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "64ec8a75-e703-460b-94bd-6e6266828f61"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "List_System_Users_in_FO": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {
+              "Send_Notification_for_missing_FO_User": {
+                "runAfter": {},
+                "metadata": {
+                  "operationMetadataId": "ca6fc80e-92e2-4635-9690-f912013520a2"
+                },
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "host": {
+                    "connectionName": "shared_commondataserviceforapps",
+                    "operationId": "CreateRecord",
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                  },
+                  "parameters": {
+                    "entityName": "appnotifications",
+                    "item/title": "@{triggerOutputs()?['body/name']} wurde in FinOps nicht gefunden.",
+                    "item/ttlinseconds": 5,
+                    "item/icontype": 100000002,
+                    "item/toasttype": 200000000
+                  },
+                  "authentication": "@parameters('$authentication')"
+                }
+              }
+            }
+          },
+          "expression": {
+            "greater": [
+              "@length(outputs('List_System_Users_in_FO')?['body/value'])",
+              0
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1e55de55-0d9b-43e0-99ca-ad55075328b2"
+          },
+          "type": "If"
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

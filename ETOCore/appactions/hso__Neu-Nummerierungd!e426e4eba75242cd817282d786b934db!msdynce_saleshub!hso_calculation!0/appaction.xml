@@ -1,0 +1,41 @@
+<appaction uniquename="hso__Neu-Nummerierungd!e426e4eba75242cd817282d786b934db!msdynce_saleshub!hso_calculation!0">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Re-Numbering">
+    <label description="Re-Numbering" languagecode="1033" />
+  </buttonlabeltext>
+  <buttontooltipdescription default="All positions in the calculation are renumbered.">
+    <label description="All positions in the calculation are renumbered." languagecode="1033" />
+  </buttontooltipdescription>
+  <buttontooltiptitle default="Re-number calculation">
+    <label description="Re-number calculation" languagecode="1033" />
+  </buttontooltiptitle>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculation</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculation</contextvalue>
+  <fonticon>BulletListDownArrow</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>0</location>
+  <name>Neu-Nummerierungd!e426e4eba75242cd817282d786b934db</name>
+  <onclickeventjavascriptfunctionname>ETO.CalculationRibbon.callCustomAPICalculation</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":5},{"type":4},{"type":21,"value":"Renumber Calculation"},{"type":19,"value":0}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>d24a8f32-ce5e-ee11-be6f-000d3ab3cbd3</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <parentappactionid>
+    <uniquename>hso__NewGroup!6cd820d12e2848409e333aa835f436f8!msdynce_saleshub!hso_calculation!0</uniquename>
+  </parentappactionid>
+  <sequence>25000.0000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilitytype>0</visibilitytype>
+</appaction>

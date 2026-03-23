@@ -1,0 +1,44 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+if (typeof (ETO.Appointment) === "undefined") { ETO.Appointment = {}; }
+
+ETO.Appointment.onLoadQuickCreate = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    
+    ETO.Appointment.PrefillStartDateFromDeadline(formContext);
+};
+
+ETO.Appointment.PrefillStartDateFromDeadline = (formContext) => 
+{
+    var regardingObject = formContext.getAttribute("regardingobjectid").getValue();
+
+    if (regardingObject === null)
+        return;
+
+    if (regardingObject[0].entityType === "opportunity")
+    {
+        Xrm.WebApi.retrieveRecord(regardingObject[0].entityType, regardingObject[0].id, "?$select=hso_deadline_dat").then(
+            function success(result) {
+                if (result.hso_deadline_dat !== null)
+
+                    var deadlineDate = new Date(result.hso_deadline_dat);
+
+                    // Setze die Uhrzeit auf 12:00 (Mittag)
+                    deadlineDate.setHours(13, 0, 0, 0);
+
+                    // ScheduledStart-Feld setzen
+                    formContext.getAttribute("scheduledstart").setValue(deadlineDate);
+
+                    // Setze die Uhrzeit auf 12:00 (Mittag)
+                    deadlineDate.setHours(13, 30, 0, 0);
+
+                    // ScheduledStart-Feld setzen
+                    formContext.getAttribute("scheduledend").setValue(deadlineDate);
+
+            },
+            function (error) {
+                console.log(error.message);
+                // handle error conditions
+            }
+        );
+    }
+}

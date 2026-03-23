@@ -1,0 +1,560 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+if (typeof (ETO.CalculationRibbon) === "undefined") { ETO.CalculationRibbon = {}; }
+
+// Define global variables
+var Quote_GUID = "";
+var Quote_Name = "";
+var Quote_Currency_GUID = "";
+var Quote_Currency_Name = "";
+var Quote_Department_GUID = "";
+var Quote_Department_Name = "";
+var Quote_Company_GUID = "";
+var Quote_Company_Name = "";
+var Quote_Language = "";
+
+// open from selected record in Subgrid
+ETO.CalculationRibbon.openTemplateCustomPage = (selectedItems) => {
+    var selectedRecordID = selectedItems[0].Id;
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationtemplate_4c1b8",
+        entityName: "hso_calculation",
+        recordId: selectedRecordID
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 400,
+        title: "Create template for calculation",
+    };
+    console.log("Open Custom Page to create Template for selected Calculation with Calculation GUID: " + selectedRecordID);
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+        // Called when the dialog closes
+        formContext.data.refresh();
+    }).catch(
+        function (error) {
+            // Handle error
+        });
+};
+
+// open from Main Form
+ETO.CalculationRibbon.openTemplateCustomPageMainForm = (formContext) => {
+    //Get Calculation GUID and remove {}
+    var selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "")
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationtemplate_4c1b8",
+        entityName: "hso_calculation",
+        recordId: selectedRecordID
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 400,
+        title: "Create template for calculation",
+    };
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(
+        function () {
+            // Called when the dialog closes
+            formContext.data.refresh();
+        }).catch(function (error) {
+            // Handle error
+        });
+};
+
+// open from selected record in Subgrid
+ETO.CalculationRibbon.openCopyCustomPage = (selectedItems) => {
+    var selectedRecordID = selectedItems[0].Id;
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationcopy_b7bc5",
+        entityName: "hso_calculation",
+        recordId: selectedRecordID
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 400,
+        title: "Create calculation as copy",
+    };
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+        // Called when the dialog closes
+        formContext.data.refresh();
+    }).catch(
+        function (error) {
+            // Handle error
+        });
+};
+
+// open from Main Form
+ETO.CalculationRibbon.openCopyCustomPageMainForm = (formContext) => {
+    //Get Calculation GUID and remove {}
+    var selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "")
+    console.log("Calculation GUID: " + selectedRecordID);
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationcopy_b7bc5",
+        entityName: "hso_calculation",
+        recordId: selectedRecordID
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 400,
+        title: "Create calculation as copy",
+    };
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+        // Called when the dialog closes
+        formContext.data.refresh();
+    }).catch(
+        function (error) {
+            // Handle error
+        });
+};
+
+
+// open from Subgrid
+ETO.CalculationRibbon.openGAEBImportCustomPage = (formContext) => {
+    // Get Quote GUID and remove {}
+    var selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "")
+    console.log("Quote GUID: " + selectedRecordID);
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationgaebimport_e35f3",
+        entityName: "quote",
+        recordId: selectedRecordID
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 453,
+        title: "Create calculation from GAEB-file",
+    };
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+        // Called when the dialog closes
+        formContext.data.refresh();
+    }).catch(
+        function (error) {
+            // Handle error
+        });
+};
+
+// open from Main Form
+ETO.CalculationRibbon.openGAEBExportCustomPage = (formContext) => {
+    // Get Calculation GUID and remove {}
+    var selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "")
+    console.log("Calculation GUID: " + selectedRecordID);
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationgaebexport_9f16b",
+        entityName: "hso_calculation",
+        recordId: selectedRecordID
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 353,
+        title: "Export calculation as GAEB-file",
+    };
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+        // Called when the dialog closes
+        formContext.data.refresh();
+    }).catch(
+        function (error) {
+            // Handle error
+        });
+};
+
+// open from Main Form
+ETO.CalculationRibbon.openSetDefaultValuesCustomPage = (formContext) => {
+    //Get Calculation GUID and remove {}
+    var selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "")
+    console.log("Calculation GUID: " + selectedRecordID);
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationsetdefaultvaluesorrecalculatepositions_3a2a9",
+        entityName: "hso_calculation",
+        recordId: JSON.stringify({ CalculationID: selectedRecordID, OperationType: "Standardwerte setzen" })
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 400,
+        title: "Set default values",
+    };
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+        // Called when the dialog closes
+        formContext.data.refresh();
+    }).catch(
+        function (error) {
+            // Handle error
+        });
+};
+
+// open from Main Form
+ETO.CalculationRibbon.openRecalculatePositionsCustomPage = (formContext) => {
+    //Get Calculation GUID and remove {}
+    var selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "")
+    console.log("Calculation GUID: " + selectedRecordID);
+    // Inline Page
+    var pageInput = {
+        pageType: "custom",
+        name: "hso_calculationsetdefaultvaluesorrecalculatepositions_3a2a9",
+        entityName: "hso_calculation",
+        recordId: JSON.stringify({ CalculationID: selectedRecordID, OperationType: "Positionen berechnen" })
+    };
+    var navigationOptions = {
+        target: 2,
+        position: 1,
+        width: 700,
+        height: 400,
+        title: "Re-calculate positions",
+    };
+    Xrm.Navigation.navigateTo(pageInput, navigationOptions).then(function () {
+        // Called when the dialog closes
+        formContext.data.refresh();
+    }).catch(
+        function (error) {
+            // Handle error
+        });
+};
+
+// open from Main Form
+ETO.CalculationRibbon.openSidePanel_SearchAndReplace = (formContext) => {
+    //Get Calculation GUID and remove {}
+    let selectedRecordID = formContext.data.entity.getId().replace(/[{}]/g, "")
+    // get the Search & Replace Side Panel
+    let SidePanel_SearchAndReplace_CustomPage = Xrm.App.sidePanes.getPane("CalculationSearchAndReplace_SidePanel");
+    if (SidePanel_SearchAndReplace_CustomPage != null) {
+        Xrm.App.sidePanes.getPane("CalculationSearchAndReplace_SidePanel").navigate({
+            pageType: "custom",
+            name: "hso_calculationpositionsearchreplace_aaddb",
+            recordId: selectedRecordID,
+            hidden: false
+        });
+        console.log("Side Panel 'Search & Replace' refreshed!");
+    } else {
+        Xrm.App.sidePanes.createPane({
+            title: "Search & Replace",
+            paneId: "CalculationSearchAndReplace_SidePanel",
+            imageSrc: "WebResources/hso_searchreplace_icon",
+            hideHeader: false,
+            canClose: true,
+            width: 1200,
+            isSelected: false,
+            hidden: false
+        }).then((pane) => {
+            pane.navigate({
+                pageType: "custom",
+                name: "hso_calculationpositionsearchreplace_aaddb",
+                recordId: selectedRecordID,
+                hidden: false
+            })
+        });
+    };
+
+};
+
+// open from Main Form
+ETO.CalculationRibbon.createNewCalculationAsEmpty = (inputParameter) => {
+    Quote_GUID = inputParameter;
+    RetrieveQuote(Quote_GUID).then(function (SelectedQuote_Name) {
+        var entityFormOptions = {};
+        entityFormOptions["entityName"] = "hso_calculation";
+        entityFormOptions["useQuickCreateForm"] = true;
+        entityFormOptions["formId"] = "8519fee7-8787-ed11-81ac-000d3a204410"; //default quick create form without possibility to select a template
+        // Set default values for the Calculation form
+        var formParameters = {};
+        //formParameters["hso_name"] = "Template abc";
+        // Set lookup column for Parent Quote
+        formParameters["hso_quoteid"] = Quote_GUID;
+        formParameters["hso_quoteidname"] = Quote_Name;
+        formParameters["hso_quoteididtype"] = "quote";
+        // Set lookup column for Currency
+        formParameters["transactioncurrencyid"] = Quote_Currency_GUID;
+        formParameters["transactioncurrencyidname"] = Quote_Currency_Name;
+        formParameters["transactioncurrencyididtype"] = "transactioncurrency";
+        // Set lookup column for Department
+        formParameters["hso_departmentid"] = Quote_Department_GUID;
+        formParameters["hso_departmentidname"] = Quote_Department_Name;
+        formParameters["hso_departmentidtype"] = "hso_department";
+        // Open the form.
+        Xrm.Navigation.openForm(entityFormOptions, formParameters).then(function (success) {
+            console.log(success);
+        },
+            function (error) {
+                console.log(error);
+            });
+    });
+};
+
+// open from Main Form
+ETO.CalculationRibbon.createNewCalculationFromTemplate = (inputParameter) => {
+    Quote_GUID = inputParameter;
+    ETO.CalculationRibbon.RetrieveQuote(Quote_GUID).then(function (SelectedQuote_Name) {
+        var entityFormOptions = {};
+        entityFormOptions["entityName"] = "hso_calculation";
+        entityFormOptions["useQuickCreateForm"] = true;
+        entityFormOptions["formId"] = "2b84eb47-800e-ee11-8f6d-000d3a204410"; //specific quick create form with additional fields to select a template
+        // Set default values for the Calculation form
+        var formParameters = {};
+        //formParameters["hso_name"] = "Template abc";
+        // Set lookup column for Parent Quote
+        formParameters["hso_quoteid"] = Quote_GUID;
+        formParameters["hso_quoteidname"] = Quote_Name;
+        formParameters["hso_quoteididtype"] = "quote";
+        // Set lookup column for Currency
+        formParameters["transactioncurrencyid"] = Quote_Currency_GUID;
+        formParameters["transactioncurrencyidname"] = Quote_Currency_Name;
+        formParameters["transactioncurrencyididtype"] = "transactioncurrency";
+        // Set lookup column for Department
+        formParameters["hso_departmentid"] = Quote_Department_GUID;
+        formParameters["hso_departmentidname"] = Quote_Department_Name;
+        formParameters["hso_departmentidtype"] = "hso_department";
+        // Set lookup column for Company
+        formParameters["hso_companyid"] = Quote_Company_GUID;
+        formParameters["hso_companyidname"] = Quote_Company_Name;
+        formParameters["hso_companyidtype"] = "cdm_company";
+        // Set Language
+        formParameters["hso_language"] = Quote_Language;
+        // Open the form.
+        Xrm.Navigation.openForm(entityFormOptions, formParameters).then(function (success) {
+            console.log(success);
+        },
+            function (error) {
+                console.log(error);
+            });
+    });
+};
+
+// Fetch Quote Information
+// Function called by other function from within this library
+ETO.CalculationRibbon.RetrieveQuote = (SelectedQuote) => {
+    return new Promise(function (resolve, reject) {
+        // Get Quote
+        Xrm.WebApi.retrieveRecord("quote", SelectedQuote, "?$select=name,_transactioncurrencyid_value,_hso_departmentid_value,_msdyn_company_value,msdyn_language&$expand=transactioncurrencyid($select=currencyname),hso_departmentid($select=hso_name),msdyn_Company($select=cdm_companycode)").then(
+            function success(result) {
+                Quote_Name = result.name;
+                Quote_Currency_GUID = result._transactioncurrencyid_value;
+                Quote_Currency_Name = result.transactioncurrencyid.currencyname;
+                Quote_Department_GUID = result._hso_departmentid_value;
+                Quote_Department_Name = result.hso_departmentid.hso_name;
+                Quote_Company_GUID = result._msdyn_company_value;
+                Quote_Company_Name = result.msdyn_Company.cdm_companycode;
+                Quote_Language = result.msdyn_language;
+                resolve(result.name);
+            },
+            function error(error) {
+                reject(error);
+            });
+    })
+};
+
+ETO.CalculationRibbon.callCustomAPIExecuteOperation = (PrimaryControl, FirstPrimaryItemId, OperationName, OperationType) => {
+    // Format Calculation GUID by removing "{" and "}"
+    let CalculationGUID = FirstPrimaryItemId.replace(/[{}]/g, "")
+    console.log("Operation: " + OperationName + " (" + OperationType + ")");
+    // Operation Types
+    // 0 - SingleDelete
+    // 1 - BulkDelete
+    // 2 - BulkSetDefaultValues
+    // 3 - BulkRecalculateNode
+
+    // Confirm action with the user
+    let confirmTitle = "";
+    let confirmMessage = "";
+    switch (OperationType) {
+        case 2:
+            confirmTitle = "Set default values";
+            confirmMessage = "The default values are set for all calculation positions. A complete recalculation of the calculation is performed afterwards.";
+            break;
+        case 3:
+            confirmTitle = "Re-calculate positions";
+            confirmMessage = "A re-calculation is performed for all positions of the calculation.";
+            break;
+    };
+    var confirmStrings = { text: confirmMessage, title: confirmTitle };
+    var confirmOptions = { height: 200, width: 450 };
+    Xrm.Navigation.openConfirmDialog(confirmStrings, confirmOptions).then(
+        function (success) {
+            if (success.confirmed) {
+                // Search for Top Level Nodes of respective Calculation
+                Xrm.WebApi.retrieveMultipleRecords("hso_calculationdetail", "?$select=hso_calculationdetailid,hso_name,hso_linenumber&$filter=_hso_calculationid_value eq '" + CalculationGUID + "' and hso_level eq 1").then(
+                    result => {
+                        let records = [];
+                        if (result && result.entities.length > 0) {
+                            for (let i = 0; i < result.entities.length; i++) {
+                                records.push(result.entities[i].hso_calculationdetailid);
+                                console.log("Record Found: ", result.entities[i]);
+                            }
+                        } else {
+                            console.log("No top-level records found for the calculation.");
+                        }
+
+                        // Display Progress Indicator (and block UI)
+                        switch (OperationType) {
+                            case 2:
+                                Xrm.Utility.showProgressIndicator("Set default values...");
+                                break;
+                            case 3:
+                                Xrm.Utility.showProgressIndicator("Re-calculate positions...");
+                                break;
+                        }
+
+                        // Prepare the payload
+                        const payload = {
+                            OperationType: OperationType,
+                            Records: records
+                        };
+
+                        const payloadString = JSON.stringify(payload);
+                        console.log("Payload to send:", payloadString);
+
+                        // Create the API request
+                        let hso_CalculationdetailExecuteOperationAPIRequest = new ETO.CalculationRibbon.hso_CalculationdetailExecuteOperation(payloadString);
+
+                        // Call the Custom API
+                        Xrm.WebApi.online.execute(hso_CalculationdetailExecuteOperationAPIRequest).then(
+                            result => {
+                                result.json().then(response => {
+                                    console.log("Custom API successfully called.", response);
+                                    Xrm.Utility.closeProgressIndicator();
+                                });
+                            },
+                            error => {
+                                console.error("Error calling the Custom API:", error);
+                                Xrm.Utility.closeProgressIndicator();
+                                Xrm.Navigation.openErrorDialog({
+                                    details: error.message,
+                                    message: 'An error occurred while calling the hso_CalculationdetailApi Custom API.'
+                                });
+                            }
+                        );
+                    },
+                    error => {
+                        console.error("Error retrieving records: ", error);
+                    }
+                );
+            }
+        });
+};
+
+// Custom API to execute several plug-ins for a list of records
+ETO.CalculationRibbon.hso_CalculationdetailExecuteOperation = function (hso_CalculationdetailApiPayload) {
+    this.hso_CalculationdetailApiPayload = hso_CalculationdetailApiPayload;
+};
+
+// Attach metadata to the prototype
+ETO.CalculationRibbon.hso_CalculationdetailExecuteOperation.prototype.getMetadata = function () {
+    return {
+        boundParameter: null,
+        parameterTypes: {
+            'hso_CalculationdetailApiPayload': {
+                'typeName': 'Edm.String',
+                'structuralProperty': 1 // Primitive Type
+            }
+        },
+        operationType: 0, // Action (0 = Action, 1 = Function, 2 = CRUD)
+        operationName: 'hso_CalculationdetailApi',
+    };
+};
+
+ETO.CalculationRibbon.callCustomAPICalculation = (PrimaryControl, FirstPrimaryItemId, OperationName, OperationType) => {
+    console.log("Operation: " + OperationName + " (" + OperationType + ")");
+    // Operation Types
+    // 0 - RenumberCalculation
+    // 1 - CalculateUnitPriceRatio
+
+    // Confirm action with the user
+    let confirmTitle = "";
+    let confirmMessage = "";
+    let progessIndicatorMessage = "";
+    switch (OperationType) {
+        case 0:
+            confirmTitle = "Execute re-numbering";
+            confirmMessage = "All calculation positions are re-numbered.";
+            progessIndicatorMessage = "Re-numbering in progress";
+            break;
+        case 1:
+            confirmTitle = "Calculate EP-shares";
+            confirmMessage = "For all required calculation positions the EP-shares are calculated.";
+            progessIndicatorMessage = "Calculating EP-shares in progress";
+            break;
+    };
+    var confirmStrings = { text: confirmMessage, title: confirmTitle };
+    var confirmOptions = { height: 200, width: 450 };
+    Xrm.Navigation.openConfirmDialog(confirmStrings, confirmOptions).then(
+        function (success) {
+            if (success.confirmed) {
+                // Show Progress Indicator
+                Xrm.Utility.showProgressIndicator(progessIndicatorMessage);
+
+                // Prepare the payload
+                let CalculationGUID = FirstPrimaryItemId.replace(/[{}]/g, "");
+                const payload = {
+                    OperationType: OperationType,
+                    Records: [CalculationGUID]
+                };
+                const payloadString = JSON.stringify(payload);
+                console.log("Payload to send:", payloadString);
+
+                // Create the API request
+                let hso_CalculationAPIRequest = new ETO.CalculationRibbon.hso_CalculationAPI(payloadString);
+                // Call the Custom API
+                Xrm.WebApi.online.execute(hso_CalculationAPIRequest).then(
+                    function (result) {
+                        result.json().then(
+                            function (response) {
+                                // Custom logic after successful API call
+                                console.log("Custom API successfully called with operation: " + OperationName);
+                                console.log("Response from API:", response);
+                                Xrm.Utility.closeProgressIndicator();
+                            }
+                        );
+                    },
+                    function (error) {
+                        console.error("Error calling the Custom API:", error);
+                        Xrm.Utility.closeProgressIndicator();
+                        Xrm.Navigation.openErrorDialog({
+                            details: error.message,
+                            message: 'An error occurred while calling the hso_CalculationAPI Custom API.'
+                        });
+                    }
+                );
+            }
+        });
+};
+
+// Custom API to execute several plug-ins for a list of records
+ETO.CalculationRibbon.hso_CalculationAPI = function (hso_CalculationApiPayload) {
+    this.hso_CalculationApiPayload = hso_CalculationApiPayload;
+};
+
+// Attach metadata to the prototype
+ETO.CalculationRibbon.hso_CalculationAPI.prototype.getMetadata = function () {
+    return {
+        boundParameter: null,
+        parameterTypes: {
+            'hso_CalculationApiPayload': {
+                'typeName': 'Edm.String',
+                'structuralProperty': 1 // Primitive Type
+            }
+        },
+        operationType: 0, // Action (0 = Action, 1 = Function, 2 = CRUD)
+        operationName: 'hso_CalculationApi',
+    };
+};

@@ -1,0 +1,135 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_dynamicsax": {
+        "api": {
+          "name": "shared_dynamicsax"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_CRFinOps"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)": {
+          "defaultValue": "hso-d365-devtest.sandbox.operations.eu.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarUnifiedOperationsInstance",
+            "description": "The Unified Operations Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Http",
+          "inputs": {
+            "triggerAuthenticationType": "All",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "projectid": {
+                  "type": "string"
+                },
+                "companyid": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "1fd85589-a1e6-44fc-93f0-fc0fa8045f4f"
+          }
+        }
+      },
+      "actions": {
+        "Aktion_ausführen": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "@parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')",
+              "procedure": "CEProjectTasks/Microsoft.Dynamics.DataEntities.transferWbsToProject",
+              "parameters/_projId": "@triggerBody()?['projectid']",
+              "parameters/_dataAreaId": "@triggerBody()?['companyid']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_dynamicsax",
+              "operationId": "ExecuteProcedure",
+              "connectionName": "shared_dynamicsax"
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "67ce232f-39bf-46c3-aff5-8f85ea8d89be"
+          }
+        },
+        "Bedingung": {
+          "type": "If",
+          "expression": {
+            "equals": [
+              "@outputs('Aktion_ausführen')?['body/value']",
+              "OK"
+            ]
+          },
+          "actions": {
+            "Antwort": {
+              "type": "Response",
+              "kind": "Http",
+              "inputs": {
+                "statusCode": 200,
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "body": "The project structure plan has been successfully updated."
+              },
+              "metadata": {
+                "operationMetadataId": "71356920-d466-492e-9ef8-647e68077851"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Antwort_2": {
+                "type": "Response",
+                "kind": "Http",
+                "inputs": {
+                  "statusCode": 400,
+                  "headers": {
+                    "Content-Type": "application/json"
+                  },
+                  "body": "The project structure plan could not be updated."
+                },
+                "metadata": {
+                  "operationMetadataId": "aa5aff44-3a36-4c5c-9026-a4c4cd87c25a"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Aktion_ausführen": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "fc49d50a-8d99-4821-a138-41cfa1e72775"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

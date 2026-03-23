@@ -1,0 +1,60 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+
+ETO.TimeEntriesRibbon = {
+    
+    createTimeReport: function(selectedTimeEntries) {
+		Xrm.Utility.showProgressIndicator("Assembly reports are generated");
+		var listOfWOs = new Array();
+		selectedTimeEntries.getGrid().getSelectedRows()
+		.forEach(rec => 
+		{
+			listOfWOs.push(rec.getAttribute("hso_workorder").getValue()[0].name);
+		});
+		listOfWOs = new Set(listOfWOs);
+		
+		var dictTimeReports = {};
+        var processedTimeEntries = 0;
+        var timeEntriestobeprocessed = selectedTimeEntries.getGrid().getSelectedRows().getLength();
+
+		listOfWOs.forEach(wo => 
+			{
+				Xrm.WebApi.createRecord("hso_timereports", {"hso_name": "Report " + wo + " On " + new Date().toDateString()}).then(
+					function success(result) {
+						dictTimeReports[wo] = result.id;
+						selectedTimeEntries.getGrid().getSelectedRows().forEach(rec =>
+							{
+								if (rec.getAttribute("hso_workorder").getValue()[0].name === wo)
+									Xrm.WebApi.updateRecord("hso_roundedtimeentries", rec.data.entity.getId(), { "hso_TimeReport@odata.bind": "/hso_timereportses("+ result.id +")" })
+                                .then(
+                                    function success(result)
+                                    {
+                                        processedTimeEntries += 1;
+                                        if (processedTimeEntries == timeEntriestobeprocessed)
+                                        {
+                                            Xrm.Utility.closeProgressIndicator();
+
+                                            // define notification object
+                                            var notification = 
+                                            {
+                                                type: 1,
+                                                level: 1, //success
+                                                message: listOfWOs.size + " Assembly report(s) were generated."
+                                            };
+
+                                            Xrm.App.addGlobalNotification(notification);
+                                            selectedTimeEntries.refresh();
+                                        }
+                                    }
+                                );
+							}
+						);
+					},
+					function (error) {
+						console.log(error.message);
+						// handle error conditions
+					}
+				);
+			}
+		);
+    }
+};

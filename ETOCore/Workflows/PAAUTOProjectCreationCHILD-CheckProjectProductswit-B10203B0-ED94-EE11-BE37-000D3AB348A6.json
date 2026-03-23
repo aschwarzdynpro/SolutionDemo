@@ -1,0 +1,1066 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps_1": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "45758aba-b392-4735-9c1a-6cb38ff6fe34"
+          },
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "Calculation GUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The Parent Calculation Version of the Project Prodcuts that need to be checked",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "title": "Processing Log Owner GUID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The User that initiated the process",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_2": {
+                  "title": "Triggered by",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Select whether the Child Flow is triggered from the Quote or from a Calculation",
+                  "x-ms-content-hint": "TEXT",
+                  "enum": [
+                    "Quote",
+                    "Calculation"
+                  ]
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "text_2"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Processing_Log": {
+          "actions": {
+            "Convert_time_zone": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "fef46357-af1c-4e69-9b99-eca36f933e78"
+              },
+              "type": "Expression",
+              "kind": "ConvertTimeZone",
+              "inputs": {
+                "baseTime": "@{utcNow()}",
+                "formatString": "s",
+                "sourceTimeZone": "UTC",
+                "destinationTimeZone": "W. Europe Standard Time"
+              }
+            },
+            "Create_Processing_Log": {
+              "runAfter": {
+                "Convert_time_zone": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "6fecba63-ae34-4a4c-9453-bc492b53e7fb"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps_1",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "hso_processinglogs",
+                  "item/hso_name": "Projektartikel auf Artikelbedarfe prüfen - @{body('Convert_time_zone')}",
+                  "item/hso_processingtask": 100000005,
+                  "item/ownerid@odata.bind": "systemusers(@{triggerBody()['text_1']})",
+                  "item/hso_flowrunurl": "@concat('https://emea.flow.microsoft.com/manage/environments/', workflow()?['tags']['environmentName'], '/flows/', workflow()?['name'], '/runs/', workflow()?['run']['name'])",
+                  "item/hso_calculationid@odata.bind": "hso_calculations(@{body('Get_Calculation')?['hso_calculationid']})",
+                  "item/hso_start_datetime": "@utcNow()",
+                  "item/hso_processingstatus": 100000001
+                },
+                "authentication": {
+                  "type": "Raw",
+                  "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Get_Calculation": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "06d610dd-7387-4c06-ada6-2b526d410db8"
+          },
+          "type": "Scope"
+        },
+        "Initialize_varError": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "1464d3e3-834e-4abb-9ea8-7fb21625b0fc"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varError",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "Summary": {
+          "actions": {
+            "Processing_successful": {
+              "actions": {
+                "Update_Processing_Log_[Success]": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "a3a515ea-90dc-47e6-a6b6-130d5f63b34f"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps_1",
+                      "operationId": "UpdateRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "hso_processinglogs",
+                      "recordId": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']",
+                      "item/hso_end_datetime": "@utcNow()",
+                      "item/hso_processingstatus": 100000002
+                    },
+                    "authentication": {
+                      "type": "Raw",
+                      "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                    }
+                  }
+                },
+                "Respond_to_Parent_Flow_[Success]": {
+                  "runAfter": {
+                    "Update_Processing_Log_[Success]": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "b8b5364c-0ddf-4b30-b658-2f1e480d15b6"
+                  },
+                  "type": "Response",
+                  "kind": "PowerApp",
+                  "inputs": {
+                    "statusCode": 200,
+                    "body": {
+                      "output": "Success"
+                    },
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "output": {
+                          "title": "Output",
+                          "x-ms-dynamically-added": true,
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "runAfter": {},
+              "else": {
+                "actions": {
+                  "Update_Processing_Log_[Failure]": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "c084b7ec-ec80-48ce-b84c-09303ffa872b"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_commondataserviceforapps_1",
+                        "operationId": "UpdateRecord",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                      },
+                      "parameters": {
+                        "entityName": "hso_processinglogs",
+                        "recordId": "@outputs('Create_Processing_Log')?['body/hso_processinglogid']",
+                        "item/hso_end_datetime": "@utcNow()",
+                        "item/hso_flowerror": "@variables('varErrorLog')",
+                        "item/hso_processingstatus": 100000003
+                      },
+                      "authentication": {
+                        "type": "Raw",
+                        "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                      }
+                    }
+                  },
+                  "Respond_to_Parent_Flow_[Failure]": {
+                    "runAfter": {
+                      "Update_Processing_Log_[Failure]": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "d1018ca9-aa41-499f-b5a4-69922f4fccfd"
+                    },
+                    "type": "Response",
+                    "kind": "PowerApp",
+                    "inputs": {
+                      "statusCode": 200,
+                      "body": {
+                        "output": "Failure"
+                      },
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "output": {
+                            "title": "Output",
+                            "x-ms-dynamically-added": true,
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "equals": [
+                  "@variables('varProcessingStatus')",
+                  "Pending"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "e0c12bd6-8992-4eb8-a457-6593a3b885fa"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Project_creation": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2f5bfa14-57f1-426a-ba94-93e2ea099f77"
+          },
+          "type": "Scope"
+        },
+        "Initialize_varProcessingStatus": {
+          "runAfter": {
+            "Initialize_varErrorLog": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "ba55e4c7-2c50-4101-ae5b-7d7579b5d085"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varProcessingStatus",
+                "type": "string",
+                "value": "Pending"
+              }
+            ]
+          }
+        },
+        "Initialize_varErrorLog": {
+          "runAfter": {
+            "Initialize_varError": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e162619a-0898-494c-9224-bb7134b4f53e"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorLog",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Check_Product_Requirement": {
+          "actions": {
+            "List_Product_Requirements": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "5badc0cb-fe81-424a-bd03-d92321a32027"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps_1",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "hso_productrequirements",
+                  "$filter": "hso_origintype eq 6 and hso_originreference eq '@{triggerBody()?['text']}'"
+                },
+                "authentication": {
+                  "type": "Raw",
+                  "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                }
+              }
+            },
+            "For_each_Product_Requirement": {
+              "foreach": "@outputs('List_Product_Requirements')?['body/value']",
+              "actions": {
+                "Switch_on_Product_Requirement_Status": {
+                  "runAfter": {},
+                  "cases": {
+                    "Offen": {
+                      "case": 1,
+                      "actions": {
+                        "Increment_varNumberOfProductRequirements_InProgress_by_1_[Offen]": {
+                          "runAfter": {},
+                          "metadata": {
+                            "operationMetadataId": "95affd3d-596a-48cc-a68c-8aa3343c553d"
+                          },
+                          "type": "IncrementVariable",
+                          "inputs": {
+                            "name": "varNumberOfProductRequirements_InProgress",
+                            "value": 1
+                          }
+                        }
+                      }
+                    },
+                    "in_Bearbeitung": {
+                      "case": 2,
+                      "actions": {
+                        "Increment_varNumberOfProductRequirements_InProgress_by_1_[in_Bearbeitung]": {
+                          "runAfter": {},
+                          "metadata": {
+                            "operationMetadataId": "d67104e3-88ce-4ad6-8a3f-24e29003ef32"
+                          },
+                          "type": "IncrementVariable",
+                          "inputs": {
+                            "name": "varNumberOfProductRequirements_InProgress",
+                            "value": 1
+                          }
+                        }
+                      }
+                    },
+                    "Abgeschlossen": {
+                      "case": 3,
+                      "actions": {}
+                    },
+                    "Wartend": {
+                      "case": 4,
+                      "actions": {
+                        "Update_Product_Requirement": {
+                          "runAfter": {},
+                          "metadata": {
+                            "operationMetadataId": "ab2a655b-fbc0-4c2c-bdbf-7ee91d28ee68"
+                          },
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "host": {
+                              "connectionName": "shared_commondataserviceforapps_1",
+                              "operationId": "UpdateRecord",
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                            },
+                            "parameters": {
+                              "entityName": "hso_productrequirements",
+                              "recordId": "@items('For_each_Product_Requirement')?['hso_productrequirementid']",
+                              "item/hso_status": 1
+                            },
+                            "authentication": {
+                              "type": "Raw",
+                              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                            }
+                          }
+                        },
+                        "Increment_varNumberOfProductRequirements_InProgress_by_1_[Wartend]": {
+                          "runAfter": {
+                            "Update_Product_Requirement": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "80fc924e-4d1f-4f48-a1a1-03d8f4a0c115"
+                          },
+                          "type": "IncrementVariable",
+                          "inputs": {
+                            "name": "varNumberOfProductRequirements_InProgress",
+                            "value": 1
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "default": {
+                    "actions": {}
+                  },
+                  "expression": "@items('For_each_Product_Requirement')?['hso_status']",
+                  "metadata": {
+                    "operationMetadataId": "01ea9c11-4eac-4e99-9cf8-588877cb1112"
+                  },
+                  "type": "Switch"
+                }
+              },
+              "runAfter": {
+                "List_Product_Requirements": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "d81b4f15-aaf5-418f-a0a4-3e9058ff713f"
+              },
+              "type": "Foreach"
+            }
+          },
+          "runAfter": {
+            "Check_Project_Products": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d5530df2-9f7d-4b26-900c-16f53f88f255"
+          },
+          "type": "Scope"
+        },
+        "Check_Project_Products": {
+          "actions": {
+            "List_Project_Products_without_Product": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "08dcdf1a-4942-4c56-892e-af89c3e0a70a"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps_1",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "hso_projectproducts",
+                  "$filter": "_hso_calculationid_value eq @{body('Get_Calculation')?['hso_calculationid']} and hso_productid eq null and _hso_productrequirementdetailid_value eq null"
+                },
+                "authentication": {
+                  "type": "Raw",
+                  "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                }
+              },
+              "description": "All Project Products must be transferred to real products. Thus check all Calculation Project Products with no Product Request Detail and no Product assigned yet"
+            },
+            "Project_Products_without_Product_found": {
+              "actions": {
+                "Product_Requirement": {
+                  "actions": {
+                    "Run_a_Child_Flow_to_check_and_create_Requirement_Header": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "9e760068-05b5-42f3-b114-2252153e0c5d"
+                      },
+                      "type": "Workflow",
+                      "inputs": {
+                        "host": {
+                          "workflowReferenceName": "bde3b09e-b6f1-ee11-904c-000d3ab1b3e1"
+                        },
+                        "body": {
+                          "text": "@body('Get_Calculation')?['hso_calculationid']",
+                          "text_1": "@body('Get_Calculation')?['hso_name']",
+                          "number": 6,
+                          "text_2": "@triggerBody()?['text_1']"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "98021a4b-0072-41cf-b64e-3506eb24d867"
+                  },
+                  "type": "Scope"
+                },
+                "Item_Project_Products": {
+                  "actions": {
+                    "Filter_Project_Products_for_Items": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "9985d397-eff4-4b2f-bddf-a2c7f9e61296"
+                      },
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@outputs('List_Project_Products_without_Product')?['body/value']",
+                        "where": "@equals(item()?['hso_isbillofmaterials'],false)"
+                      }
+                    },
+                    "Select_Item_Project_Products": {
+                      "runAfter": {
+                        "Filter_Project_Products_for_Items": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "5d76a627-67f8-4d93-b2e9-3ebd5aa82337"
+                      },
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Filter_Project_Products_for_Items')",
+                        "select": {
+                          "hso_name": "@item()?['hso_name']",
+                          "hso_description": "@item()?['hso_description']",
+                          "_hso_uomid_value": "@item()?['_hso_uomid_value']",
+                          "hso_projectproductid": "@item()?['hso_projectproductid']",
+                          "hso_typenumber_manufacturer": "@item()?['hso_typenumber_manufacturer']",
+                          "hso_productnumber_manufacturer": "@item()?['hso_productnumber_manufacturer']",
+                          "hso_manufacturer_name": "@item()?['hso_manufacturer_name']",
+                          "hso_europeanarticlenumber": "@item()?['hso_europeanarticlenumber']",
+                          "hso_supplier_name": "@item()?['hso_supplier_name']",
+                          "_hso_manufacturer_id_value": "@item()?['_hso_manufacturer_id_value']",
+                          "hso_productnumber_supplier": "@item()?['hso_productnumber_supplier']"
+                        }
+                      }
+                    },
+                    "Item_Project_Products_to_process": {
+                      "actions": {
+                        "Run_a_Child_Flow_to_process_Item_Project_Products": {
+                          "runAfter": {},
+                          "metadata": {
+                            "operationMetadataId": "6da8106d-25f8-4689-b0af-903f306b8fbe"
+                          },
+                          "type": "Workflow",
+                          "inputs": {
+                            "host": {
+                              "workflowReferenceName": "f8a5f133-4ff3-ee11-904c-000d3ab1b3e1"
+                            },
+                            "body": {
+                              "text": "@body('Run_a_Child_Flow_to_check_and_create_Requirement_Header')?['requirementguid']",
+                              "text_1": "@{body('Select_Item_Project_Products')}",
+                              "text_2": "@body('Get_Calculation')?['_hso_companyid_value']"
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Select_Item_Project_Products": [
+                          "Succeeded"
+                        ]
+                      },
+                      "expression": {
+                        "and": [
+                          {
+                            "greater": [
+                              "@length(body('Select_Item_Project_Products'))",
+                              "@int('0')"
+                            ]
+                          }
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "7b50d164-f9bf-4247-9a4b-53dc1ad89e7a"
+                      },
+                      "type": "If"
+                    }
+                  },
+                  "runAfter": {
+                    "Product_Requirement_-_Error": [
+                      "Succeeded",
+                      "Skipped"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "d122b30f-c65d-4ae2-928f-fd7db1728756"
+                  },
+                  "type": "Scope"
+                },
+                "BOM_Project_Products": {
+                  "actions": {
+                    "Filter_Project_Products_for_BOMs": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "9808547a-6170-477c-8518-32b37c9dae11"
+                      },
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@outputs('List_Project_Products_without_Product')?['body/value']",
+                        "where": "@equals(item()?['hso_isbillofmaterials'],true)"
+                      }
+                    },
+                    "Select_BOM_Project_Products": {
+                      "runAfter": {
+                        "Filter_Project_Products_for_BOMs": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "fd072872-dca8-499d-a10c-0abf4559b5b9"
+                      },
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Filter_Project_Products_for_BOMs')",
+                        "select": {
+                          "hso_name": "@item()?['hso_name']",
+                          "hso_description": "@item()?['hso_description']",
+                          "_hso_uomid_value": "@item()?['_hso_uomid_value']",
+                          "hso_projectproductid": "@item()?['hso_projectproductid']"
+                        }
+                      }
+                    },
+                    "BOM_Project_Products_to_process": {
+                      "actions": {
+                        "Run_a_Child_Flow_to_process_BOM_Project_Products": {
+                          "runAfter": {},
+                          "metadata": {
+                            "operationMetadataId": "c689fbc6-8221-45ca-bb9f-db59c1dedaae"
+                          },
+                          "type": "Workflow",
+                          "inputs": {
+                            "host": {
+                              "workflowReferenceName": "a65a3db7-9df1-ee11-904c-000d3ab1b3e1"
+                            },
+                            "body": {
+                              "text": "@body('Run_a_Child_Flow_to_check_and_create_Requirement_Header')?['requirementguid']",
+                              "text_1": "@{body('Select_BOM_Project_Products')}",
+                              "text_2": "@body('Get_Calculation')?['_hso_companyid_value']"
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Select_BOM_Project_Products": [
+                          "Succeeded"
+                        ]
+                      },
+                      "expression": {
+                        "and": [
+                          {
+                            "greater": [
+                              "@length(body('Select_BOM_Project_Products'))",
+                              "@int('0')"
+                            ]
+                          }
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "7823f2c6-69cf-4b61-b003-1f05a81c4671"
+                      },
+                      "type": "If"
+                    }
+                  },
+                  "runAfter": {
+                    "Item_Project_Products_-_Error": [
+                      "Succeeded",
+                      "Skipped"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "361bdda0-04d0-4ec3-aa6b-558f285f80f0"
+                  },
+                  "type": "Scope"
+                },
+                "Product_Requirement_-_Error": {
+                  "actions": {
+                    "Filter_Results_for_failed_actions_[Product_Requirement]": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "a2eb17eb-78fe-44da-bb73-0c9bdb21ad47"
+                      },
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@result('Product_Requirement')",
+                        "where": "@equals(item()['status'], 'Failed')"
+                      }
+                    },
+                    "Select_Error_Summary_[Product_Requirement]": {
+                      "runAfter": {
+                        "Filter_Results_for_failed_actions_[Product_Requirement]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "87b3a1d1-e356-4230-a0af-c0335330e79c"
+                      },
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Filter_Results_for_failed_actions_[Product_Requirement]')",
+                        "select": {
+                          "Action": "@item()?['name']",
+                          "Code": "@item()?['code']",
+                          "Status": "@item()?['status']",
+                          "StatusCode": "@item()?['outputs']?['statusCode']",
+                          "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                        }
+                      }
+                    },
+                    "Apply_to_each_Error_Summary_[Product_Requirement]": {
+                      "foreach": "@body('Select_Error_Summary_[Product_Requirement]')",
+                      "actions": {
+                        "Append_varErrorSummary_[Product_Requirement]": {
+                          "runAfter": {},
+                          "metadata": {
+                            "operationMetadataId": "78e076c5-e9c9-4ce0-bcdf-19ab6ab23d01"
+                          },
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "varError",
+                            "value": "@items('Apply_to_each_Error_Summary_[Product_Requirement]')"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Select_Error_Summary_[Product_Requirement]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "0fc8885d-f846-400f-a027-d2f764ad355c"
+                      },
+                      "type": "Foreach"
+                    }
+                  },
+                  "runAfter": {
+                    "Product_Requirement": [
+                      "TimedOut",
+                      "Failed"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "1cf3f856-fb77-49aa-90cc-2a8614a71296"
+                  },
+                  "type": "Scope"
+                },
+                "Item_Project_Products_-_Error": {
+                  "actions": {
+                    "Filter_Results_for_failed_actions_[Item_Project_Products]": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "1858387b-b8ab-41b3-a195-68ad451d5e5a"
+                      },
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@result('Item_Project_Products')",
+                        "where": "@equals(item()?['status'],'Failed')"
+                      }
+                    },
+                    "Select_Error_Summary_[Item_Project_Products]": {
+                      "runAfter": {
+                        "Filter_Results_for_failed_actions_[Item_Project_Products]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "c26b08ac-9ca8-4a6d-8e81-a61a2e3c85f2"
+                      },
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Filter_Results_for_failed_actions_[Item_Project_Products]')",
+                        "select": {
+                          "Action": "@item()?['name']",
+                          "Code": "@item()?['code']",
+                          "Status": "@item()?['status']",
+                          "StatusCode": "@item()?['outputs']?['statusCode']",
+                          "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                        }
+                      }
+                    },
+                    "Apply_to_each_Error_Summary_[Item_Project_Products]": {
+                      "foreach": "@body('Select_Error_Summary_[Item_Project_Products]')",
+                      "actions": {
+                        "Append_Error_Summary_[Item_Project_Products]": {
+                          "runAfter": {},
+                          "metadata": {
+                            "operationMetadataId": "99cc6e30-5aa0-47cc-8623-f5d7a87ab425"
+                          },
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "varError",
+                            "value": "@items('Apply_to_each_Error_Summary_[Item_Project_Products]')"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Select_Error_Summary_[Item_Project_Products]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "7c227018-383f-438a-9c77-a0ee697edfb3"
+                      },
+                      "type": "Foreach"
+                    }
+                  },
+                  "runAfter": {
+                    "Item_Project_Products": [
+                      "TimedOut",
+                      "Failed"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "1b007e70-24d6-40a4-9132-2295cb72b28c"
+                  },
+                  "type": "Scope"
+                },
+                "BOM_Project_Products_-_Error": {
+                  "actions": {},
+                  "runAfter": {
+                    "BOM_Project_Products": [
+                      "TimedOut",
+                      "Failed"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "4c414c40-9236-4b26-88ca-135d09ce9b38"
+                  },
+                  "type": "Scope"
+                }
+              },
+              "runAfter": {
+                "List_Project_Products_without_Product": [
+                  "Succeeded"
+                ]
+              },
+              "expression": {
+                "greater": [
+                  "@length(outputs('List_Project_Products_without_Product')?['body/value'])",
+                  0
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "2f74986e-d61f-452a-a4bf-a59fa3a6b585"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Processing_Log": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e7e8abbd-0fe8-4fba-a4f2-15c9e37af8d0"
+          },
+          "type": "Scope"
+        },
+        "Project_creation": {
+          "actions": {
+            "Not_ready_Project_Products_or_open_Product_Requirements_found": {
+              "actions": {
+                "Update_active_Calculation_to_wait_with_Project_creation": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "8daca8a9-fccc-460a-8c9f-72ab34a1463b"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps_1",
+                      "operationId": "UpdateRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "hso_calculations",
+                      "recordId": "@body('Get_Calculation')?['hso_calculationid']",
+                      "item/hso_projectstatus": 100000000
+                    },
+                    "authentication": {
+                      "type": "Raw",
+                      "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                    }
+                  }
+                }
+              },
+              "runAfter": {},
+              "else": {
+                "actions": {
+                  "List_Project_Products_without_Product_2": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "1c2b1f98-bda8-4baa-b903-f246198b4eae"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_commondataserviceforapps_1",
+                        "operationId": "ListRecords",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                      },
+                      "parameters": {
+                        "entityName": "hso_projectproducts",
+                        "$filter": "_hso_calculationid_value eq @{body('Get_Calculation')?['hso_calculationid']} and hso_productid eq null and _hso_productrequirementdetailid_value eq null"
+                      },
+                      "authentication": {
+                        "type": "Raw",
+                        "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                      }
+                    }
+                  },
+                  "No_Project_Products_without_Product_found": {
+                    "actions": {
+                      "Update_active_Calculation_to_initiate_Project_creation": {
+                        "runAfter": {},
+                        "metadata": {
+                          "operationMetadataId": "8d4447fd-f720-4f1b-98de-0de77ec0bbe7"
+                        },
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "host": {
+                            "connectionName": "shared_commondataserviceforapps_1",
+                            "operationId": "UpdateRecord",
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                          },
+                          "parameters": {
+                            "entityName": "hso_calculations",
+                            "recordId": "@body('Get_Calculation')?['hso_calculationid']",
+                            "item/hso_createproject": true
+                          },
+                          "authentication": {
+                            "type": "Raw",
+                            "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                          }
+                        },
+                        "description": "Update the active Calculation to initiate the Project creation process in FinOps"
+                      }
+                    },
+                    "runAfter": {
+                      "List_Project_Products_without_Product_2": [
+                        "Succeeded"
+                      ]
+                    },
+                    "expression": {
+                      "and": [
+                        {
+                          "equals": [
+                            "@length(outputs('List_Project_Products_without_Product_2')?['body/value'])",
+                            "@int('0')"
+                          ]
+                        }
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "7a341820-e4a5-4a44-b299-07a920cb061e"
+                    },
+                    "type": "If"
+                  }
+                }
+              },
+              "expression": {
+                "or": [
+                  {
+                    "greater": [
+                      "@length(outputs('List_Project_Products_without_Product')?['body/value'])",
+                      0
+                    ]
+                  },
+                  {
+                    "greater": [
+                      "@variables('varNumberOfProductRequirements_InProgress')",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "46b48937-65c5-4f8a-846f-465781de288d"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Check_Product_Requirement": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e5ba6349-790f-4875-a5a0-9f9a62f5792a"
+          },
+          "type": "Scope"
+        },
+        "Initialize_varNumberOfProductRequirements_InProgress": {
+          "runAfter": {
+            "Initialize_varProcessingStatus": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "488567d2-614f-4c28-93c6-1d2f75bb35d3"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNumberOfProductRequirements_InProgress",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Get_Calculation": {
+          "runAfter": {
+            "Initialize_varNumberOfProductRequirements_InProgress": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "5fb38f00-3700-41bd-b9d9-082472eabba5"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps_1",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "hso_calculations",
+              "recordId": "@triggerBody()?['text']",
+              "$select": "hso_calculationid,hso_name,_hso_companyid_value"
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

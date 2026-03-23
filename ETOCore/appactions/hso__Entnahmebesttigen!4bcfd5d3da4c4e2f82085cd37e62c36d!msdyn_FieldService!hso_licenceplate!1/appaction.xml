@@ -1,0 +1,37 @@
+<appaction uniquename="hso__Entnahmebesttigen!4bcfd5d3da4c4e2f82085cd37e62c36d!msdyn_FieldService!hso_licenceplate!1">
+  <appmoduleid>
+    <uniquename>msdyn_FieldService</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Entnahme bestätigen">
+    <label description="Entnahme bestätigen" languagecode="1033" />
+  </buttonlabeltext>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_licenceplate</logicalname>
+  </contextentity>
+  <contextvalue>hso_licenceplate</contextvalue>
+  <fonticon>ProductUpsell</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>1</location>
+  <name>Entnahmebesttigen!4bcfd5d3da4c4e2f82085cd37e62c36d</name>
+  <onclickeventformulacomponentlibraryid>
+    <name>hso_fieldservicedefaultcommandlibrary_5ffdf</name>
+  </onclickeventformulacomponentlibraryid>
+  <onclickeventformulacomponentname>7493ed23e0054e85982ef75630dbeb35</onclickeventformulacomponentname>
+  <onclickeventformulafunctionname>OnSelect</onclickeventformulafunctionname>
+  <onclickeventtype>1</onclickeventtype>
+  <origin>0</origin>
+  <sequence>1000100005.5000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>hso_fieldservicedefaultcommandlibrary_5ffdf</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>7493ed23e0054e85982ef75630dbeb35</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

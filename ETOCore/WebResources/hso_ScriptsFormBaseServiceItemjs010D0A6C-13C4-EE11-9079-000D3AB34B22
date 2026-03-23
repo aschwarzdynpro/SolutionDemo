@@ -1,0 +1,110 @@
+
+if (typeof (ETO) === "undefined") { ETO = {}; };
+if (typeof (ETO.BaseServiceItemForm) === "undefined") { ETO.BaseServiceItemForm = {}; }
+
+ETO.BaseServiceItemForm.formOnLoad = (executionContext) => {
+	var formContext = executionContext.getFormContext();
+	// onChange Event Handler for Product
+	formContext.getAttribute("hso_productid")?.addOnChange(ETO.BaseServiceItemForm.onChangeProduct);
+	// onChange Event Handler for Company
+	formContext.getAttribute("hso_companyid")?.addOnChange(ETO.BaseServiceItemForm.onChangeCompany);
+};
+
+// Set Name - "Company.CompanyCode - Product.Productnumber" 
+// Function triggered in the Base Service Item form onChange event handler for field hso_productid
+ETO.BaseServiceItemForm.onChangeProduct = (executionContext) => {
+	// get the form context
+	var formContext = executionContext.getFormContext();
+	if (formContext.getAttribute("hso_productid").getValue() != null) {
+		// get the selected Product
+		let SelectedProduct = formContext.getAttribute("hso_productid").getValue()[0].id;
+		// get the selected Company
+		let SelectedCompany = formContext.getAttribute("hso_companyid").getValue()[0].id;
+		// Clear Name Field
+		ETO.BaseServiceItemForm.ClearFields(formContext);
+
+		// check whether Project Product is set
+		if (formContext.getAttribute("hso_productid").getValue() != null) {
+			console.log("Previously selected Product: " + formContext.getAttribute("hso_productid").getValue()[0].id);
+		} else {
+			console.log("No Product selected previously!");
+		};
+		// check whether Company is set
+		if (formContext.getAttribute("hso_companyid").getValue() != null) {
+			console.log("Previously selected Company: " + formContext.getAttribute("hso_companyid").getValue()[0].id);
+		} else {
+			console.log("No Company selected previously!");
+		};
+		// Fetch selected Product Details to set values
+		ETO.BaseServiceItemForm.retrieveProduct(formContext, SelectedProduct, SelectedCompany).then(function (RetrievedProduct) {
+			console.log("Product retrieved = " + RetrievedProduct);
+		}).catch(function (error) {
+			alert(error.message);
+		});
+
+	}
+};
+
+// Set Name - "Company.CompanyCode - Product.Productnumber" 
+// Function triggered in the Base Service Item form onChange event handler for field hso_productid
+ETO.BaseServiceItemForm.onChangeCompany = (executionContext) => {
+	// get the form context
+	var formContext = executionContext.getFormContext();
+	// clear Field
+	clearOptionField(formContext, 'hso_productid');
+};
+
+// Fetch Product that has been selected for a Base Service Item (ARTIKEL)
+// Function called by other function 'onChangeProduct' from within this library
+ETO.BaseServiceItemForm.retrieveProduct = (formContext, SelectedProduct, SelectedCompany) => {
+	return new Promise(function (resolve, reject) {
+		// Get Product by selecting field Product and expanding Name and Productnumber 
+		Xrm.WebApi.retrieveRecord("product", SelectedProduct, "?$select=name,msdyn_productnumber").then(
+			function success(result) {
+				// get the selected Product Number
+				let SelectedProductNumber = result.msdyn_productnumber;
+				// Fetch selected Company Details to set values
+				ETO.BaseServiceItemForm.retrieveCompany(formContext, SelectedProductNumber, SelectedCompany).then(function (RetrievedCompany) {
+					console.log("Product retrieved = " + RetrievedCompany);
+				}).catch(function (error) {
+					alert(error.message);
+				});
+				resolve(result.name);
+			},
+			function error(error) {
+				reject(error);
+			});
+	})
+};
+
+// Fetch Company that has been selected for a BaseCervice Item 
+// Function called by other function 'retrieveProduct' from within this library
+ETO.BaseServiceItemForm.retrieveCompany = (formContext, SelectedProductNumber, SelectedCompany) => {
+	return new Promise(function (resolve, reject) {
+		// Get Company by selecting field Company to set Name
+		Xrm.WebApi.retrieveRecord("cdm_company", SelectedCompany, "?$select=cdm_name,cdm_companycode").then(
+			function success(result) {
+				// get the selected Company Code
+				let SelectedCompanyCode = result.cdm_companycode;
+				// set name for Base Service Item  
+				formContext.getAttribute("hso_name").setValue(SelectedCompanyCode + "-" + SelectedProductNumber);
+				resolve(result.name);
+			},
+			function error(error) {
+				reject(error);
+			});
+	})
+};
+
+// Clear Fields for changes within an Product
+// Function triggered in the Base Servise Item form onChange event handler for (hso_productid)
+ETO.BaseServiceItemForm.ClearFields = (formContext) => {
+	// clear Field
+	clearOptionField(formContext, 'hso_name');
+};
+
+// Generic function to reset a option field (null)
+// Function called by other functions from within this library
+function clearOptionField(formContext, fieldName) {
+	formContext.getAttribute(fieldName).setValue(null);
+};

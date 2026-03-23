@@ -1,0 +1,222 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_CRDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_teams": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConRefTeamsArticlesearch"
+        },
+        "api": {
+          "name": "shared_teams"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_an_item_request_is_closed": {
+          "metadata": {
+            "operationMetadataId": "8f99cc5c-3834-4f9e-8ddd-00ddfe015262"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "hso_productrequirement",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "hso_status",
+              "subscriptionRequest/filterexpression": "hso_status eq 3"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Notify": {
+          "actions": {
+            "Fetch_all_related_item_requests": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "c713c04f-f41a-4e3a-b0c7-7559f6913d06"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "hso_productrequirementdetails",
+                  "$select": "hso_manufacturername, hso_manufacturerpid, hso_itemnumberlog, hso_status, hso_productname",
+                  "$filter": "_hso_requirementid_id_value eq '@{triggerOutputs()?['body/hso_productrequirementid']}' ",
+                  "$expand": "hso_product_id($select=msdyn_itemnumber)"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Is_without_reference": {
+              "actions": {
+                "Post_message_to_requester_without_reference": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "31354e0d-92fc-4729-aca1-ea8091cb4dc6"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_teams",
+                      "operationId": "PostMessageToConversation",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+                    },
+                    "parameters": {
+                      "poster": "Flow bot",
+                      "location": "Chat with Flow bot",
+                      "body/recipient": "@{outputs('Get_Requester_Information')?['body/internalemailaddress']};",
+                      "body/messageBody": "<p><strong>Artikelanfrage </strong><strong>@{triggerOutputs()?['body/hso_requirementid']}</strong><strong></strong><br>\n<br>\nHallo @{outputs('Get_Requester_Information')?['body/firstname']},<br>\n<br>\nDeine Artikelanfrage wurde vollständig bearbeitet.<br>\nHier findest du die Informationen zu deinen Artikeln:<br>\n<br>\n@{body('Create_HTML_table')}<br>\n<br>\n<br>\n<span style=\"font-size: 10px\">*Systemgenerierte Nachricht, Fragen und Antworten in diesem Chat werden nicht bearbeitet.</span></p>"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "runAfter": {
+                "Create_HTML_table": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Post_message_to_requester_with_reference": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "9984b142-1034-450b-93b1-82ff3b69c36d"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_teams",
+                        "operationId": "PostMessageToConversation",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+                      },
+                      "parameters": {
+                        "poster": "Flow bot",
+                        "location": "Chat with Flow bot",
+                        "body/recipient": "@{outputs('Get_Requester_Information')?['body/internalemailaddress']};",
+                        "body/messageBody": "<p><strong>Artikelanfrage </strong><strong>@{triggerOutputs()?['body/hso_requirementid']}</strong><strong></strong><br>\n<br>\nHallo @{outputs('Get_Requester_Information')?['body/firstname']},<br>\n<br>\nDeine Artikelanfrage für<strong> </strong><strong>@{triggerOutputs()?['body/_hso_origintype_label']}</strong><strong> </strong><strong>@{triggerOutputs()?['body/hso_originreferenceformatted']}</strong><strong> </strong>wurde vollständig bearbeitet.<br>\nHier findest du die Informationen zu deinen Artikeln:<br>\n<br>\n@{body('Create_HTML_table')}<br>\n<br>\n<br>\n<span style=\"font-size: 10px\">*Systemgenerierte Nachricht, Fragen und Antworten in diesem Chat werden nicht bearbeitet.</span></p>"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "equals": [
+                  "@triggerOutputs()?['body/hso_origintype']",
+                  7
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "f337e7d7-2278-4f24-a3c4-487544896958"
+              },
+              "type": "If"
+            },
+            "Create_HTML_table": {
+              "runAfter": {
+                "Fetch_all_related_item_requests": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "50443391-e215-4e16-a0a3-1806e2463a42"
+              },
+              "type": "Table",
+              "inputs": {
+                "from": "@outputs('Fetch_all_related_item_requests')?['body/value']",
+                "format": "HTML",
+                "columns": [
+                  {
+                    "header": "Hersteller",
+                    "value": "@item()?['hso_manufacturername']"
+                  },
+                  {
+                    "header": "Herstellerartikelnummer",
+                    "value": "@item()?['hso_manufacturerpid']"
+                  },
+                  {
+                    "header": "Status",
+                    "value": "@item()?['hso_status@OData.Community.Display.V1.FormattedValue']"
+                  },
+                  {
+                    "header": "Artikelnummer",
+                    "value": "@coalesce(\r\n  item()?['hso_itemnumberlog'],\r\n  item()?['hso_product_id']?['msdyn_itemnumber']\r\n)"
+                  },
+                  {
+                    "header": "Produktname",
+                    "value": "@item()?['hso_productname']"
+                  }
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Get_Requester_Information": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f4fe2746-9b9f-4379-9a33-ad707cb4f7f4"
+          },
+          "type": "Scope"
+        },
+        "Get_Requester_Information": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "26db0924-c55c-4b4b-ab55-03351a544c24"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "systemusers",
+              "recordId": "@triggerOutputs()?['body/_hso_requester_id_value']",
+              "$select": "internalemailaddress, firstname"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

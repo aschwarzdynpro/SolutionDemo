@@ -1,0 +1,43 @@
+<appaction uniquename="hso__Deaktivieren!184b6cb472ac4c989ed41209ac02723a!msdynce_saleshub!hso_calculation!2">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Deactivate Version">
+    <label description="Deactivate Version" languagecode="1033" />
+  </buttonlabeltext>
+  <buttontooltipdescription default="Set the selected calculation version as non-active version">
+    <label description="Set the selected calculation version as non-active version" languagecode="1033" />
+  </buttontooltipdescription>
+  <buttontooltiptitle default="Deactivate calculation version">
+    <label description="Deactivate calculation version" languagecode="1033" />
+  </buttontooltiptitle>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculation</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculation</contextvalue>
+  <fonticon>$clientsvg:FavoriteStar</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>2</location>
+  <name>Deaktivieren!184b6cb472ac4c989ed41209ac02723a</name>
+  <onclickeventformulacomponentlibraryid>
+    <name>hso_saleshubdefaultcommandlibrary_a87a9</name>
+  </onclickeventformulacomponentlibraryid>
+  <onclickeventformulacomponentname>e88223afb31b449893b5fce30040bc16</onclickeventformulacomponentname>
+  <onclickeventformulafunctionname>OnSelect</onclickeventformulafunctionname>
+  <onclickeventtype>1</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100100048.7500000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>hso_saleshubdefaultcommandlibrary_a87a9</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>e88223afb31b449893b5fce30040bc16</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

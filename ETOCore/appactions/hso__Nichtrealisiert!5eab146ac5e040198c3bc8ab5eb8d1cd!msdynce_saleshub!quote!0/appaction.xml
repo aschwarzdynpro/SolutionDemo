@@ -1,0 +1,35 @@
+<appaction uniquename="hso__Nichtrealisiert!5eab146ac5e040198c3bc8ab5eb8d1cd!msdynce_saleshub!quote!0">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Not realized">
+    <label description="Not realized" languagecode="1033" />
+  </buttonlabeltext>
+  <context>1</context>
+  <contextentity>
+    <logicalname>quote</logicalname>
+  </contextentity>
+  <contextvalue>quote</contextvalue>
+  <fonticon>Cancel</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>0</location>
+  <name>Nichtrealisiert!5eab146ac5e040198c3bc8ab5eb8d1cd</name>
+  <onclickeventformulacomponentlibraryid>
+    <name>hso_saleshubdefaultcommandlibrary_a87a9</name>
+  </onclickeventformulacomponentlibraryid>
+  <onclickeventformulacomponentname>17db8480a41b46ac92485c2f2adf1654</onclickeventformulacomponentname>
+  <onclickeventformulafunctionname>OnSelect</onclickeventformulafunctionname>
+  <onclickeventtype>1</onclickeventtype>
+  <origin>0</origin>
+  <parentappactionid>
+    <uniquename>hso__grouptitlelost!21810ee861ea44ca8279f16d2b70b667!msdynce_saleshub!quote!0</uniquename>
+  </parentappactionid>
+  <sequence>30000.0000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilitytype>0</visibilitytype>
+</appaction>

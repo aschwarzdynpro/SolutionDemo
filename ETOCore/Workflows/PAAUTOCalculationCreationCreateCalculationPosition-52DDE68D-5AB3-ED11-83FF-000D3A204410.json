@@ -1,0 +1,120 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_commondataserviceforapps-1": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_CRDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_a_Calculation_is_created": {
+          "metadata": {
+            "operationMetadataId": "e3ccdb6f-6f46-4eeb-a9cb-e4e1596d6abb"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "hso_calculation",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filterexpression": "hso_iscopy eq false and _hso_templateid_value eq null and hso_istemplate eq false",
+              "subscriptionRequest/name": "52dde68d-5ab3-ed11-83ff-000d3a204410"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          }
+        }
+      },
+      "actions": {
+        "Create_Calculation_Position_as_Placeholder": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "bfe946d2-aea8-4e20-b37b-923242b28662"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "hso_calculationdetails",
+              "item/hso_calculationtype": 100000000,
+              "item/hso_positionelementtype": 100000006,
+              "item/hso_calculationid@odata.bind": "hso_calculations(@{triggerOutputs()?['body/hso_calculationid']})",
+              "item/hso_quantity": 1,
+              "item/hso_name": "Knotenpunkt 1 ",
+              "item/hso_quoteid@odata.bind": "quotes(@{triggerOutputs()?['body/_hso_quoteid_value']})",
+              "item/hso_costpriceperunit": 0,
+              "item/hso_level": 1,
+              "item/hso_positionquantity": 1,
+              "item/hso_projecttype": 100000002,
+              "item/hso_language": "@triggerBody()?['hso_language']",
+              "item/hso_subproject": true,
+              "item/hso_companyid@odata.bind": "cdm_companies(@{triggerBody()?['_hso_companyid_value']})",
+              "item/hso_linenumber": "1",
+              "item/hso_linenumber_level": "1",
+              "item/transactioncurrencyid@odata.bind": "transactioncurrencies(@{triggerOutputs()?['body/_transactioncurrencyid_value']})"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "CreateRecord",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          }
+        },
+        "Update_Calculation": {
+          "runAfter": {
+            "Create_Calculation_Position_as_Placeholder": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "hso_calculations",
+              "recordId": "@triggerBody()?['hso_calculationid']",
+              "item/hso_navigationcalculationposition@odata.bind": "hso_calculationdetails(@{body('Create_Calculation_Position_as_Placeholder')?['hso_calculationdetailid']})"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "UpdateRecord",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          },
+          "description": "Set Navigation Calculation Position to Placeholder Node"
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

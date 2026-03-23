@@ -1,0 +1,458 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+if (typeof (ETO.CalculationForm) === "undefined") { ETO.CalculationForm = {}; }
+
+ETO.CalculationForm.formOnLoad = (executionContext, formType, showCalculationParameters) => {
+        let formContext = executionContext.getFormContext();
+        // Get Quote
+        let Quote = formContext.getAttribute("hso_quoteid").getValue();
+        if (Quote && Quote.length > 0) {
+                var QuoteGUID = Quote[0].id;
+        } else {
+                console.warn("Quote is not set or invalid.");
+        };
+        // Get Quote Currency
+        if (formType == "IsQuickCreateForm") {
+                // Set Default Currency of new Calculation to "Euro"
+                ETO.CalculationForm.retrieveDefaultCurrency(formContext).then(function (RetrievedCurrencyName) {
+                }).catch(function (error) {
+                        alert(error.message);
+                });
+                // Set Quote Currency of new Calculation to Currency from Quote
+                ETO.CalculationForm.retrieveQuote(formContext, QuoteGUID).then(function (RetrievedQuoteCurrencyName) {
+                }).catch(function (error) {
+                        alert(error.message);
+                });
+        } else {
+                // get the current calculation
+                let CalculationGUID = formContext.data.entity.getId();
+                // format Calculation GUID
+                CalculationGUID_formatted = CalculationGUID.replace(/[{}]/g, "");
+                // Register onChange Events for Main Forms
+                ETO.CalculationForm.registerEvents_MainForm(executionContext, formContext);
+                // Restrict options to set Calculation Type
+                ETO.CalculationForm.filterCalculationTypeOptions(formContext, CalculationGUID_formatted);
+                // Display a notification with information regarding the project creation process in FinOps
+                ETO.CalculationForm.displayFormNotification(formContext);
+                // Open Side Panels
+                ETO.CalculationForm.openSidePanel(formContext, showCalculationParameters, CalculationGUID_formatted);
+                // Check Calculation Positions with Product Lifecycle Warning
+                ETO.CalculationForm.retrieveCalculationPositionsWithProductLifecycleWarning(formContext, CalculationGUID).then(function (NumberOfCalculationPositionsWithProductLifecycleWarning) {
+                        if (NumberOfCalculationPositionsWithProductLifecycleWarning > 1) {// Processing Status Project = In Progress
+                                formContext.ui.setFormNotification("ATTENTION: The calculation contains products with an expiring product life cycle status.", "INFO", "ProductLifecycleWarning_InformationNotification");
+                        }
+                }).catch(function (error) {
+                        alert(error.message);
+                });
+
+                // Check Project Products with Supplier Not Available for Calculation 
+                ETO.CalculationForm.retrieveProjectProductswithSupplierNotAvailable(formContext, CalculationGUID).then(function (NumberOfCalculationPositionsWithProjectProductswithSupplierNotAvailable) {
+                        if (NumberOfCalculationPositionsWithProjectProductswithSupplierNotAvailable >= 1) {// Processing Status Project = In Progress
+                                formContext.ui.setFormNotification("ATTENTION: The calculation contains project products that are no longer available from the respective supplier.", "INFO", "ProjectProductswithSupplierNotAvailable_InformationNotification");
+                        }
+                }).catch(function (error) {
+                        alert(error.message);
+                });
+
+                // Get Navigation Calculation Position
+                let navigationCalculationPosition = formContext.getAttribute("hso_navigationcalculationposition").getValue();
+                if (navigationCalculationPosition && navigationCalculationPosition.length > 0) {
+                        let NavigationCalculationPosition_ID = navigationCalculationPosition[0].id;
+
+                        // Open Calculation Position Pricing Details and Search & Replace Side Panels
+                        ETO.CalculationForm.openCalculationPositionSidePanel(formContext, NavigationCalculationPosition_ID);
+                } else {
+                        console.warn("Navigation Calculation Position is not set or invalid.");
+                };
+        }
+};
+
+// Register onChange Events for Main Forms
+ETO.CalculationForm.registerEvents_MainForm = (executionContext, formContext) => {
+        // onChange Event Handler for Elementtype
+        formContext.getAttribute("hso_navigationcalculationposition")?.addOnChange(ETO.CalculationForm.onChangeNavigationPosition);
+};
+
+// Function triggered in the Calculation Position form onChange event handler for field hso_productid
+ETO.CalculationForm.onChangeNavigationPosition = (executionContext) => {
+        // get the form context
+        var formContext = executionContext.getFormContext();
+
+        // Get Navigation Calculation Position
+        let navigationCalculationPosition = formContext.getAttribute("hso_navigationcalculationposition").getValue();
+        if (navigationCalculationPosition && navigationCalculationPosition.length > 0) {
+                let NavigationCalculationPosition_ID = navigationCalculationPosition[0].id;
+
+                // Open Calculation Position Pricing Details and Search & Replace Side Panels
+                ETO.CalculationForm.openCalculationPositionSidePanel(formContext, NavigationCalculationPosition_ID);
+        } else {
+                console.warn("Navigation Calculation Position is not set or invalid.");
+        }
+};
+
+ETO.CalculationForm.formOnSave = (executionContext) => {
+        var formContext = executionContext.getFormContext();
+        // Retrieve required fields
+        var Company = formContext.getAttribute("hso_companyid").getValue();
+        var Quote = formContext.getAttribute("hso_quoteid").getValue();
+        var Department = formContext.getAttribute("hso_departmentid").getValue();
+        var Currency = formContext.getAttribute("transactioncurrencyid").getValue();
+        var QuoteCurrency = formContext.getAttribute("hso_transactioncurrencyid_quote").getValue();
+        var Language = formContext.getAttribute("hso_language").getValue();
+        // Validate Company
+        if (Company == null || Company === "") {
+                formContext.ui.setFormNotification("Please select a company for the quote. The company is mandatory for creating a calculation.", "ERROR", "1");
+                executionContext.getEventArgs().preventDefault(); // Prevents save
+        };
+        // Validate Quote
+        if (Quote == null || Quote === "") {
+                formContext.ui.setFormNotification("A new calculation must be assigned to a quote. Please repeat the process.", "ERROR", "1");
+                executionContext.getEventArgs().preventDefault(); // Prevents save
+        };
+        // Validate Department
+        if (Department == null || Department === "") {
+                formContext.ui.setFormNotification("Please select a department for the quote. The department is mandatory for creating a calculation.", "ERROR", "1");
+                executionContext.getEventArgs().preventDefault(); // Prevents save
+        };
+        // Validate Currency
+        if (Currency == null || Currency === "") {
+                formContext.ui.setFormNotification("The standard currency for a calculation is EURO. Please repeat the process.", "ERROR", "1");
+                executionContext.getEventArgs().preventDefault(); // Prevents save
+        };
+        // Validate Quote Currency
+        if (QuoteCurrency == null || QuoteCurrency === "") {
+                formContext.ui.setFormNotification("Please select a currency for the quote. The quote currency is required to create a calculation.", "ERROR", "1");
+                executionContext.getEventArgs().preventDefault(); // Prevents save
+        };
+        // Validate Language
+        if (Language == null || Language === "") {
+                formContext.ui.setFormNotification("Please select a language for the quote. The language is mandatory for creating a calculation.", "ERROR", "1");
+                executionContext.getEventArgs().preventDefault(); // Prevents save
+        };
+};
+
+// Filter available Calculation Type options
+// Function called by other function 'formOnLoad' from within this library
+ETO.CalculationForm.filterCalculationTypeOptions = (formContext, Calculation) => {
+        // Get Option Set Values for Calculation Type
+        let CalculationTypeOptions = formContext.getControl("hso_calculationtype").getOptions();
+        let optionUseDefaultPrice = CalculationTypeOptions[1]; // Standardpreis verwenden
+        let optionOverwriteDefaultPrice = CalculationTypeOptions[2]; // Standardpreis überschreiben
+        // Clear choices for Calculation Type
+        formContext.getControl("hso_calculationtype").clearOptions();
+        //Add choices that should be available for selection
+        formContext.getControl("hso_calculationtype").addOption(optionUseDefaultPrice);
+        // Check Top-Level-Nodes for Projecttype "Effort"
+        ETO.CalculationForm.retrieveLevel1CalculationPositions(formContext, Calculation).then(function (NumberOfTopLevelCalculationPositions) {
+                console.log("Number of Top-Level-Nodes with Projecttype 'Effort' retrieved = " + NumberOfTopLevelCalculationPositions);
+                if (NumberOfTopLevelCalculationPositions == 0) {
+                        // allow possibility to overwrite the Default prices by triggering the Top-Down-Calculation
+                        console.log("Allow Top-Down-Calculation because no Top-Level-Nodes with Projecttype 'Effort' found");
+                        formContext.getControl("hso_calculationtype").addOption(optionOverwriteDefaultPrice);
+                } else {
+                        console.log("Top-Down-Calculation not allowed because no Top-Level-Nodes with Projecttype 'Effort' found");
+                        formContext.ui.setFormNotification("The calculation type of the entire calculation cannot be changed to 'Overwrite standard price' as the project type 'Effort' is used. Please use the level 1 nodes, which are not assigned to the project type 'Effort', to specify a top-down calculation.", "INFO", "TopDownCalculationNotAllowed_InformationNotification");
+
+                }
+        }).catch(function (error) {
+                alert(error.message);
+        });
+};
+
+// Display a (permanent) Notification regarding how a Project will be created in FinOps (e.g. as new Project or as Project Extension)
+// Function called by formOnLoad  -  but only for Main Forms
+ETO.CalculationForm.displayFormNotification = (formContext) => {
+        let CreateProject = formContext.getAttribute("hso_createproject").getValue();
+        let ProjectExtension = formContext.getAttribute("hso_projectextension").getValue();
+        let ProjectStatus = formContext.getAttribute("hso_projectstatus").getValue();
+        // show Form Notification on how Projects are created (Project Extension or not)
+        /**if (ProjectExtension == true && (ProjectStatus != 100000002 || ProjectStatus == null)) {
+                console.log("Show Notification for Project Extension");
+                let ProjectExtension_ParentProject = formContext.getAttribute("hso_parentprojectid").getValue();
+                // get selected Parent Project to retrieve Parent Project ID
+                ETO.CalculationForm.retrieveParentProject(ProjectExtension_ParentProject[0].id).then(function (ProjectExtension_ParentProjectID) {
+                        console.log("Parent ProjectID: " + ProjectExtension_ParentProjectID);
+                        formContext.ui.setFormNotification("Die Projekstruktur für die Kalkulationsversion wird unterhalb dem ausgewählten Projekt '" + ProjectExtension_ParentProject[0].name + "' (Projektnummer: " + ProjectExtension_ParentProjectID + ") erstellt. Ein Projektvertrag inkl. Finanzierungsquelle & -regel sowie Abrechnungsregeln für jedes Unterprojekt werden ebenfalls erstellt. Für die Kalkulationspositionen wird ein entsprechender Projektstrukturplan sowie eine Projektartikelplanung aufgebaut.", "INFO", "ProjectExtension_InformationNotification");
+                }).catch(function (error) {
+                        alert(error.message);
+                })
+        } else if (ProjectExtension == false && (ProjectStatus != 100000002 || ProjectStatus == null)) {
+                console.log("Show Notification for new Project (without Project Extension)");
+                formContext.ui.setFormNotification("Die Projektstruktur für die Kalkulationsversion wird komplett neu aufgebaut. D.h. ein neues Hauptprojekt mit entsprechendem Projektvertrag inkl. Finanzierungsquelle & -regel sowie Abrechnungsregeln für jedes Haupt- & Unterprojekt werden erstellt. Für die Kalkulationspositionen wird ein entsprechender Projektstrukturplan sowie eine Projektartikelplanung aufgebaut.", "INFO", "NoProjectExtension_InformationNotification");
+        };*/
+        // show Form Notification for Project Status
+        if (CreateProject == true && ProjectStatus == 100000001) {// Processing Status Project = In Progress
+                formContext.ui.setFormNotification("A project and any sub-projects are created in FinOps for the selected calculation. You will be notified as soon as the processing is complete.", "INFO", "CreateFinOps_InformationNotification");
+        } else if (ProjectStatus == 100000000) {// Processing Status Project = Waiting
+                formContext.ui.setFormNotification("The project creation process can only be started once all project products have been assigned to an article master. Please wait until the corresponding approvals for the article request have been granted and the corresponding project products have been completed. The project creation process can then be started manually.", "INFO", "CreateFinOps_WaitingNotification");
+        } else if (ProjectStatus == 100000003) {// Processing Status Project = Error
+                formContext.ui.setFormNotification("An error has occurred while creating the FinOps project and any sub-projects for the selected calculation. Further information can be found in the processing log. In the event that there is a structural problem, please contact an administrator.", "ERROR", "CreateFinOps_ErrorNotification");
+        };
+};
+
+// openSidePanel's in the Calculation Position form onLoad event handler
+ETO.CalculationForm.openSidePanel = function (formContext, showCalculationParameters, Calculation) {
+        // open Navigation Parameters Side Panel (Surcharge Groups + Metal Prices + Sales Prices)
+        if (showCalculationParameters == "openCalculationParameters") {
+                // get the Calculation Parameters Side Panel
+                let SidePanel_CalculationParameters_CustomPage = Xrm.App.sidePanes.getPane("CalculationParameters_SidePanel");
+                // Calculation Position: Parent Calculation - Metal Prices
+                if (SidePanel_CalculationParameters_CustomPage != null) {
+                        Xrm.App.sidePanes.getPane("CalculationParameters_SidePanel").navigate({
+                                pageType: "custom",
+                                name: "hso_calculationparameters_ad6ee",
+                                recordId: Calculation,
+                                hidden: false
+                        });
+                } else {
+                        Xrm.App.sidePanes.createPane({
+                                title: "Calculation Parameters",
+                                paneId: "CalculationParameters_SidePanel",
+                                imageSrc: "WebResources/hso_addfragment_icon",
+                                hideHeader: false,
+                                canClose: false,
+                                width: 800,
+                                isSelected: false,
+                                hidden: false
+                        }).then((pane) => {
+                                pane.navigate({
+                                        pageType: "custom",
+                                        name: "hso_calculationparameters_ad6ee",
+                                        recordId: Calculation,
+                                        hidden: false
+                                })
+                        });
+                }
+        };
+};
+
+// Open (create, refresh) Side Panels for Price Details, Navigation, Surcharge Groups, Metal Prices and Search & Replace
+// Function called by 'formOnLoad' from within this library
+ETO.CalculationForm.openCalculationPositionSidePanel = (formContext, CalculationDetail_GUID) => {
+        // Calculation Position Details: Prices, Textblocks & Notes
+        // get the Calculation Detail (Price Details) Side Panel
+        let SidePanel_CalculationDetail_Form = Xrm.App.sidePanes.getPane("CalculationPosition_SidePanel");
+        // Calculation Position: Price Details
+        if (SidePanel_CalculationDetail_Form != null) {
+                Xrm.App.sidePanes.getPane("CalculationPosition_SidePanel").navigate({
+                        pageType: "entityrecord",
+                        entityName: "hso_calculationdetail",
+                        entityId: CalculationDetail_GUID,
+                        formId: "aae22d94-24c1-ef11-b8e9-000d3adf95e4",
+                        hidden: false
+                });
+        } else {
+                Xrm.App.sidePanes.createPane({
+                        title: "Pricing details",
+                        paneId: "CalculationPosition_SidePanel",
+                        imageSrc: "WebResources/hso_calculator_icon",
+                        hideHeader: false,
+                        canClose: true,
+                        width: 800,
+                        isSelected: false,
+                        hidden: false
+                }).then((pane) => {
+                        pane.navigate({
+                                pageType: "entityrecord",
+                                entityName: "hso_calculationdetail",
+                                entityId: CalculationDetail_GUID,
+                                formId: "aae22d94-24c1-ef11-b8e9-000d3adf95e4",
+                                hidden: false
+                        })
+                });
+        };
+
+        /*Xrm.WebApi.retrieveRecord("hso_calculationdetail", CalculationDetail_GUID, "?$select=hso_positionelementtype").then(
+                function success(result) {
+                        // get the Search & Replace Side Panel
+                        let SidePanel_SearchAndReplace_CustomPage = Xrm.App.sidePanes.getPane("CalculationSearchAndReplace_SidePanel");
+                        let ElementType = result.hso_positionelementtype;
+                        if (ElementType == 100000006) {
+                                // Calculation Position - Search & Replace
+                                if (SidePanel_SearchAndReplace_CustomPage != null) {
+                                        Xrm.App.sidePanes.getPane("CalculationSearchAndReplace_SidePanel").navigate({
+                                                pageType: "custom",
+                                                name: "hso_calculationpositionsearchreplace_aaddb",
+                                                recordId: CalculationDetail_GUID,
+                                                hidden: false
+                                        });
+                                } else {
+                                        Xrm.App.sidePanes.createPane({
+                                                title: "Suchen & Ersetzen",
+                                                paneId: "CalculationSearchAndReplace_SidePanel",
+                                                imageSrc: "WebResources/hso_searchreplace_icon",
+                                                hideHeader: false,
+                                                canClose: true,
+                                                width: 1200,
+                                                isSelected: false,
+                                                hidden: false
+                                        }).then((pane) => {
+                                                pane.navigate({
+                                                        pageType: "custom",
+                                                        name: "hso_calculationpositionsearchreplace_aaddb",
+                                                        recordId: CalculationDetail_GUID,
+                                                        hidden: false
+                                                })
+                                        });
+                                };
+                        } else {
+                                if (SidePanel_SearchAndReplace_CustomPage != null) { SidePanel_SearchAndReplace_CustomPage.close(); }
+                        };
+                },
+                function error(error) {
+                        reject(error);
+                });*/
+};
+
+// Fetch selected Parent Project to display additional information
+// Function called by other function 'displayFormNotification' from within this library
+ETO.CalculationForm.retrieveParentProject = (SelectedParentProject) => {
+        return new Promise(function (resolve, reject) {
+                // Get Parent Project 
+                Xrm.WebApi.retrieveRecord("msdyn_project", SelectedParentProject, "?$select=hso_projectnumber").then(
+                        function success(result) {
+                                resolve(result.hso_projectnumber);
+                        },
+                        function error(error) {
+                                reject(error);
+                        });
+        })
+};
+
+// Set default Currency "Euro" for new Calculation
+// Function called by formOnLoad  -  but only for Quick Create Forms
+ETO.CalculationForm.retrieveDefaultCurrency = (formContext) => {
+        return new Promise(function (resolve, reject) {
+                // Search for default currency "Euro"
+                Xrm.WebApi.retrieveMultipleRecords("transactioncurrency", "?$select=transactioncurrencyid,isocurrencycode,currencyname&$filter=isocurrencycode eq 'EUR'").then(
+                        function success(result) {
+                                for (var i = 0; i < result.entities.length; i++) {
+                                }
+                                if (result != null) {
+                                        // set default Currency for new Calculation
+                                        formContext.getAttribute("transactioncurrencyid").setValue(null);
+                                        formContext.getAttribute("transactioncurrencyid").setValue([{ id: result.entities[0].transactioncurrencyid, name: result.entities[0].currencyname, entityType: "transactioncurrency" }]);
+                                        resolve(result.entities[0].currencyname);
+                                }
+                        },
+                        function error(error) {
+                                reject(error);
+                        });
+        })
+};
+
+// Set Quote Currency for new Calculation
+// Function called by formOnLoad  -  but only for Quick Create Forms
+ETO.CalculationForm.retrieveQuote = (formContext, Quote) => {
+        return new Promise(function (resolve, reject) {
+                // Search for Quote currency
+                Xrm.WebApi.retrieveRecord("quote", Quote, "?$select=quoteid,transactioncurrencyid&$expand=transactioncurrencyid($select=transactioncurrencyid,isocurrencycode,currencyname)").then(
+                        function success(result) {
+                                if (result != null) {
+                                        // set Currency for new Calculation based on Quote Currency
+                                        formContext.getAttribute("hso_transactioncurrencyid_quote").setValue([{ id: result.transactioncurrencyid.transactioncurrencyid, name: result.transactioncurrencyid.currencyname, entityType: "transactioncurrency" }]);
+                                        resolve(result.transactioncurrencyid.currencyname);
+                                }
+                        },
+                        function error(error) {
+                                reject(error);
+                        });
+        })
+};
+
+// Fetch Level 1 Calculation Positions to decide whether calculation method "Top-Down" is allowed or not 
+// Function called by other function "filterCalculationTypeOptions" from within this library
+ETO.CalculationForm.retrieveLevel1CalculationPositions = (formContext, Calculation) => {
+        return new Promise(function (resolve, reject) {
+                // Search for fitting Calculation Surcharge Group
+                Xrm.WebApi.retrieveMultipleRecords("hso_calculationdetail", "?$select=hso_name,hso_linenumber,hso_projecttype&$filter=_hso_calculationid_value eq '" + Calculation + "' and hso_level eq 1 and hso_projecttype eq 100000000").then(
+                        function success(result) {
+                                for (var i = 0; i < result.entities.length; i++) {
+                                }
+                                if (result != null) {
+                                        console.log("Number of Top-Level-Nodes with Projecttype 'Effort': " + result.entities.length);
+                                        resolve(result.entities.length);
+                                }
+                        },
+                        function error(error) {
+                                reject(error);
+                        });
+        })
+};
+
+// Fetch Calculation Surcharge Group for Base-Surcharge Group retrieved from selected Item to set Surcharge Percentages for a Calculation Position
+// Function called by other functions (RetrieveProduct / RetrieveProjectProduct / RetrieveProjectHour / RetrieveProductionHour / RetrieveProjectExpense / RetrieveExternalService) from within this library
+ETO.CalculationForm.retrieveCalculationPositionsWithProductLifecycleWarning = (formContext, Calculation) => {
+        return new Promise(function (resolve, reject) {
+                // Search for fitting Calculation Surcharge Group
+                Xrm.WebApi.retrieveMultipleRecords("hso_calculationdetail", "?$select=hso_name,hso_linenumber,hso_projecttype&$filter=_hso_calculationid_value eq '" + Calculation + "' and hso_productlifecyclewarning eq 1").then(
+                        function success(result) {
+                                for (var i = 0; i < result.entities.length; i++) {
+                                }
+                                if (result != null) {
+                                        console.log("Number of Calculation Positions with Product Lifecycle Warning: " + result.entities.length);
+                                        //formContext.getAttribute("hso_productlifecyclewarning").setValue(result.entities.length);
+                                        let CurrentDateTime = new Date();
+                                        //formContext.getAttribute("hso_productlifecyclewarning_date").setValue(CurrentDateTime);
+                                        resolve(result.entities.length);
+                                        // define the data to update a record
+                                        var data =
+                                        {
+                                                "hso_productlifecyclewarning": result.entities.length,
+                                                "hso_productlifecyclewarning_date": CurrentDateTime
+                                        }
+                                        // update the record
+                                        Xrm.WebApi.updateRecord("hso_calculation", Calculation, data).then(
+                                                function success(result) {
+                                                        // perform operations on record update
+                                                },
+                                                function (error) {
+                                                        console.log(error.message);
+                                                        // handle error conditions
+                                                }
+                                        );
+                                }
+                        },
+                        function error(error) {
+                                reject(error);
+                        });
+        })
+};
+
+// Fetch and count Project Products with Supplier Not Available for a Calculation
+// Function called by other functions (ETO.CalculationForm.retrieveProjectProductswithSupplierNotAvailable) from within this library
+ETO.CalculationForm.retrieveProjectProductswithSupplierNotAvailable = (formContext, Calculation) => {
+        return new Promise(function (resolve, reject) {
+                // Search for fitting Calculation Surcharge Group
+                Xrm.WebApi.retrieveMultipleRecords("hso_projectproduct", "?$select=hso_name&$filter=_hso_calculationid_value eq '" + Calculation + "' and hso_suppliernotavailable eq true").then(
+                        function success(result) {
+                                for (var i = 0; i < result.entities.length; i++) {
+                                }
+                                if (result != null) {
+                                        console.log("Number of Project Products with Product Lifecycle Warning: " + result.entities.length);
+                                        //formContext.getAttribute("hso_productlifecyclewarning").setValue(result.entities.length);
+                                        let CurrentDateTime = new Date();
+                                        //formContext.getAttribute("hso_productlifecyclewarning_date").setValue(CurrentDateTime);
+                                        resolve(result.entities.length);
+                                        // define the data to update a record
+                                        var data =
+                                        {
+                                                "hso_suppliercataloguewarning": result.entities.length,
+                                                "hso_suppliercataloguewarning_date": CurrentDateTime
+                                        }
+                                        // update the record // maybe for later
+                                        Xrm.WebApi.updateRecord("hso_calculation", Calculation, data).then(
+                                                function success(result) {
+                                                        // perform operations on record update
+                                                },
+                                                function (error) {
+                                                        console.log(error.message);
+                                                        // handle error conditions
+                                                }
+                                        );
+                                }
+                        },
+                        function error(error) {
+                                reject(error);
+                        });
+        })
+};

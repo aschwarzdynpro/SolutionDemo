@@ -1,0 +1,8 @@
+hso_customer: |-
+    =If(!IsBlank(hso_WorkOrder_id.msdyn_name),
+        hso_WorkOrder_id.msdyn_serviceaccount.name,
+        hso_Project_id.msdyn_customer.name)
+hso_order: |-
+    =If(!IsBlank(hso_WorkOrder_id.msdyn_name),
+        hso_WorkOrder_id.msdyn_name,
+        hso_Project_id.hso_projectnumber)

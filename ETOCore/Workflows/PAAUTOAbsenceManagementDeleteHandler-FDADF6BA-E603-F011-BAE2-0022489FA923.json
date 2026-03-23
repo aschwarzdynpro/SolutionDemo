@@ -1,0 +1,606 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps-1": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_CRDataverse"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_the_absence_management_api_calls_the_delete_action": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "catalog": "allcatalog",
+              "category": "allcategory",
+              "subscriptionRequest/entityname": "none",
+              "subscriptionRequest/sdkmessagename": "hso_CAGlobalAbsenceManagementDeleteTrigger"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "BusinessEventsTrigger",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "bd248025-51e9-4a1f-9260-315f87669737"
+          }
+        }
+      },
+      "actions": {
+        "Check_if_the_absence_management_api_case_is_CREATE_or_DELETE": {
+          "type": "If",
+          "expression": {
+            "equals": [
+              "@triggerOutputs()?['body/InputParameters/IsPreDelete']",
+              "@true"
+            ]
+          },
+          "actions": {
+            "Get_all_bookable_resource_bookings_for_the_given_old_nonworkingtime_id": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "bookableresourcebookings",
+                  "$filter": "_hso_nonworkingtime_value eq '@{triggerOutputs()?['body/InputParameters/OldNonworkingtimeId']}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              },
+              "runtimeConfiguration": {
+                "paginationPolicy": {
+                  "minimumItemCount": 100000
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "fb7d9f6f-095d-46ab-b538-6ddbf9d11227"
+              }
+            },
+            "Delete_all_bookable_resource_bookings": {
+              "type": "Foreach",
+              "foreach": "@outputs('Get_all_bookable_resource_bookings_for_the_given_old_nonworkingtime_id')?['body/value']",
+              "actions": {
+                "delete_bookable_resource_booking": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "bookableresourcebookings",
+                      "recordId": "@items('Delete_all_bookable_resource_bookings')?['bookableresourcebookingid']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "DeleteRecord",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "d27b6d42-5d9f-42f4-b527-a4d13383ff14"
+                  }
+                }
+              },
+              "runAfter": {
+                "Get_all_bookable_resource_bookings_for_the_given_old_nonworkingtime_id": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 10
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "9d949c36-258b-46d0-a023-340b38b247df"
+              }
+            },
+            "Delete_all_resource_requirements": {
+              "type": "Foreach",
+              "foreach": "@outputs('Get_all_resource_requirements_for_the_given_old_nonworkingtime_id')?['body/value']",
+              "actions": {
+                "Delete_resource_requirement": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "msdyn_resourcerequirements",
+                      "recordId": "@items('Delete_all_resource_requirements')?['msdyn_resourcerequirementid']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "DeleteRecord",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "596f45f0-3cfb-43c5-bdd5-05013290b51c"
+                  }
+                }
+              },
+              "runAfter": {
+                "Get_all_resource_requirements_for_the_given_old_nonworkingtime_id": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "cc9b9ad6-09ad-471c-991a-2331ad1b7fc0"
+              }
+            },
+            "Get_all_resource_requirements_for_the_given_old_nonworkingtime_id": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "msdyn_resourcerequirements",
+                  "$filter": "_hso_nonworkingtime_value eq '@{triggerOutputs()?['body/InputParameters/OldNonworkingtimeId']}'"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              },
+              "runAfter": {
+                "Delete_all_bookable_resource_bookings": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "paginationPolicy": {
+                  "minimumItemCount": 100000
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "0d9eb168-0be2-4f22-b46a-f365cc83f92f"
+              }
+            },
+            "Continue_Create_Process": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "actionName": "hso_CAGlobalAbsenceManagementCreateTrigger",
+                  "item/NonworkingtimeId": "@triggerOutputs()?['body/InputParameters/NewNonworkingtimeId']",
+                  "item/AbsenceParameters": "@triggerOutputs()?['body/InputParameters/AbsenceParameters']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "PerformUnboundAction",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              },
+              "runAfter": {
+                "Delete_old_nonworkingtime": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c3feacbe-0aa7-4a7b-89ec-72fee629371b"
+              }
+            },
+            "Delete_old_nonworkingtime": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_nonworkingtimes",
+                  "recordId": "@triggerOutputs()?['body/InputParameters/OldNonworkingtimeId']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "DeleteRecord",
+                  "connectionName": "shared_commondataserviceforapps-1"
+                }
+              },
+              "runAfter": {
+                "Delete_all_resource_requirements": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "302f1506-ab35-46a6-9c13-643838fa4bd8"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Parse_Absence_Parameters": {
+                "type": "ParseJson",
+                "inputs": {
+                  "content": "@triggerOutputs()?['body/InputParameters/AbsenceParameters']",
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "hso_from": {
+                        "type": "string"
+                      },
+                      "hso_fromtype": {
+                        "type": "integer"
+                      },
+                      "hso_personnelnumber": {
+                        "type": "string"
+                      },
+                      "hso_reason": {
+                        "type": "string"
+                      },
+                      "hso_to": {
+                        "type": "string"
+                      },
+                      "hso_totype": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                },
+                "metadata": {
+                  "operationMetadataId": "ecd71431-8f9e-42a2-a3ec-4e27870091eb"
+                }
+              },
+              "Get_Nonworkingtime_records_by_the_time_range_in_the_absence_parameters": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "entityName": "hso_nonworkingtimes",
+                    "fetchXml": "<fetch>\n  <entity name=\"hso_nonworkingtime\">\n    <attribute name=\"hso_from_dat\" />\n    <attribute name=\"hso_to_dat\" />\n    <attribute name=\"hso_nonworkingtimeid\" />\n    \n    <filter>\n      <condition attribute=\"hso_from_dat\" operator=\"on\" value=\"@{body('Parse_Absence_Parameters')?['hso_from']}\" />\n      <condition attribute=\"hso_to_dat\" operator=\"on\" value=\"@{addDays(body('Parse_Absence_Parameters')?['hso_to'], 1, 'yyyy-MM-ddTHH:mm:ssZ')}\" />\n      <condition attribute=\"hso_from_type\" operator=\"eq\" value=\"@{variables('hso_from_type')}\" />\n      <condition attribute=\"hso_to_type\" operator=\"eq\" value=\"@{variables('hso_to_type')}\" />\n    </filter>\n\n    <link-entity name=\"bookableresource\" from=\"bookableresourceid\" to=\"hso_resource\" alias=\"resource\">\n      <attribute name=\"hso_personnelnumber_str\" />\n      <filter>\n        <condition attribute=\"hso_personnelnumber_str\" operator=\"eq\" value=\"@{body('Parse_Absence_Parameters')?['hso_personnelnumber']}\" />\n      </filter>\n    </link-entity>\n  </entity>\n</fetch>"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                    "operationId": "ListRecords",
+                    "connectionName": "shared_commondataserviceforapps-1"
+                  }
+                },
+                "runAfter": {
+                  "Map_ToType": [
+                    "Succeeded"
+                  ]
+                },
+                "runtimeConfiguration": {
+                  "paginationPolicy": {
+                    "minimumItemCount": 100000
+                  }
+                },
+                "metadata": {
+                  "operationMetadataId": "dacb418d-c523-4c97-8323-03cdcaac0df2"
+                }
+              },
+              "Map_FromType": {
+                "type": "Switch",
+                "expression": "@body('Parse_Absence_Parameters')?['hso_fromtype']",
+                "default": {
+                  "actions": {
+                    "Set_from_type_to_WholeDay": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "hso_from_type",
+                        "value": 867520000
+                      },
+                      "metadata": {
+                        "operationMetadataId": "484ee731-6e01-48f5-8613-ea2812ca8d14"
+                      }
+                    }
+                  }
+                },
+                "cases": {
+                  "Set_FromType_to_FirstPart": {
+                    "actions": {
+                      "Set_from_type_to_FirstPart": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "hso_from_type",
+                          "value": 867520001
+                        },
+                        "metadata": {
+                          "operationMetadataId": "117d0514-6c31-47da-98b4-35bd1ce281a8"
+                        }
+                      }
+                    },
+                    "case": 2
+                  },
+                  "Set_FromType_to_SecondPart": {
+                    "actions": {
+                      "Set_from_type_to_SecondPart": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "hso_from_type",
+                          "value": 867520002
+                        },
+                        "metadata": {
+                          "operationMetadataId": "3f84b87a-d5d9-492e-8bb1-2d8d9d00ac57"
+                        }
+                      }
+                    },
+                    "case": 3
+                  }
+                },
+                "runAfter": {
+                  "Parse_Absence_Parameters": [
+                    "Succeeded"
+                  ]
+                },
+                "metadata": {
+                  "operationMetadataId": "12aa53fe-55b8-4697-a100-a5812462f448"
+                }
+              },
+              "Map_ToType": {
+                "type": "Switch",
+                "expression": "@body('Parse_Absence_Parameters')?['hso_totype']",
+                "default": {
+                  "actions": {
+                    "Set_ToType_to_WholeDay": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "hso_to_type",
+                        "value": 867520000
+                      },
+                      "metadata": {
+                        "operationMetadataId": "67a21619-1bad-4ea1-8316-d5de5f5d9c03"
+                      }
+                    }
+                  }
+                },
+                "cases": {
+                  "Set_ToType_to_FirstPart-1": {
+                    "actions": {
+                      "Set_ToType_to_FirstPart": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "hso_to_type",
+                          "value": 867520001
+                        },
+                        "metadata": {
+                          "operationMetadataId": "c94799fd-c882-4b3e-81e7-8b1e4b3455df"
+                        }
+                      }
+                    },
+                    "case": 2
+                  },
+                  "Set_ToType_to_SecondPart-1": {
+                    "actions": {
+                      "Set_ToType_to_SecondPart": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "hso_to_type",
+                          "value": 867520002
+                        },
+                        "metadata": {
+                          "operationMetadataId": "9123c842-e2ef-4997-bc4d-98d8c3da862a"
+                        }
+                      }
+                    },
+                    "case": 3
+                  }
+                },
+                "runAfter": {
+                  "Map_FromType": [
+                    "Succeeded"
+                  ]
+                },
+                "metadata": {
+                  "operationMetadataId": "a452b545-ef38-4666-9129-963ff48df4b1"
+                }
+              },
+              "For_each_Nonworkingtime": {
+                "type": "Foreach",
+                "foreach": "@outputs('Get_Nonworkingtime_records_by_the_time_range_in_the_absence_parameters')?['body/value']",
+                "actions": {
+                  "Get_all_bookable_resource_bookings_for_the_given_nonworkingtime_nested": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "bookableresourcebookings",
+                        "$filter": "_hso_nonworkingtime_value eq '@{items('For_each_Nonworkingtime')?['hso_nonworkingtimeid']}'"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "ListRecords",
+                        "connectionName": "shared_commondataserviceforapps-1"
+                      }
+                    },
+                    "runtimeConfiguration": {
+                      "paginationPolicy": {
+                        "minimumItemCount": 100000
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "9c73a08a-6793-4042-a528-445b52c076c6"
+                    }
+                  },
+                  "Delete_all_bookable_resource_bookings_nested": {
+                    "type": "Foreach",
+                    "foreach": "@outputs('Get_all_bookable_resource_bookings_for_the_given_nonworkingtime_nested')?['body/value']",
+                    "actions": {
+                      "delete_bookable_resource_booking_nested": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "entityName": "bookableresourcebookings",
+                            "recordId": "@items('Delete_all_bookable_resource_bookings_nested')?['bookableresourcebookingid']"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "operationId": "DeleteRecord",
+                            "connectionName": "shared_commondataserviceforapps-1"
+                          }
+                        },
+                        "metadata": {
+                          "operationMetadataId": "a6e90aec-ea2a-4a15-8c34-0a156838bb92"
+                        }
+                      }
+                    },
+                    "runAfter": {
+                      "Get_all_bookable_resource_bookings_for_the_given_nonworkingtime_nested": [
+                        "Succeeded"
+                      ]
+                    },
+                    "runtimeConfiguration": {
+                      "concurrency": {
+                        "repetitions": 10
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "6de4bbae-b994-4c01-ac65-464c3bd918ca"
+                    }
+                  },
+                  "Get_all_resource_requirements_for_the_given_nonworkingtime_nested": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "msdyn_resourcerequirements",
+                        "$filter": "_hso_nonworkingtime_value eq '@{items('For_each_Nonworkingtime')?['hso_nonworkingtimeid']}'"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "ListRecords",
+                        "connectionName": "shared_commondataserviceforapps-1"
+                      }
+                    },
+                    "runAfter": {
+                      "Delete_all_bookable_resource_bookings_nested": [
+                        "Succeeded"
+                      ]
+                    },
+                    "runtimeConfiguration": {
+                      "paginationPolicy": {
+                        "minimumItemCount": 100000
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "0d9eb168-0be2-4f22-b46a-f365cc83f92f"
+                    }
+                  },
+                  "Delete_all_resource_requirements_nested": {
+                    "type": "Foreach",
+                    "foreach": "@outputs('Get_all_resource_requirements_for_the_given_nonworkingtime_nested')?['body/value']",
+                    "actions": {
+                      "Delete_resource_requirement_nested": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "entityName": "msdyn_resourcerequirements",
+                            "recordId": "@items('Delete_all_resource_requirements_nested')?['msdyn_resourcerequirementid']"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "operationId": "DeleteRecord",
+                            "connectionName": "shared_commondataserviceforapps-1"
+                          }
+                        },
+                        "metadata": {
+                          "operationMetadataId": "596f45f0-3cfb-43c5-bdd5-05013290b51c"
+                        }
+                      }
+                    },
+                    "runAfter": {
+                      "Get_all_resource_requirements_for_the_given_nonworkingtime_nested": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "cc9b9ad6-09ad-471c-991a-2331ad1b7fc0"
+                    }
+                  },
+                  "Delete_nonworkingtime_nested": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_nonworkingtimes",
+                        "recordId": "@items('For_each_Nonworkingtime')?['hso_nonworkingtimeid']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "DeleteRecord",
+                        "connectionName": "shared_commondataserviceforapps-1"
+                      }
+                    },
+                    "runAfter": {
+                      "Delete_all_resource_requirements_nested": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "375e4029-e4d9-4f00-a7c3-e21dfe37a327"
+                    }
+                  }
+                },
+                "runAfter": {
+                  "Get_Nonworkingtime_records_by_the_time_range_in_the_absence_parameters": [
+                    "Succeeded"
+                  ]
+                },
+                "runtimeConfiguration": {
+                  "concurrency": {
+                    "repetitions": 10
+                  }
+                },
+                "metadata": {
+                  "operationMetadataId": "c0302ff7-c6d6-4641-ab56-c7bb45e66c99"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "initialize_ToType": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e5c460bc-c53b-43e0-bab5-82e03919147b"
+          }
+        },
+        "Initialize_FromType": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "hso_from_type",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "3c003228-1a2e-4b06-80a6-1be4f3f39baf"
+          }
+        },
+        "initialize_ToType": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "hso_to_type",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_FromType": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "4f3bb7f0-31e3-4396-9528-df4e8fd54d63"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

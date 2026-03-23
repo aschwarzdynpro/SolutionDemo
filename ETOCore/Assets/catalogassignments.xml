@@ -1,0 +1,10 @@
+<catalogassignments>
+  <catalogassignment catalogid.uniquename="hso_Integration" object.uniquename="hso_CreateAbsenceEntry" objectidtype="customapi">
+    <iscustomizable>1</iscustomizable>
+    <name>ETO Integration | Create Absence Entry</name>
+  </catalogassignment>
+  <catalogassignment catalogid.uniquename="hso_Integration" object.uniquename="hso_DeleteAbsenceEntry" objectidtype="customapi">
+    <iscustomizable>1</iscustomizable>
+    <name>ETO Integration | Delete Absence Entry</name>
+  </catalogassignment>
+</catalogassignments>

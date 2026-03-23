@@ -1,0 +1,77 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataversewithPSA"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_a_Projectexpense_Created": {
+          "metadata": {
+            "operationMetadataId": "8dc4fbd8-44da-4620-8d9e-f85853eec3b9"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "hso_projectexpense",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/name": "afbe5b56-d07f-ee11-8179-000d3ab3438c"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Create_Textblock_for_Projectexpense_(DE)": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "b0529189-9905-4b5c-a8d9-d61d3138ad56"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "CreateRecord"
+            },
+            "parameters": {
+              "entityName": "hso_textblocks",
+              "item/hso_name": "@triggerOutputs()?['body/hso_name']",
+              "item/hso_language": 192350004,
+              "item/hso_projectexpenseid@odata.bind": "hso_projectexpenses(@{triggerOutputs()?['body/hso_projectexpenseid']})"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

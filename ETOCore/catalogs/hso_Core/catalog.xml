@@ -1,0 +1,10 @@
+<catalog uniquename="hso_Core">
+  <description default="ETO Core">
+    <label description="ETO Core" languagecode="1033" />
+  </description>
+  <displayname default="ETO Core">
+    <label description="ETO Core" languagecode="1033" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <name>ETOCore</name>
+</catalog>

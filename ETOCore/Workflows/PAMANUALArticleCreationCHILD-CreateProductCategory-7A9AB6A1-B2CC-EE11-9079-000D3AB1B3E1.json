@@ -1,0 +1,430 @@
+{
+  "properties": {
+    "connectionReferences": {},
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)": {
+          "defaultValue": "d365-ETO-int-11b9dbaf056743afd3devaos.axcloud.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarUnifiedOperationsInstance",
+            "description": "The Unified Operations Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "4ab9d322-deaf-4a9a-9696-11b25e13257d"
+          },
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text_2": {
+                  "title": "strItemNumber",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Itemnumber for creation of product category assignment.",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_3": {
+                  "title": "strTenant",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Tenant ID",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_4": {
+                  "title": "strClient",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Client ID",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_5": {
+                  "title": "strSecret",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Secret",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text": {
+                  "title": "ProductCategoryName",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Name of product category.",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_1": {
+                  "title": "ProductCategoryHierarchyName",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Name of product category hierarchy.",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text_2",
+                "text_3",
+                "text_4",
+                "text_5",
+                "text",
+                "text_1"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Product_category_assignment": {
+          "actions": {
+            "Fetch_existing_product_category_assignment": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "2fe59aa3-50d5-4843-a36a-19f69f01e9a6"
+              },
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "@{variables('strInlineFinOpsURL')}/data/ProductCategoryAssignments?$filter=(ProductNumber eq '@{triggerBody()['text_2']}') and (ProductCategoryName eq '@{triggerBody()['text']}')&cross-company=true",
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "tenant": "@triggerBody()['text_3']",
+                  "audience": "@variables('strInlineFinOpsURL')",
+                  "clientId": "@triggerBody()['text_4']",
+                  "secret": "@triggerBody()['text_5']"
+                }
+              }
+            },
+            "Product_category_assignment_does_not_exist_yet": {
+              "actions": {
+                "Create_product_category_assignment": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "a8d27b91-6904-4b31-9131-7054ef964ee7"
+                  },
+                  "type": "Http",
+                  "inputs": {
+                    "method": "POST",
+                    "uri": "@{variables('strInlineFinOpsURL')}/data/ProductCategoryAssignments",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "body": {
+                      "ProductNumber": "@{triggerBody()['text_2']}",
+                      "ProductCategoryName": "@{triggerBody()['text']}",
+                      "ProductCategoryHierarchyName": "@{triggerBody()['text_1']}"
+                    },
+                    "authentication": {
+                      "type": "ActiveDirectoryOAuth",
+                      "tenant": "@triggerBody()['text_3']",
+                      "audience": "@variables('strInlineFinOpsURL')",
+                      "clientId": "@triggerBody()['text_4']",
+                      "secret": "@triggerBody()['text_5']"
+                    }
+                  }
+                },
+                "Set_strResponseMsg_on_created": {
+                  "runAfter": {
+                    "Create_product_category_assignment": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "1e4808a7-40c6-4ba8-9020-83417a66b7d0"
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "strResponseMsg",
+                    "value": "Product category assignment created for @{triggerBody()['text_2']}."
+                  }
+                },
+                "Set_strResponseMsg_on_innererror": {
+                  "runAfter": {
+                    "Create_product_category_assignment": [
+                      "Failed",
+                      "TimedOut"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "1e4808a7-40c6-4ba8-9020-83417a66b7d0"
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "strResponseMsg",
+                    "value": "@{coalesce(body('Create_product_category_assignment')?['error']?['innererror']?['message'], 'Something went wrong...')}"
+                  }
+                }
+              },
+              "runAfter": {
+                "Fetch_existing_product_category_assignment": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Set_strResponseMsg_on_already_existing": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "1e4808a7-40c6-4ba8-9020-83417a66b7d0"
+                    },
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "strResponseMsg",
+                      "value": "Product category assignment already exists."
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "equals": [
+                  "@length(body('Fetch_existing_product_category_assignment')?['value'])",
+                  0
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "001f1a2e-9749-45ee-ba6b-8bbea325b462"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Init_strStatus": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f661246a-ab2f-4ec8-9f05-2587e8641de6"
+          },
+          "type": "Scope"
+        },
+        "Product_category_assignment_[CATCH]": {
+          "actions": {
+            "Terminate": {
+              "runAfter": {
+                "Respond_to_a_PowerApp_or_flow_error": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "391cf5a6-e000-4977-95b7-67fb84095ee4"
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed"
+              }
+            },
+            "Error_bool_to_true": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "41b070da-ec0b-4ae9-98a0-cdafc1aa7cea"
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "Error_bool",
+                "value": true
+              }
+            },
+            "Filter_array_on_error": {
+              "runAfter": {
+                "Set_strStatus": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "9420e9bd-9d2b-439b-b441-7c77cccc620b"
+              },
+              "type": "Query",
+              "inputs": {
+                "from": "@result('Product_category_assignment')",
+                "where": "@equals(item()?['status'], 'Failed')"
+              }
+            },
+            "Set_strStatus": {
+              "runAfter": {
+                "Error_bool_to_true": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "631e859e-e614-4412-9652-9cdb4cbd49f6"
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "strStatus",
+                "value": "400"
+              }
+            },
+            "Respond_to_a_PowerApp_or_flow_error": {
+              "runAfter": {
+                "Filter_array_on_error": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "7e496dd9-d5c3-4bd2-bd03-09366f332a73"
+              },
+              "type": "Response",
+              "kind": "PowerApp",
+              "inputs": {
+                "statusCode": 200,
+                "body": {
+                  "strstatus": "@variables('strStatus')",
+                  "responsemsg": "@variables('strResponseMsg')"
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "strstatus": {
+                      "title": "strStatus",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    },
+                    "responsemsg": {
+                      "title": "ResponseMsg",
+                      "x-ms-dynamically-added": true,
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Product_category_assignment": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "dcc89b3c-3cbb-40c8-9818-b103539870e6"
+          },
+          "type": "Scope"
+        },
+        "Init_strInlineFinOpsURL": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "284e1ceb-899d-4f12-9a59-ad34242f1f2b"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strInlineFinOpsURL",
+                "type": "string",
+                "value": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}"
+              }
+            ]
+          }
+        },
+        "Init_Error_bool": {
+          "runAfter": {
+            "Init_strInlineFinOpsURL": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "8cb12a39-d076-4d10-920a-b1bc9c716c29"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Error_bool",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          }
+        },
+        "Respond_to_a_PowerApp_or_flow": {
+          "runAfter": {
+            "Product_category_assignment_[CATCH]": [
+              "Skipped"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1411d0d8-5fc4-44bf-a970-d35cddd5a4e9"
+          },
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "statusCode": 200,
+            "body": {
+              "strstatus": "@variables('strStatus')",
+              "responsemsg": "@variables('strResponseMsg')"
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "strstatus": {
+                  "title": "strStatus",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                },
+                "responsemsg": {
+                  "title": "ResponseMsg",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "Init_strResponseMsg": {
+          "runAfter": {
+            "Init_Error_bool": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "13505fef-dc98-4121-a092-2f1cf5c09362"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strResponseMsg",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Init_strStatus": {
+          "runAfter": {
+            "Init_strResponseMsg": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "af3cb277-6ee7-4339-8718-401c3a2c4541"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "strStatus",
+                "type": "string",
+                "value": "200"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

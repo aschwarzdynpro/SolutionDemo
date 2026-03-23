@@ -1,0 +1,79 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+if (typeof (ETO.ProjectRibbon) === "undefined") { ETO.ProjectRibbon = {}; }
+
+
+ETO.ProjectRibbon.refreshPSP = async (formContext) => {
+        var projectid = formContext.getAttribute("hso_projectnumber").getValue();
+        var companyid = formContext.getAttribute("hso_owningcompany").getValue()[0].name;
+        var flowUrl = await ETO.ProjectRibbon.getEnvironmentVariable("hso_evprojectrefreshpspflowid");
+        var input = JSON.stringify({
+            "projectid": projectid,
+            "companyid": companyid
+        });
+       
+        var alertOptions = { height: 120, width: 260 };
+        var req = new XMLHttpRequest();
+        req.open("POST", flowUrl, true);
+        req.setRequestHeader('Content-Type', 'application/json');
+        ////Response
+        req.onreadystatechange = function () {
+            if (this.readyState === 4) { 
+                req.onreadystatechange = null;
+                if (this.status === 200) {
+                    var result = this.response;
+                    var alertStrings = { confirmButtonLabel: "Ok", text: result, title: "Success" }; 
+                    Xrm.Navigation.openAlertDialog(alertStrings, alertOptions).then(
+                        function (success) {
+                            console.log("Alert dialog closed");
+                        },
+                        function (error) {
+                            console.log(error.message);
+                        }
+                    );
+                    formContext.ui.clearFormNotification("PSPUpdateStarted");
+                }
+                else if(this.status === 400){
+                    var result = this.response;    
+                    var alertStrings = { confirmButtonLabel: "Ok", text: result, title: "ERROR" }; 
+                    Xrm.Navigation.openAlertDialog(alertStrings, alertOptions).then(
+                        function (success) {
+                            console.log("Alert dialog closed");
+                        },
+                        function (error) {
+                            console.log(error.message);
+                        }
+                    );
+                    formContext.ui.clearFormNotification("PSPUpdateStarted");
+                }
+            }
+        };  
+
+        ////End
+        req.send(input); 
+        formContext.ui.setFormNotification("The project work breakdown structure is updated in the background.", "WARNING", "PSPUpdateStarted");
+
+}
+ETO.ProjectRibbon.getEnvironmentVariable = async (schemaName) => {
+    var value = null;
+
+    // Get the matching environment variable definition with related values
+    var data = await Xrm.WebApi.retrieveMultipleRecords("environmentvariabledefinition", "?$top=1" +
+        "&$select=environmentvariabledefinitionid,defaultvalue" +
+        "&$expand=environmentvariabledefinition_environmentvariablevalue($select=value)" +
+        `&$filter=schemaname eq '${schemaName}'`);
+
+    if (data && data.entities && data.entities.length > 0) {
+        // Definition exists
+        var definition = data.entities[0];
+
+        // Use the default value only if no related values
+        value = definition.defaultvalue;
+
+        // Get the related value if provided
+        if (definition.environmentvariabledefinition_environmentvariablevalue.length > 0) {
+            value = definition.environmentvariabledefinition_environmentvariablevalue[0].value;
+        }
+    }
+
+    return value;
+}

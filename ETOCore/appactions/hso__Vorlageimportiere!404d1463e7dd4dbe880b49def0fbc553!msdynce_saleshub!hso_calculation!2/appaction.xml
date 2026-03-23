@@ -1,0 +1,43 @@
+<appaction uniquename="hso__Vorlageimportiere!404d1463e7dd4dbe880b49def0fbc553!msdynce_saleshub!hso_calculation!2">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Import Template">
+    <label description="Import Template" languagecode="1033" />
+  </buttonlabeltext>
+  <buttontooltipdescription default="Create a calculation version from the selected template.">
+    <label description="Create a calculation version from the selected template." languagecode="1033" />
+  </buttontooltipdescription>
+  <buttontooltiptitle default="Create calculation from template">
+    <label description="Create calculation from template" languagecode="1033" />
+  </buttontooltiptitle>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculation</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculation</contextvalue>
+  <fonticon>$clientsvg:Download</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>2</location>
+  <name>Vorlageimportiere!404d1463e7dd4dbe880b49def0fbc553</name>
+  <onclickeventjavascriptfunctionname>ETO.CalculationRibbon.createNewCalculationFromTemplate</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":4}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>d24a8f32-ce5e-ee11-be6f-000d3ab3cbd3</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100100045.0000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>hso_saleshubdefaultcommandlibrary_a87a9</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>a30fad22d5434311b193bea9f16236e1</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

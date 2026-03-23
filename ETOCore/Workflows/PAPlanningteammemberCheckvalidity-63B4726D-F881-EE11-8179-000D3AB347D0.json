@@ -1,0 +1,151 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps_1": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_CRDataverse"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Every_Night": {
+          "type": "Recurrence",
+          "recurrence": {
+            "frequency": "Day",
+            "interval": 1,
+            "startTime": "2023-11-13T00:00:00Z",
+            "schedule": {
+              "hours": [
+                "1"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "1e7c3807-6a1c-417f-ae96-4584e83b6692"
+          }
+        }
+      },
+      "actions": {
+        "Valid_inactive_teammembers": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "hso_planningteammembers",
+              "fetchXml": "<fetch>  <entity name=\"hso_planningteammember\">    <attribute name=\"hso_name_txt\" /><attribute name=\"hso_planningteammemberid\" />    <filter>      <condition attribute=\"hso_validfrom_dat\" operator=\"on-or-before\" value=\"@{utcNow()}\" />      <condition attribute=\"hso_validto_dat\" operator=\"on-or-after\" value=\"@{utcNow()}\" /><condition attribute=\"statecode\" operator=\"eq\" value=\"1\" /></filter>  </entity></fetch>"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps_1"
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "9609e1da-3629-4a8f-99c4-647eb5d46dd1"
+          }
+        },
+        "for_each_valid_inactive_member": {
+          "type": "Foreach",
+          "foreach": "@outputs('Valid_inactive_teammembers')?['body/value']",
+          "actions": {
+            "activate_member": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_planningteammembers",
+                  "recordId": "@item()?['hso_planningteammemberid']",
+                  "item/statecode": 0
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateRecord",
+                  "connectionName": "shared_commondataserviceforapps_1"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "0714e79f-5667-4db8-8822-b56660ee8d2d"
+              }
+            }
+          },
+          "runAfter": {
+            "Valid_inactive_teammembers": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3b78e97c-4cce-40f9-9e4e-965b86f97e0a"
+          }
+        },
+        "Invalid_active_teammembers": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "hso_planningteammembers",
+              "fetchXml": "<fetch>  <entity name=\"hso_planningteammember\">    <attribute name=\"hso_name_txt\" />    <attribute name=\"hso_planningteammemberid\" />    <filter>      <condition attribute=\"statecode\" operator=\"eq\" value=\"0\" />      <filter type=\"or\">        <condition attribute=\"hso_validfrom_dat\" operator=\"on-or-after\" value=\"@{addDays(utcNow(), 1)}\" />        <condition attribute=\"hso_validto_dat\" operator=\"on-or-before\" value=\"@{addDays(utcNow(), -1)}\" />      </filter>    </filter>  </entity></fetch>"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps_1"
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "9609e1da-3629-4a8f-99c4-647eb5d46dd1"
+          }
+        },
+        "for_each_invalid_active_member": {
+          "type": "Foreach",
+          "foreach": "@outputs('Invalid_active_teammembers')?['body/value']",
+          "actions": {
+            "deactivate_member": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_planningteammembers",
+                  "recordId": "@items('for_each_invalid_active_member')?['hso_planningteammemberid']",
+                  "item/statecode": 1
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateRecord",
+                  "connectionName": "shared_commondataserviceforapps_1"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "6e3b4496-9841-4b6e-8b0f-eeb6899a6296"
+              }
+            }
+          },
+          "runAfter": {
+            "Invalid_active_teammembers": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "939e32ea-5980-49a8-8b60-2bc905149f65"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

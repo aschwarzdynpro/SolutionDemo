@@ -1,0 +1,567 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+if (typeof (ETO.QuoteForm) === "undefined") { ETO.QuoteForm = {}; }
+
+ETO.QuoteForm.onLoad = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+
+    ETO.QuoteForm.registerEvents(formContext);
+    ETO.QuoteForm.requiredFieldsCheck(executionContext);
+    ETO.QuoteForm.debitorCheck(executionContext);
+    //ETO.QuoteForm.filterContact(executionContext);
+    ETO.QuoteForm.filterTextblocks(executionContext);
+    ETO.QuoteForm.hideTypespecificElements(executionContext);
+    ETO.QuoteForm.fillERPRoleFields(executionContext);
+    ETO.QuoteForm.setLocationIDtoDeliveryadress(executionContext);
+    ETO.QuoteForm.useAlternateAddress(executionContext);
+    //ETO.QuoteForm.printPreviewLogicArticelsales(executionContext);
+    ETO.QuoteForm.notifyUserIfQuoteIsActiveAndWriteInProductsExist(executionContext);
+    ETO.QuoteForm.notifyUserIfProjectQuoteIsWon(formContext);
+};
+
+ETO.QuoteForm.onSave = (executionContext) => {
+    ETO.QuoteForm.setTypeReadOnly(executionContext);
+};
+
+ETO.QuoteForm.requiredFieldsCheck = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+    // Only on update form (not on create) and for project quote
+    if (formContext.ui.getFormType() === 2 && formContext.getAttribute("hso_quotetype_opt").getValue() === 867520001)
+    {
+        var warehouseLookupValue = formContext.getAttribute("msdyn_defaultshippingwarehouse").getValue();
+        var operationalSiteLookupValue = formContext.getAttribute("msdyn_defaultshippingsite").getValue();
+        var requiredFieldsMissingNotification = "requiredFieldsMissingNotification";
+
+        if (warehouseLookupValue == null || warehouseLookupValue[0] == null || operationalSiteLookupValue == null || operationalSiteLookupValue[0] == null) {
+            formContext.ui.setFormNotification("The storage location and site must be specified before the quotation calculation is converted into a project!", "ERROR", requiredFieldsMissingNotification);
+        }
+        else
+            formContext.ui.clearFormNotification(requiredFieldsMissingNotification);
+    }
+};
+
+ETO.QuoteForm.notifyUserIfQuoteIsActiveAndWriteInProductsExist = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+    var notificationIDWriteInProductWarning = "write-in-product-warning";
+    var stateCodeValue = formContext.getAttribute("statecode").getValue();
+    var quoteTypeValue = formContext.getAttribute("hso_quotetype_opt").getValue();
+    var writeInProductsExistValue = formContext.getAttribute("hso_containswriteinproduct").getValue();
+
+    if (stateCodeValue === 1 && quoteTypeValue === 867520000 && writeInProductsExistValue === true)
+        formContext.ui.setFormNotification("There are still Write-In products in this offer. Please replace these first before you can create the order.", "WARNING", notificationIDWriteInProductWarning);
+};
+
+ETO.QuoteForm.registerEvents = (formContext) => {
+    formContext.getAttribute("msdyn_company")?.addOnChange(ETO.QuoteForm.debitorCheck);
+    formContext.getAttribute("customerid")?.addOnChange(ETO.QuoteForm.debitorCheck);
+    formContext.getAttribute("customerid")?.addOnChange(ETO.QuoteForm.setLocationIDtoDeliveryadress);
+    formContext.getAttribute("hso_debitor_id")?.addOnChange(ETO.QuoteForm.fillERPRoleFields);
+    formContext.getAttribute("hso_contactperson_id")?.addOnChange(ETO.QuoteForm.prefilAccount);
+    formContext.getAttribute("hso_footertextblock_id")?.addOnChange(ETO.QuoteForm.setTextblockFooter);
+    formContext.getAttribute("hso_headertextblock_id")?.addOnChange(ETO.QuoteForm.setTextblockHeader);
+    formContext.getAttribute("hso_quotetype_opt")?.addOnChange(ETO.QuoteForm.hideTypespecificElements);
+    //formContext.getAttribute("hso_quotetype_opt")?.addOnChange(ETO.QuoteForm.printPreviewLogicArticelsales);
+    //formContext.getAttribute("statecode")?.addOnChange(ETO.QuoteForm.printPreviewLogicArticelsales);
+    formContext.getAttribute("hso_alternativdelivery_opt")?.addOnChange(ETO.QuoteForm.useAlternateAddress);
+    formContext.getAttribute("hso_alternativdelivery_opt")?.addOnChange(ETO.QuoteForm.setLocationIDtoDeliveryadress);
+    formContext.getAttribute("msdyn_defaultshippingwarehouse").addOnChange(ETO.QuoteForm.requiredFieldsCheck);
+    formContext.getAttribute("msdyn_defaultshippingsite").addOnChange(ETO.QuoteForm.requiredFieldsCheck);
+    formContext.getAttribute("statecode").addOnChange(ETO.QuoteForm.notifyUserIfQuoteIsActiveAndWriteInProductsExist);
+    formContext.getAttribute("statecode").addOnChange(ETO.QuoteForm.setPrintTypeToQuoteIfQuoteIsActive);
+    formContext.getAttribute("hso_activecalculation_id").addOnChange(ETO.QuoteForm.setStatusForActiveCalculation);
+};
+
+ETO.QuoteForm.setStatusForActiveCalculation = (executionContext) => 
+{
+    var formContext = executionContext.getFormContext();
+    if (formContext.getAttribute("hso_activecalculation_id").getValue() !== null)
+        formContext.getAttribute("statuscode").setValue(867520002);
+}
+
+ETO.QuoteForm.setPrintTypeToQuoteIfQuoteIsActive = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+    var stateCodeValue = formContext.getAttribute("statecode").getValue();
+    var printTypeValue = formContext.getAttribute("hso_printtype_opt").getValue();
+    var quoteTypeValue = formContext.getAttribute("hso_quotetype_opt").getValue();
+
+    if (stateCodeValue === 1 && quoteTypeValue === 867520000)
+        formContext.getAttribute("hso_printtype_opt").setValue(100000001);
+};
+
+ETO.QuoteForm.hideTypespecificElements = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+
+    switch (formContext.getAttribute("hso_quotetype_opt").getValue()) {
+        case 867520000: //Artikelangebot
+            formContext.ui.tabs.get("Summary_tab").sections.get("products").setVisible(true);
+            formContext.ui.tabs.get("Summary_tab").sections.get("totals").setVisible(true);
+            formContext.ui.tabs.get("Summary_tab").sections.get("calculation_section").setVisible(false);
+            formContext.ui.tabs.get("Summary_tab").sections.get("section_quoteclosure").setVisible(false);
+            formContext.ui.tabs.get("Summary_tab").sections.get("description_section").setVisible(false);
+            formContext.ui.tabs.get("tab_products").setVisible(true);
+            formContext.getControl("hso_paymentgoal_txt").setVisible(false);
+            formContext.getControl("hso_departmentid").setVisible(false);
+            formContext.getControl("revisionnumber").setVisible(true);
+            formContext.getControl("hso_printtype_opt").setVisible(true);
+            formContext.getControl("hso_activecalculation_id").setVisible(false);
+            formContext.getControl("hso_previewprint_opt").setVisible(true);
+            formContext.getControl("hso_projectmanager_ref").setVisible(false);
+            formContext.getControl("hso_paymentmethodid").setVisible(false);
+            formContext.getControl("msdyn_defaultshippingwarehouse").setVisible(false);
+            formContext.getAttribute("hso_departmentid").setRequiredLevel("none");
+            formContext.getAttribute("msdyn_defaultshippingsite").setRequiredLevel("none");
+            formContext.getAttribute("msdyn_defaultshippingwarehouse").setRequiredLevel("none");
+
+            break;
+        case 867520001: //Projektangebot
+            formContext.ui.tabs.get("Summary_tab").sections.get("products").setVisible(false);
+            formContext.ui.tabs.get("Summary_tab").sections.get("totals").setVisible(false);
+            formContext.ui.tabs.get("Summary_tab").sections.get("calculation_section").setVisible(true);
+            formContext.ui.tabs.get("Summary_tab").sections.get("section_quoteclosure").setVisible(true);
+            formContext.ui.tabs.get("Summary_tab").sections.get("description_section").setVisible(true);
+            formContext.ui.tabs.get("tab_products").setVisible(false);
+            formContext.getControl("hso_paymentgoal_txt").setVisible(false);
+            formContext.getControl("hso_departmentid").setVisible(true);
+            formContext.getControl("hso_projectmanager_ref").setVisible(true);
+            formContext.getControl("revisionnumber").setVisible(false);
+            formContext.getControl("hso_printtype_opt").setVisible(false);
+            formContext.getControl("hso_previewprint_opt").setVisible(false);
+            formContext.getControl("hso_activecalculation_id").setVisible(true);
+            formContext.getControl("hso_paymentmethodid").setVisible(true);
+            formContext.getAttribute("hso_departmentid").setRequiredLevel("required");
+            formContext.getAttribute("msdyn_defaultshippingsite").setRequiredLevel("required");
+            formContext.getAttribute("msdyn_defaultshippingwarehouse").setRequiredLevel("required");
+            break;
+        default:
+            formContext.ui.tabs.get("Summary_tab").sections.get("products").setVisible(true);
+            formContext.ui.tabs.get("Summary_tab").sections.get("totals").setVisible(true);
+            formContext.ui.tabs.get("Summary_tab").sections.get("calculation_section").setVisible(false);
+            formContext.ui.tabs.get("tab_products").setVisible(true);
+            formContext.getControl("hso_paymentgoal_txt").setVisible(false);
+            formContext.getControl("hso_departmentid").setVisible(false);
+            formContext.getControl("hso_printtype_opt").setVisible(false);
+            formContext.getControl("hso_previewprint_opt").setVisible(false);
+            formContext.getControl("hso_activecalculation_id").setVisible(false);
+            formContext.getAttribute("hso_departmentid").setRequiredLevel("none");
+            formContext.getAttribute("msdyn_defaultshippingsite").setRequiredLevel("none");
+            formContext.getAttribute("msdyn_defaultshippingwarehouse").setRequiredLevel("none");
+    }
+
+};
+ETO.QuoteForm.printPreviewLogicArticelsales = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+    var statecode = formContext.getAttribute("statecode").getValue();
+
+    if (formContext.getAttribute("hso_quotetype_opt").getValue() == 867520000) {
+        if (statecode == 0) { //in progress
+            formContext.getAttribute("hso_previewprint_opt").setValue(true);
+        } else if (statecode == 1) {
+            formContext.getAttribute("hso_previewprint_opt").setValue(false);
+        }
+    }
+}
+ETO.QuoteForm.setTypeReadOnly = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+
+    if (formContext.getAttribute("hso_quotetype_opt").getValue() != null)
+        formContext.getControl("hso_quotetype_opt").setDisabled(true);
+}
+ETO.QuoteForm.debitorCheck = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+    if (formContext.getAttribute("msdyn_company").getValue() != null) {
+        var company = formContext.getAttribute("msdyn_company").getValue()[0].id;
+        var companyid = company.replace('{', '').replace('}', '');
+
+    }
+    if (formContext.getAttribute("customerid").getValue() != null) {
+        var customer = formContext.getAttribute("customerid").getValue();
+        var customertype = customer[0].entityType;
+        if (customertype == 'account') {
+            var accountid = formContext.getAttribute("customerid").getValue()[0].id;
+            accountid = accountid.substring(1, accountid.length - 1);
+        } if (customertype == 'contact') {
+            var contactid = formContext.getAttribute("customerid").getValue()[0].id;
+            contactid = contactid.substring(1, contactid.length - 1);
+        }
+    }
+    switch (customertype) {
+        case 'account':
+            if (accountid != null && companyid != null) {
+                Xrm.WebApi.retrieveMultipleRecords("hso_erprole", "?$select=_hso_account_ref_value,_hso_company_ref_value,hso_name_str,hso_erproleid,hso_invoicedeliveryonhold_opt,_hso_taxgroup_ref_value&$filter=_hso_account_ref_value eq '" + accountid + "' and _hso_company_ref_value eq '" + companyid + "'").then(
+                    function success(results) {
+                        if (results.entities && results.entities.length > 0) {
+                            var hso_erprole = results.entities[0];
+                            const erprole = {
+                                id: hso_erprole["hso_erproleid"],
+                                entityType: "hso_erprole",
+                                name: hso_erprole["hso_name_str"]
+                            }
+                            if (formContext.getAttribute("hso_debitor_id").getValue() == null) {
+                                formContext.getAttribute("hso_debitor_id").setValue([erprole]);
+                            }
+                            if (hso_erprole["hso_invoicedeliveryonhold_opt"] == 806380000 && !formContext.getAttribute("hso_hasdebitor_opt").getValue()) {
+                                formContext.getAttribute("hso_hasdebitor_opt").setValue(true);
+                                formContext.ui.clearFormNotification("MissingDebitorNotification");
+                            }
+                            else if (!formContext.getAttribute("hso_hasdebitor_opt").getValue()) {
+                                formContext.getAttribute("hso_hasdebitor_opt").setValue(false);
+                                formContext.ui.setFormNotification("Der Debitor in diesem Mandanten ist noch nicht freigegeben.", "WARNING", "MissingDebitorNotification");
+                            }
+
+                            ETO.QuoteForm.fillDefaultSalesTaxPercentage(formContext, hso_erprole["_hso_taxgroup_ref_value"]);
+                        }
+                        else {
+                            if (formContext.getAttribute("hso_debitor_id").getValue() != null) {
+                                formContext.getAttribute("hso_debitor_id").setValue(null);
+                            }
+                            if (!formContext.getAttribute("hso_hasdebitor_opt").getValue()) {
+                                formContext.getAttribute("hso_hasdebitor_opt").setValue(false);
+                            }
+                            formContext.ui.setFormNotification("In diesem Mandanten gibt es keinen Debitor für diese Firma.", "WARNING", "MissingDebitorNotification");
+                            ETO.QuoteForm.clearDefaultSalesTaxPercentage(formContext);
+                        }
+                        ETO.QuoteForm.fillERPRoleFields(executionContext);
+                    },
+                    function (error) {
+                    }
+                );
+            }
+            break;
+        case 'contact':
+            if (contactid != null && companyid != null) {
+                Xrm.WebApi.retrieveMultipleRecords("hso_erprole", "?$select=_hso_account_ref_value,_hso_company_ref_value,hso_name_str,hso_erproleid,hso_invoicedeliveryonhold_opt,_hso_taxgroup_ref_value&$filter=_hso_contact_id_value eq '" + contactid + "' and _hso_company_ref_value eq '" + companyid + "'").then(
+                    function success(results) {
+                        if (results.entities && results.entities.length > 0) {
+                            var hso_erprole = results.entities[0];
+                            const erprole = {
+                                id: hso_erprole["hso_erproleid"],
+                                entityType: "hso_erprole",
+                                name: hso_erprole["hso_name_str"]
+                            }
+                            if (formContext.getAttribute("hso_debitor_id").getValue() == null) {
+                                formContext.getAttribute("hso_debitor_id").setValue([erprole]);
+                            }
+                            if (hso_erprole["hso_invoicedeliveryonhold_opt"] == 806380000 && !formContext.getAttribute("hso_hasdebitor_opt").getValue()) {
+                                formContext.getAttribute("hso_hasdebitor_opt").setValue(true);
+                                formContext.ui.clearFormNotification("MissingDebitorNotification");
+                            }
+                            else if (!formContext.getAttribute("hso_hasdebitor_opt").getValue()) {
+                                formContext.getAttribute("hso_hasdebitor_opt").setValue(false);
+                                formContext.ui.setFormNotification("There is no ERP customer for the given account in this tenant.", "WARNING", "MissingDebitorNotification");
+                            }
+
+                            ETO.QuoteForm.fillDefaultSalesTaxPercentage(formContext, hso_erprole["_hso_taxgroup_ref_value"]);
+                        }
+                        else {
+                            if (formContext.getAttribute("hso_debitor_id").getValue() != null) {
+                                formContext.getAttribute("hso_debitor_id").setValue(null);
+                            }
+                            if (!formContext.getAttribute("hso_hasdebitor_opt").getValue()) {
+                                formContext.getAttribute("hso_hasdebitor_opt").setValue(false);
+                            }
+                            formContext.ui.setFormNotification("There is no ERP customer for the given account in this tenant.", "WARNING", "MissingDebitorNotification");
+                            ETO.QuoteForm.clearDefaultSalesTaxPercentage(formContext);
+                        }
+                        ETO.QuoteForm.fillERPRoleFields(executionContext);
+
+                    },
+                    function (error) {
+                    }
+                );
+            }
+            break;
+    }
+}
+ETO.QuoteForm.fillERPRoleFields = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+
+    if (formContext.getAttribute("hso_debitor_id").getValue() != null) {
+        var erproleid = formContext.getAttribute("hso_debitor_id").getValue()[0].id;
+        erproleid = erproleid.substring(1, erproleid.length - 1);
+    }
+    if (erproleid != null && (formContext.getAttribute("msdyn_paymentterms").getValue() == null || formContext.getAttribute("hso_termsofdelivery_id").getValue() == null)) {
+        Xrm.WebApi.retrieveMultipleRecords("hso_erprole", "?$select=hso_paymentterms_id,hso_termsofdelivery_id,hso_erproleid,&$top=1&$filter=hso_erproleid eq '" + erproleid + "'&$expand=hso_paymentterms_id($select=msdyn_paymenttermid,msdyn_name),hso_termsofdelivery_id($select=msdyn_termscode,msdyn_termsofdeliveryid)", 1)
+            .then(result => {
+                if (result.entities && result.entities.length > 0) {
+                    var results = result.entities[0];
+
+                    if (formContext.getAttribute("msdyn_paymentterms").getValue() == null && results.hso_paymentterms_id != null) {
+                        const payt = {
+                            id: results.hso_paymentterms_id.msdyn_paymenttermid,
+                            entityType: "msdyn_paymentterm",
+                            name: results.hso_paymentterms_id.msdyn_name
+                        }
+
+                        formContext.getAttribute("msdyn_paymentterms").setValue([payt]);
+                    }
+
+                    if (formContext.getAttribute("hso_termsofdelivery_id").getValue() == null && results.hso_termsofdelivery_id != null) {
+                        const deliveryTermsRef = {
+                            id: results.hso_termsofdelivery_id.msdyn_termsofdeliveryid,
+                            entityType: "msdyn_termsofdelivery",
+                            name: results.hso_termsofdelivery_id.msdyn_termscode
+                        }
+                        formContext.getAttribute("hso_termsofdelivery_id").setValue([deliveryTermsRef]);
+                    }
+                }
+            }, error => {
+                console.log(error.message); // TODO: implement better error approach.
+            });
+    }
+}
+ETO.QuoteForm.fillDefaultSalesTaxPercentage = (formContext, salesTaxGroupRef) => {
+    if (salesTaxGroupRef) {
+        Xrm.WebApi.retrieveRecord("msdyn_taxgroup", salesTaxGroupRef, "?$select=hso_defaultsalestaxcodepercentage")
+            .then(result => {
+                formContext.getAttribute("hso_salestaxcodepercentage").setValue(result["hso_defaultsalestaxcodepercentage"]);
+            }, error => {
+                console.log(error.message);
+            });
+    }
+    else {
+        ETO.QuoteForm.clearDefaultSalesTaxPercentage(formContext);
+    }
+}
+ETO.QuoteForm.clearDefaultSalesTaxPercentage = (formContext) => {
+    formContext.getAttribute("hso_salestaxcodepercentage").setValue(null);
+}
+ETO.QuoteForm.prefilAccount = (executionContext) => {
+    var formContext = executionContext.getFormContext();
+
+    if (formContext.getAttribute("hso_contactperson_id").getValue() != null) {
+        var contactid = formContext.getAttribute("hso_contactperson_id").getValue()[0].id;
+        contactid = contactid.substring(1, contactid.length - 1);
+    }
+    let accountAttribute = formContext.getAttribute("customerid");
+    if (contactid != null && formContext.getAttribute("customerid").getValue() == null) {
+        Xrm.WebApi.retrieveRecord("contact", contactid, "?$select=_parentcustomerid_value&$expand=parentcustomerid_account($select=accountid,name)")
+            .then(result => {
+                if (result?.parentcustomerid_account?.accountid && result?.parentcustomerid_account?.name) {
+                    accountAttribute?.setValue([{
+                        entityType: "account",
+                        id: result.parentcustomerid_account.accountid,
+                        name: result.parentcustomerid_account.name
+                    }]);
+                    accountAttribute.fireOnChange();
+                }
+            }, error => {
+                console.log(error.message); // TODO: implement better error approach.
+            });
+    }
+}
+ETO.QuoteForm.filterContact = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    let contactAttribute = formContext.getAttribute("hso_contactperson_id");
+
+    contactAttribute?.controls.forEach(control => {
+        control.addPreSearch(ETO.QuoteForm.setContactPreSearch)
+    });
+}
+ETO.QuoteForm.setContactPreSearch = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+
+    let accountLookup = formContext.getAttribute("customerid")?.getValue();
+    let contactAttribute = formContext.getAttribute("hso_contactperson_id");
+
+    if (accountLookup) {
+        let accountId = accountLookup[0].id;
+        let filter = `<filter type="and"><condition attribute="parentcustomerid" operator="eq" uitype="account" value="${accountId}" /></filter>`;
+
+        contactAttribute?.controls.forEach(control => {
+            control.addCustomFilter(filter, "contact");
+        });
+    }
+}
+ETO.QuoteForm.setTextblockHeader = (executionContext) => {
+    ETO.QuoteForm.setTextblock(executionContext, "hso_headertextblock_id", "hso_headtext_txt");
+}
+ETO.QuoteForm.setTextblockFooter = (executionContext) => {
+    ETO.QuoteForm.setTextblock(executionContext, "hso_footertextblock_id", "hso_foottext_txt");
+}
+ETO.QuoteForm.setTextblock = (executionContext, lookupname, txtname) => {
+    let formContext = executionContext.getFormContext();
+
+    if (formContext.getAttribute(lookupname).getValue()) {
+        let textblock = formContext.getAttribute(lookupname).getValue()[0].id;
+        Xrm.WebApi.retrieveRecord("hso_textblocks", textblock, "?$select=hso_textblock_txt")
+            .then(result => {
+                if (result?.hso_textblock_txt) {
+                    if (!formContext.getAttribute(txtname).getValue()) {
+                        formContext.getAttribute(txtname).setValue(result.hso_textblock_txt);
+                    } else {
+                        let txt = formContext.getAttribute(txtname).getValue();
+                        txt += "\n";
+                        txt += result.hso_textblock_txt;
+                        formContext.getAttribute(txtname).setValue(txt);
+                    }
+                }
+            }, error => {
+                console.log(error.message); // TODO: implement better error approach.
+            });
+    }
+}
+ETO.QuoteForm.filterTextblocks = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    let headerAttribute = formContext.getAttribute("hso_headertextblock_id");
+    let footerAttribute = formContext.getAttribute("hso_footertextblock_id");
+
+    headerAttribute?.controls.forEach(control => {
+        control.addPreSearch(ETO.QuoteForm.setTextblocksPreSearch);
+    });
+    footerAttribute?.controls.forEach(control => {
+        control.addPreSearch(ETO.QuoteForm.setTextblocksPreSearch);
+    });
+}
+ETO.QuoteForm.setTextblocksPreSearch = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+
+    let headertextblock = formContext.getAttribute("hso_headertextblock_id");
+    let footertextblock = formContext.getAttribute("hso_footertextblock_id");
+    let companyAttribute = formContext.getAttribute("msdyn_company")?.getValue();
+    let language = formContext.getAttribute("msdyn_language")?.getValue();
+
+    if (companyAttribute) {
+        let companyId = companyAttribute[0].id;
+        let filterheader = `<filter type="and"><condition attribute="hso_language_opt" operator="eq" value="${language}" /><condition attribute="hso_type_opt" operator="eq" value="867520000" /><filter type="or"><condition attribute="hso_company_id" operator="eq" uitype="msdyn_company" value="${companyId}" /><condition attribute="hso_company_id" operator="null" /></filter></filter>`;
+        let filterfooter = `<filter type="and"><condition attribute="hso_language_opt" operator="eq" value="${language}" /><condition attribute="hso_type_opt" operator="eq" value="867520001" /><filter type="or"><condition attribute="hso_company_id" operator="eq" uitype="msdyn_company" value="${companyId}" /><condition attribute="hso_company_id" operator="null" /></filter></filter>`;
+        headertextblock?.controls.forEach(control => {
+            control.addCustomFilter(filterheader, "hso_textblocks");
+        });
+        footertextblock?.controls.forEach(control => {
+            control.addCustomFilter(filterfooter, "hso_textblocks");
+        });
+    }
+};
+ETO.QuoteForm.setLocationIDtoDeliveryadress = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+
+    if (formContext.getAttribute("statecode").getValue() > 0) return;
+
+    if (formContext.getAttribute("hso_alternativdelivery_opt").getValue() != null) {
+        var altadress = formContext.getAttribute("hso_alternativdelivery_opt").getValue();
+    }
+    if (altadress) return;
+    if (formContext.getAttribute("customerid").getValue() != null) {
+        var customer = formContext.getAttribute("customerid").getValue();
+        var customertype = customer[0].entityType;
+        if (customertype == 'account') {
+            var accountid = formContext.getAttribute("customerid").getValue()[0].id;
+            accountid = accountid.substring(1, accountid.length - 1);
+        } if (customertype == 'contact') {
+            var contactid = formContext.getAttribute("customerid").getValue()[0].id;
+            contactid = contactid.substring(1, contactid.length - 1);
+        }
+    }
+    switch (customertype) {
+        case 'account':
+            if (accountid != null) {
+                Xrm.WebApi.retrieveMultipleRecords("account", "?$select=accountid,hso_adresse1_locationid,hso_adresse2_locationid&$top=1&$filter=accountid eq '" + accountid + "'", 1)
+                    .then(result => {
+                        if (result.entities && result.entities.length > 0) {
+                            var results = result.entities[0];
+                            if (formContext.getAttribute("hso_invoiceadresslocationid_txt").getValue() != results.hso_adresse2_locationid) {
+                                formContext.getAttribute("hso_invoiceadresslocationid_txt").setValue(results.hso_adresse2_locationid);
+                            } else if (formContext.getAttribute("hso_invoiceadresslocationid_txt").getValue() == null && results.hso_adresse2_locationid == null && results.hso_adresse1_locationid != null) {
+                                formContext.getAttribute("hso_invoiceadresslocationid_txt").setValue(results.hso_adresse1_locationid);
+                            }
+                            if (formContext.getAttribute("msdyn_deliveryaddresslocationid").getValue() != results.hso_adresse1_locationid) {
+                                formContext.getAttribute("msdyn_deliveryaddresslocationid").setValue(results.hso_adresse1_locationid);
+                            } else if (formContext.getAttribute("msdyn_deliveryaddresslocationid").getValue() == null && results.hso_adresse2_locationid != null && results.hso_adresse1_locationid == null) {
+                                formContext.getAttribute("msdyn_deliveryaddresslocationid").setValue(results.hso_adresse2_locationid);
+                            }
+                        }
+                    }, error => {
+                        console.log(error.message); // TODO: implement better error approach.
+                    });
+            }
+        case 'contact':
+            if (contactid != null) {
+                Xrm.WebApi.retrieveMultipleRecords("contact", "?$select=contactid,hso_adress1locationid_txt,hso_adress2locationid_txt&$top=1&$filter=contactid eq '" + contactid + "'", 1)
+                    .then(result => {
+                        if (result.entities && result.entities.length > 0) {
+                            var results = result.entities[0];
+                            if (formContext.getAttribute("hso_invoiceadresslocationid_txt").getValue() != results.hso_adress2locationid_txt) {
+                                formContext.getAttribute("hso_invoiceadresslocationid_txt").setValue(results.hso_adress2locationid_txt);
+                            } else if (formContext.getAttribute("hso_invoiceadresslocationid_txt").getValue() == null && results.hso_adress2locationid_txt == null && results.hso_adress1locationid_txt != null) {
+                                formContext.getAttribute("hso_invoiceadresslocationid_txt").setValue(results.hso_adress1locationid_txt);
+                            }
+                            if (formContext.getAttribute("msdyn_deliveryaddresslocationid").getValue() != results.hso_adress1locationid_txt) {
+                                formContext.getAttribute("msdyn_deliveryaddresslocationid").setValue(results.hso_adress1locationid_txt);
+                            } else if (formContext.getAttribute("msdyn_deliveryaddresslocationid").getValue() == null && results.hso_adress2locationid_txt != null && results.hso_adress1locationid_txt == null) {
+                                formContext.getAttribute("msdyn_deliveryaddresslocationid").setValue(results.hso_adress2locationid_txt);
+                            }
+                        }
+                    }, error => {
+                        console.log(error.message); // TODO: implement better error approach.
+                    });
+            }
+    }
+};
+ETO.QuoteForm.deliveryAdressfields = [
+    "shipto_line1",
+    "shipto_line2",
+    "shipto_city",
+    "shipto_postalcode",
+    "hso_country_id",
+    "shipto_name"
+];
+ETO.QuoteForm.useAlternateAddress = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    if (formContext.getAttribute("hso_alternativdelivery_opt").getValue() != null) {
+        var altadress = formContext.getAttribute("hso_alternativdelivery_opt").getValue();
+    }
+    if (altadress && formContext.getAttribute("msdyn_deliveryaddresslocationid").getValue() != null) {
+        formContext.getAttribute("msdyn_deliveryaddresslocationid").setValue(null);
+        if (formContext.getAttribute("msdyn_deliveryaddressdescription").getValue() == "Delivery Address Description")
+            formContext.getAttribute("msdyn_deliveryaddressdescription").setValue(null);
+    }
+    ETO.QuoteForm.deliveryAdressfields.forEach(field => {
+        let attribute = formContext.getAttribute(field);
+        ETO.QuoteForm.controlVisible(attribute, altadress);
+    });
+};
+ETO.QuoteForm.notifyUserIfProjectQuoteIsWon = (formContext) => {
+    if (formContext.getAttribute("statecode").getValue() == 2 && formContext.getAttribute("hso_quotetype_opt").getValue() == 867520001) {// only for Project Quote that is won
+        if (formContext.getAttribute("hso_activecalculation_id").getValue() != null) {
+            // get active Calculation
+            let ActiveCalculationGUID = formContext.getAttribute("hso_activecalculation_id").getValue()[0].id;
+            // display Form Notification depending on the Status of the Project Creation process
+            ETO.QuoteForm.retrieveActiveCalculation(formContext, ActiveCalculationGUID).then(function (RetrievedProjectStatus) {
+                console.log("Active Calculation Project Status: " + RetrievedProjectStatus);
+            }).catch(function (error) {
+                alert(error.message);
+            });
+        }
+    }
+};
+// Set Quote Currency for new Calculation
+// Function called by formOnLoad  -  but only for Quick Create Forms
+ETO.QuoteForm.retrieveActiveCalculation = (formContext, ActiveCalculationGUID) => {
+    return new Promise(function (resolve, reject) {
+        // Search for Quote currency
+        Xrm.WebApi.retrieveRecord("hso_calculation", ActiveCalculationGUID, "?$select=hso_name,hso_createproject,hso_projectstatus").then(
+            function success(result) {
+                if (result != null) {
+                    let CreateProject = result.hso_createproject;
+                    let ProjectStatus = result.hso_projectstatus;
+
+                    // show Form Notification for Project Status
+                    if (CreateProject == true && ProjectStatus == 100000001) {// Processing Status Project = In Progress
+                        formContext.ui.setFormNotification("A project and any sub-projects are created in FinOps for the selected calculation. You will be notified as soon as processing is complete.", "INFO", "CreateFinOps_InformationNotification");
+                    } else if (ProjectStatus == 100000000) {// Processing Status Project = Waiting
+                        formContext.ui.setFormNotification("The project creation process can only be started once all project products have been assigned to an article master. Please wait until the corresponding approvals for the article request have been granted and the corresponding project products have been completed. The project creation process can then be started manually.", "INFO", "CreateFinOps_WaitingNotification");
+                    } else if (ProjectStatus == 100000003) {// Processing Status Project = Error
+                        formContext.ui.setFormNotification("An error has occurred while creating the FinOps project and any sub-projects for the selected calculation. Further information can be found in the processing log. In the event that there is a structural problem, please contact an administrator.", "ERROR", "CreateFinOps_ErrorNotification");
+                    };
+                    resolve(result.hso_projectstatus);
+                }
+            },
+            function error(error) {
+                reject(error);
+            });
+    })
+};
+ETO.QuoteForm.controlVisible = (attribute, visible) => {
+    attribute?.controls.forEach(control => {
+        control.setVisible(visible);
+    });
+};

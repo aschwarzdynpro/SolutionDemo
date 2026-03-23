@@ -1,0 +1,39 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+if (typeof (ETO.LeadForm) === "undefined") { ETO.LeadForm = {}; }
+
+ETO.LeadForm.onLoad = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    ETO.LeadForm.registerEvents(formContext);
+
+    ETO.LeadForm.filterContact(executionContext);
+};
+
+ETO.LeadForm.registerEvents = (formContext) => {
+    formContext.getAttribute("telephone1")?.addOnChange(ETO.Common.phoneNumberValidator);
+    formContext.getAttribute("mobilephone")?.addOnChange(ETO.Common.phoneNumberValidator);
+};
+
+ETO.LeadForm.filterContact = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    let contactAttribute = formContext.getAttribute("parentcontactid");
+
+    contactAttribute?.controls.forEach(control => {
+        control.addPreSearch(ETO.LeadForm.setContactPreSearch)
+    });
+};
+
+ETO.LeadForm.setContactPreSearch = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+
+    let accountLookup = formContext.getAttribute("parentaccountid")?.getValue();
+    let contactAttribute = formContext.getAttribute("parentcontactid");
+
+    if (accountLookup) {
+        let accountId = accountLookup[0].id
+        let filter = `<filter type="and"><condition attribute="parentcustomerid" operator="eq" uitype="account" value="${accountId}" /></filter>`;
+
+        contactAttribute?.controls.forEach(control => {
+            control.addCustomFilter(filter, "contact");
+        });
+    }
+};

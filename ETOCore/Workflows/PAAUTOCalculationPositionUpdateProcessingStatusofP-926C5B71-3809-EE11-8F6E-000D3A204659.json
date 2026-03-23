@@ -1,0 +1,154 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_a_Calculation_Positions_Processing_Status_is_set_to_Finished": {
+          "metadata": {
+            "operationMetadataId": "f494162a-ef58-433c-bc9e-730c7ff0b087"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "hso_calculationdetail",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "hso_processingstatus",
+              "subscriptionRequest/filterexpression": "hso_processingstatus eq true"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          }
+        }
+      },
+      "actions": {
+        "Parent_Calculation_Position_not_null": {
+          "actions": {
+            "List_Child_Calculation_Positions": {
+              "metadata": {
+                "operationMetadataId": "30567964-c0de-417d-a834-a537f0a7d802"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "hso_calculationdetails",
+                  "$select": "hso_calculationdetailid, hso_processingstatus",
+                  "$filter": "_hso_calculationdetail_parentid_value eq @{triggerOutputs()?['body/_hso_calculationdetail_parentid_value']} and \nhso_processingstatus eq false"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "All_Child_Calculation_Positions_are_set_to_finished": {
+              "actions": {
+                "Update_Parent_Calculation_Position": {
+                  "metadata": {
+                    "operationMetadataId": "ac51d416-85cb-4887-b375-63e2c678ac37"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_calculationdetails",
+                      "recordId": "@triggerOutputs()?['body/_hso_calculationdetail_parentid_value']",
+                      "item/hso_processingstatus": true
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "List_Child_Calculation_Positions": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Cancel_(Run)": {
+                    "metadata": {
+                      "operationMetadataId": "3b403180-46b7-4316-854c-8dbf34dec824"
+                    },
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Cancelled"
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "equals": [
+                  "@length(outputs('List_Child_Calculation_Positions')?['body/value'])",
+                  0
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "e1e2fdc3-f407-49cb-a828-5aca3e4f7600"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {},
+          "else": {
+            "actions": {
+              "Cancel": {
+                "metadata": {
+                  "operationMetadataId": "80eb7152-590f-4ef7-b996-dc112af20212"
+                },
+                "type": "Terminate",
+                "inputs": {
+                  "runStatus": "Cancelled"
+                }
+              }
+            }
+          },
+          "expression": {
+            "not": {
+              "equals": [
+                "@triggerOutputs()?['body/_hso_calculationdetail_parentid_value']",
+                "@null"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "4c52e807-e162-461d-b556-9229bb3189a9"
+          },
+          "type": "If"
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

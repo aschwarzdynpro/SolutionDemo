@@ -1,0 +1,41 @@
+<appaction uniquename="hso__EP-Anteileberechn!ec17e5f9184140cb9e5a477835791e73!msdynce_saleshub!hso_calculation!0">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Calculate Price Components">
+    <label description="Calculate Price Components" languagecode="1033" />
+  </buttonlabeltext>
+  <buttontooltipdescription default="Calculate the EP-shares (price components) for all required calculation positions.">
+    <label description="Calculate the EP-shares (price components) for all required calculation positions." languagecode="1033" />
+  </buttontooltipdescription>
+  <buttontooltiptitle default="Calculate Price Components">
+    <label description="Calculate Price Components" languagecode="1033" />
+  </buttontooltiptitle>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculation</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculation</contextvalue>
+  <fonticon>DonutChart</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>0</location>
+  <name>EP-Anteileberechn!ec17e5f9184140cb9e5a477835791e73</name>
+  <onclickeventjavascriptfunctionname>ETO.CalculationRibbon.callCustomAPICalculation</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":5},{"type":4},{"type":21,"value":"CalculateUnitPriceRatio"},{"type":19,"value":1}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>d24a8f32-ce5e-ee11-be6f-000d3ab3cbd3</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <parentappactionid>
+    <uniquename>hso__GAEB!82a4091f6be14e3191bb04e51f5a061d!msdynce_saleshub!hso_calculation!0</uniquename>
+  </parentappactionid>
+  <sequence>20000.0000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilitytype>0</visibilitytype>
+</appaction>

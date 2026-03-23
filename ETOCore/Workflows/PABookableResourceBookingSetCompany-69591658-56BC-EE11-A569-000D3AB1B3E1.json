@@ -1,0 +1,138 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps_1": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "hso_CRDataverse"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_a_booking_has_been_created_or_changed": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 4,
+              "subscriptionRequest/entityname": "bookableresourcebooking",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "msdyn_workorder",
+              "subscriptionRequest/filterexpression": "_msdyn_workorder_value ne null"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps_1"
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "8b078b4e-e483-45a5-8d80-500e87721614"
+          }
+        }
+      },
+      "actions": {
+        "Get_Work_Order": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "msdyn_workorders",
+              "recordId": "@triggerOutputs()?['body/_msdyn_workorder_value']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "connectionName": "shared_commondataserviceforapps_1"
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "ee84d680-dd46-4777-a8fe-febf281bd7dd"
+          }
+        },
+        "Update_Company_on_Booking": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "bookableresourcebookings",
+              "recordId": "@triggerOutputs()?['body/bookableresourcebookingid']",
+              "item/hso_company_id@odata.bind": "/cdm_companies(@{outputs('Get_Work_Order')?['body/_hso_company_ref_value']})"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "UpdateRecord",
+              "connectionName": "shared_commondataserviceforapps_1"
+            }
+          },
+          "runAfter": {
+            "Get_Work_Order": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "961de050-3d13-4a34-9361-7db31473162e"
+          }
+        },
+        "If_project_is_set": {
+          "type": "If",
+          "expression": {
+            "not": {
+              "equals": [
+                "@outputs('Get_Work_Order')?['body/_hso_project_ref_value']",
+                "@null"
+              ]
+            }
+          },
+          "actions": {
+            "Update_project_on_booking": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "bookableresourcebookings",
+                  "recordId": "@triggerOutputs()?['body/bookableresourcebookingid']",
+                  "item/hso_ProjectAssembly_id@odata.bind": "/msdyn_projects(@{outputs('Get_Work_Order')?['body/_hso_project_ref_value']})"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateRecord",
+                  "connectionName": "shared_commondataserviceforapps_1"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "83caa8c4-f879-4722-8ba2-f67eb3bdeef2"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Update_Company_on_Booking": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "0ad08480-3433-4aca-b815-dc95592892a3"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

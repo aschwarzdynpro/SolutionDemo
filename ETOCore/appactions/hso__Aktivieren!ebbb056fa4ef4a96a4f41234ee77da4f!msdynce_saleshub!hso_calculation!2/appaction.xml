@@ -1,0 +1,43 @@
+<appaction uniquename="hso__Aktivieren!ebbb056fa4ef4a96a4f41234ee77da4f!msdynce_saleshub!hso_calculation!2">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Activate Version">
+    <label description="Activate Version" languagecode="1033" />
+  </buttonlabeltext>
+  <buttontooltipdescription default="Activates this calculation version for the quotation. Further modifications of the calculation version are blocked.">
+    <label description="Activates this calculation version for the quotation. Further modifications of the calculation version are blocked." languagecode="1033" />
+  </buttontooltipdescription>
+  <buttontooltiptitle default="Activate calculation version">
+    <label description="Activate calculation version" languagecode="1033" />
+  </buttontooltiptitle>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculation</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculation</contextvalue>
+  <fonticon>$clientsvg:FavoriteStarFill</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>2</location>
+  <name>Aktivieren!ebbb056fa4ef4a96a4f41234ee77da4f</name>
+  <onclickeventformulacomponentlibraryid>
+    <name>hso_saleshubdefaultcommandlibrary_a87a9</name>
+  </onclickeventformulacomponentlibraryid>
+  <onclickeventformulacomponentname>cc894b5fa05f49e5a0dfb9a115ad5a3b</onclickeventformulacomponentname>
+  <onclickeventformulafunctionname>OnSelect</onclickeventformulafunctionname>
+  <onclickeventtype>1</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100100005.5000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>hso_saleshubdefaultcommandlibrary_a87a9</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>cc894b5fa05f49e5a0dfb9a115ad5a3b</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

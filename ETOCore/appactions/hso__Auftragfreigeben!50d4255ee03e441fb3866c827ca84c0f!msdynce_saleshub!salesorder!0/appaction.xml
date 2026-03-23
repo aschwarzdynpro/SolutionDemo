@@ -1,0 +1,37 @@
+<appaction uniquename="hso__Auftragfreigeben!50d4255ee03e441fb3866c827ca84c0f!msdynce_saleshub!salesorder!0">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Auftrag freigeben">
+    <label description="Auftrag freigeben" languagecode="1033" />
+  </buttonlabeltext>
+  <context>1</context>
+  <contextentity>
+    <logicalname>salesorder</logicalname>
+  </contextentity>
+  <contextvalue>salesorder</contextvalue>
+  <fonticon>$clientsvg:Accept</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>0</location>
+  <name>Auftragfreigeben!50d4255ee03e441fb3866c827ca84c0f</name>
+  <onclickeventjavascriptfunctionname>ETO.OrderCommands.approveOrder</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":5}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>a94a63bd-8434-ef11-8409-000d3ab4007b</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100110513.5000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>hso_saleshubdefaultcommandlibrary_a87a9</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>bf5080e1fdc84496a6874ce5de8cd252</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

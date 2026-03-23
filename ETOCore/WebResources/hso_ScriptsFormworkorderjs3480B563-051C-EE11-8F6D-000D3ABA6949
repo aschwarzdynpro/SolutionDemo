@@ -1,0 +1,155 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+if (typeof (ETO.WorkOrderForm) === "undefined") { ETO.WorkOrderForm = {}; }
+
+ETO.WorkOrderForm.onLoad = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    //ETO.WorkOrderForm.registerEvents(formContext);
+
+    if (formContext.ui.getFormType() > 2) // Skip if form is not create or update
+        return;
+
+    if (formContext.getAttribute("msdyn_systemstatus").getValue() >= 690970003)
+    {
+        ETO.Common.disableAllFields(formContext);
+        formContext.getControl("msdyn_systemstatus").setDisabled(false);
+        formContext.getControl("hso_targetworkorder_id").setDisabled(false);
+        formContext.getControl("workorderproductsgrid").setDisabled(false);
+        formContext.ui.setFormNotification("The work order has been completed. Changes are no longer possible.", "INFO", "wo_readonly");
+        return;
+    }
+
+    ETO.WorkOrderForm.setWorkorderDefaults(executionContext);
+
+    const currentForm = formContext.ui.formSelector.getCurrentItem();
+
+    if (currentForm.getId() === "adada18b-44a1-ed11-aad1-0022489de585") // Work Order Main Form
+    {
+        ETO.WorkOrderForm.checkParentWorkOrder(executionContext);
+        ETO.WorkOrderForm.prefilterTargetWorkOrder(executionContext);
+    }
+    
+    formContext.getAttribute("msdyn_billingaccount").addOnChange(ETO.WorkOrderForm.loadPaymentTerms);
+    formContext.getAttribute("msdyn_parentworkorder").addOnChange(ETO.WorkOrderForm.checkParentWorkOrder);
+};
+
+
+ETO.WorkOrderForm.onQuickCreateLoad = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+
+    ETO.WorkOrderForm.setWorkorderDefaults(executionContext);
+
+    formContext.getAttribute("msdyn_billingaccount").addOnChange(ETO.WorkOrderForm.loadPaymentTerms);
+};
+//ETO.WorkOrderForm.registerEvents = (formContext) => {   
+//    formContext.getAttribute("hso_opportunityprocessstage_opt")?.addOnChange(ETO.WorkOrderForm.setDebitorDefaults);
+//};
+
+ETO.WorkOrderForm.checkParentWorkOrder = (context) => {
+    var formContext = context.getFormContext();
+    var parentWorkOrderId = formContext.getAttribute("msdyn_parentworkorder").getValue();
+
+    if (parentWorkOrderId) {
+        Xrm.WebApi.retrieveMultipleRecords("msdyn_workorderproduct", "?$filter=_msdyn_workorder_value eq " + parentWorkOrderId[0].id)
+            .then(function (result) {
+                var hasUnusedProducts = result.entities.some(function (product) {
+                    return product.msdyn_estimatequantity !== product.msdyn_quantity;
+                });
+
+                if (hasUnusedProducts) {
+                    formContext.ui.setFormNotification(
+                        "There are unused products on the parent work order. Please check and transfer products if necessary.",
+                        "WARNING",
+                        "unusedProductsWarning"
+                    );
+                }
+            })
+            .catch(function (error) {
+                console.error(error.message);
+            });
+    }
+};
+
+ETO.WorkOrderForm.setWorkorderDefaults = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    let companyAttribute = formContext.getAttribute("hso_company_ref");
+    let costcenterAttribute = formContext.getAttribute("hso_organizationalunit_ref")
+
+    if (!companyAttribute?.getValue()) {
+        let userId = Xrm.Utility.getGlobalContext().userSettings?.userId;
+        userId = userId.substring(1, userId.length - 1);
+
+        Xrm.WebApi.retrieveRecord("systemuser", userId, "?$select=cdm_Company&$expand=cdm_Company($select=cdm_companyid,cdm_name)")
+            .then(result => {
+                if (result?.cdm_Company?.cdm_companyid && result?.cdm_Company?.cdm_name) {
+                    companyAttribute?.setValue([{
+                        entityType: "cdm_company",
+                        id: result.cdm_Company.cdm_companyid,
+                        name: result.cdm_Company.cdm_name
+                    }]);
+                }
+            }, error => {
+                console.log(error.message); // TODO: implement better error approach.
+        });
+        Xrm.WebApi.retrieveRecord("systemuser", userId, "?$select=hso_organizationalunit_ref&$expand=hso_organizationalunit_ref($select=msdyn_organizationalunitid,msdyn_name)")
+            .then(result => {
+                if (result?.hso_organizationalunit_ref?.msdyn_organizationalunitid && result?.hso_organizationalunit_ref?.msdyn_name) {
+                    costcenterAttribute?.setValue([{
+                        entityType: "msdyn_organizationalunit",
+                        id: result.hso_organizationalunit_ref.msdyn_organizationalunitid,
+                        name: result.hso_organizationalunit_ref.msdyn_name
+                    }]);
+                }
+            }, error => {
+                console.log(error.message); // TODO: implement better error approach.
+        });
+    }
+    
+};
+
+ETO.WorkOrderForm.prefilterTargetWorkOrder = (executionContext) => {
+	    // Hol das Formularkontext
+    var formContext = executionContext.getFormContext();
+
+    // Aktuelle Work Order ID
+    var currentWorkOrderId = formContext.data.entity.getId();
+
+    // Entferne geschweifte Klammern von der ID, falls vorhanden
+    currentWorkOrderId = currentWorkOrderId ? currentWorkOrderId.replace(/[{}]/g, "") : null;
+
+    if (!currentWorkOrderId) {
+        console.error("Work Order ID could not be retrieved.");
+        return;
+    }
+
+    // Setze einen Filter auf das Lookup-Feld
+    formContext.getControl("hso_targetworkorder_id").addPreSearch(function () {
+        var filter = 
+            `<filter type="and">
+                <condition attribute="msdyn_parentworkorder" operator="eq" value="${currentWorkOrderId}" />
+            </filter>`;
+        formContext.getControl("hso_targetworkorder_id").addCustomFilter(filter, "msdyn_workorder");
+    });
+};
+
+ETO.WorkOrderForm.loadPaymentTerms = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+    let billingAccountValue = formContext.getAttribute("msdyn_billingaccount").getValue();
+    let companyValue = formContext.getAttribute("hso_company_ref").getValue();
+    let paymentTermsAttribute = formContext.getAttribute("hso_paymentterms_ref");
+
+    if (billingAccountValue === null || companyValue === null) return;
+
+            Xrm.WebApi.retrieveMultipleRecords("hso_erprole", "?$select=hso_erproleid&$filter=(_hso_account_ref_value%20eq%20%27" + billingAccountValue[0].id + "%27%20and%20_hso_company_ref_value%20eq%20%27" + companyValue[0].id + "%27)&$expand=hso_paymentterms_id($select=msdyn_name,msdyn_paymenttermid)")
+            .then(result => {
+                if (result?.entities.length > 0) {
+                    var foundErpRole = result.entities[0];
+                    paymentTermsAttribute?.setValue([{
+                        entityType: "msdyn_paymentterm",
+                        id: foundErpRole.hso_paymentterms_id.msdyn_paymenttermid,
+                        name: foundErpRole.hso_paymentterms_id.msdyn_name
+                    }]);
+                }
+            }, error => {
+                console.log(error.message); // TODO: implement better error approach.
+        });
+}

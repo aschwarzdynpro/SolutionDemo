@@ -1,0 +1,49 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+
+ETO.QuoteDetailForm = {
+    
+    onLoad: function(executionContext) {
+    let formContext = executionContext.getFormContext();
+    ETO.QuoteDetailForm.registerEvents(formContext);
+
+    ETO.QuoteDetailForm.presetSalesProductCategory(executionContext);
+
+    ETO.QuoteDetailForm.showWarningOnCreate(formContext);
+    },
+
+    registerEvents: function(formContext) {
+        formContext.getAttribute("isproductoverridden").addOnChange(ETO.QuoteDetailForm.presetSalesProductCategory);
+    },
+
+    showWarningOnCreate: function(formContext) {
+        let isCreateForm = formContext.ui.getFormType() === 1;
+        if (isCreateForm) {
+            formContext.ui.setFormNotification("The cost price and cost price per unit are calculated after the first save.", "INFO", "purchaseprice");
+        }
+    },
+
+    presetSalesProductCategory: function(executionContext) {
+
+        let formContext = executionContext.getFormContext();
+
+        let productOverridden = formContext.getAttribute("isproductoverridden").getValue();
+        
+        let salesProductCategoryField = formContext.getAttribute("msdyn_salesproductcategory");
+
+        if (productOverridden === null || productOverridden === false)
+        {
+            salesProductCategoryField.setValue(null);
+return;
+        }
+
+        if (salesProductCategoryField.getValue() !== null) return;
+
+        let lookupValue = new Array();
+        lookupValue[0] = new Object();
+        lookupValue[0].id = "{233f1634-8d84-ee11-8179-000d3aad3fb6}";
+        lookupValue[0].name = "Default";
+        lookupValue[0].entityType = "msdyn_productcategory";
+
+        salesProductCategoryField.setValue(lookupValue);
+    }
+};

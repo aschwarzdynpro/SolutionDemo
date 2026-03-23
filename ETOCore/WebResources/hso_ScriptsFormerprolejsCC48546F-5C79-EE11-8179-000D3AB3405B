@@ -1,0 +1,41 @@
+if (typeof (ETO) === "undefined") { ETO = {}; };
+if (typeof (ETO.ERPRoleForm) === "undefined") { ETO.ERPRoleForm = {}; };
+
+ETO.ERPRoleForm.onLoad = (executionContext) => {
+    ETO.ERPRoleForm.lockUnlockErpRelevantFields(executionContext);  
+};
+
+ETO.ERPRoleForm.erpRelevantFields = [
+    "hso_name_str",
+    "hso_firstname_str",
+    "hso_lastname_str",
+    "hso_company_ref",
+    "hso_customergroup_ref",
+    "hso_taxgroup_ref",
+    "ownerid",
+    "hso_paymentterms_id",
+    "hso_customerpaymentmethod_id",
+    "hso_contact_id",
+    "hso_accountnumber_str",
+    "hso_transactioncurrency_ref",
+    "hso_ouraccount_txt",
+    "hso_delivery_address_city",
+    "hso_invoice_address_city"
+];
+
+ETO.ERPRoleForm.lockUnlockErpRelevantFields = (executionContext) => {
+    let formContext = executionContext.getFormContext();
+
+    let invoicdeliveryonhold = formContext.getAttribute("hso_invoicedeliveryonhold_opt")?.getValue();
+
+    ETO.ERPRoleForm.erpRelevantFields.forEach(field => {
+        let attribute = formContext.getAttribute(field);
+
+        ETO.ERPRoleForm.controlDisabled(attribute, invoicdeliveryonhold == 806380000);
+    });
+};
+ETO.ERPRoleForm.controlDisabled = (attribute, disabled) => {
+    attribute?.controls.forEach(control => {
+        control.setDisabled(disabled);
+    });
+};

@@ -1,0 +1,1 @@
+hso_signed_bol: =If(IsBlank(hso_signature),false,true)

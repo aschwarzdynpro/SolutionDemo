@@ -1,0 +1,43 @@
+<appaction uniquename="hso__Vorlageexportiere!17088fbe2e3a4cd1affd9438a22972eb!msdynce_saleshub!hso_calculation!0">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Export as Template">
+    <label description="Export as Template" languagecode="1033" />
+  </buttonlabeltext>
+  <buttontooltipdescription default="Export the selected calculation as a template">
+    <label description="Export the selected calculation as a template" languagecode="1033" />
+  </buttontooltipdescription>
+  <buttontooltiptitle default="Export calculation as template">
+    <label description="Export calculation as template" languagecode="1033" />
+  </buttontooltiptitle>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculation</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculation</contextvalue>
+  <hidden>0</hidden>
+  <iconwebresourceid>
+    <webresourceid>f5967f68-d409-ee11-8f6e-000d3a204659</webresourceid>
+  </iconwebresourceid>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>0</location>
+  <name>Vorlageexportiere!17088fbe2e3a4cd1affd9438a22972eb</name>
+  <onclickeventjavascriptfunctionname>ETO.CalculationRibbon.openTemplateCustomPageMainForm</onclickeventjavascriptfunctionname>
+  <onclickeventjavascriptparameters>[{"type":5}]</onclickeventjavascriptparameters>
+  <onclickeventjavascriptwebresourceid>
+    <webresourceid>d24a8f32-ce5e-ee11-be6f-000d3ab3cbd3</webresourceid>
+  </onclickeventjavascriptwebresourceid>
+  <onclickeventtype>2</onclickeventtype>
+  <origin>0</origin>
+  <parentappactionid>
+    <uniquename>hso__NewGroup!6cd820d12e2848409e333aa835f436f8!msdynce_saleshub!hso_calculation!0</uniquename>
+  </parentappactionid>
+  <sequence>5000.0000000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilitytype>0</visibilitytype>
+</appaction>

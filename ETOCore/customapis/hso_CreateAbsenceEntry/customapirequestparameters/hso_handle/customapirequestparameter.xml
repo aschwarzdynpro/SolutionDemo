@@ -1,0 +1,12 @@
+<customapirequestparameter uniquename="hso_handle">
+  <description default="ID für Update bei Anwesenheit von Vor auf Nachmittag und vice versa">
+    <label description="ID für Update bei Anwesenheit von Vor auf Nachmittag und vice versa" languagecode="1033" />
+  </description>
+  <displayname default="Handle">
+    <label description="Handle" languagecode="1033" />
+  </displayname>
+  <iscustomizable>1</iscustomizable>
+  <isoptional>0</isoptional>
+  <name>Handle</name>
+  <type>7</type>
+</customapirequestparameter>

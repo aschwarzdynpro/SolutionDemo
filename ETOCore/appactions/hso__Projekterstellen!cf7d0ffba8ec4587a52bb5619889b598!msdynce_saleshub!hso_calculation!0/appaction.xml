@@ -1,0 +1,43 @@
+<appaction uniquename="hso__Projekterstellen!cf7d0ffba8ec4587a52bb5619889b598!msdynce_saleshub!hso_calculation!0">
+  <appmoduleid>
+    <uniquename>msdynce_saleshub</uniquename>
+  </appmoduleid>
+  <buttonlabeltext default="Create Project">
+    <label description="Create Project" languagecode="1033" />
+  </buttonlabeltext>
+  <buttontooltipdescription default="Start the project creation process for this calculation">
+    <label description="Start the project creation process for this calculation" languagecode="1033" />
+  </buttontooltipdescription>
+  <buttontooltiptitle default="Project Creation">
+    <label description="Project Creation" languagecode="1033" />
+  </buttontooltiptitle>
+  <context>1</context>
+  <contextentity>
+    <logicalname>hso_calculation</logicalname>
+  </contextentity>
+  <contextvalue>hso_calculation</contextvalue>
+  <fonticon>SendDirectEmail</fonticon>
+  <hidden>0</hidden>
+  <iscustomizable>1</iscustomizable>
+  <isdisabled>0</isdisabled>
+  <isgrouptitlehidden>0</isgrouptitlehidden>
+  <location>0</location>
+  <name>Projekterstellen!cf7d0ffba8ec4587a52bb5619889b598</name>
+  <onclickeventformulacomponentlibraryid>
+    <name>hso_saleshubdefaultcommandlibrary_a87a9</name>
+  </onclickeventformulacomponentlibraryid>
+  <onclickeventformulacomponentname>1737652f829242d08f7ce96d4cb4a859</onclickeventformulacomponentname>
+  <onclickeventformulafunctionname>OnSelect</onclickeventformulafunctionname>
+  <onclickeventtype>1</onclickeventtype>
+  <origin>0</origin>
+  <sequence>100100007.7500000000</sequence>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <type>0</type>
+  <visibilityformulacomponentlibraryid>
+    <name>hso_saleshubdefaultcommandlibrary_a87a9</name>
+  </visibilityformulacomponentlibraryid>
+  <visibilityformulacomponentname>1737652f829242d08f7ce96d4cb4a859</visibilityformulacomponentname>
+  <visibilityformulafunctionname>Visible</visibilityformulafunctionname>
+  <visibilitytype>1</visibilitytype>
+</appaction>

@@ -1,0 +1,918 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_ConnRefProjectQuoteCalculationDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_a_Category_Sales_Price_created": {
+          "metadata": {
+            "operationMetadataId": "a26f9b07-cd29-4d37-9b17-ecf7fc4371c2"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "hso_projectcategorysalesprice",
+              "subscriptionRequest/scope": 4
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Initialize_varError": {
+          "runAfter": {
+            "Initialize_varErrorMessage": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "eed278cb-0b03-4e74-a461-5346e9267c39"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varError",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "Initialize_varErrorMessage": {
+          "runAfter": {
+            "Get_Category_for_Project_Category": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b4ebf231-4b62-467b-9a38-a2e6c3aabb02"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorMessage",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Initialize_varProcessingStatus": {
+          "runAfter": {
+            "Initialize_varError": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d9778e51-3398-4861-8a53-96a310365863"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varProcessingStatus",
+                "type": "string",
+                "value": "Pending"
+              }
+            ]
+          }
+        },
+        "Append_to_varCategorySalesPrice_[Neu]": {
+          "runAfter": {
+            "Initialize_varCategorySalesPrice": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "0a650831-ee1a-4414-a634-b7abaccb4cd3"
+          },
+          "type": "AppendToArrayVariable",
+          "inputs": {
+            "name": "varCategorySalesPrice",
+            "value": {
+              "hso_projectcategorysalespriceid": "@triggerOutputs()?['body/hso_projectcategorysalespriceid']",
+              "hso_validfrom": "@triggerOutputs()?['body/hso_validfrom']",
+              "hso_validto": "@If(empty(triggerOutputs()?['body/hso_validto']), formatDateTime('12/31/2054'),triggerOutputs()?['body/hso_validto'])"
+            }
+          }
+        },
+        "Initialize_varAt": {
+          "runAfter": {
+            "Initialize_varProcessingStatus": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b55f9086-5bc2-42d3-b045-19fb1ca43941"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varAt",
+                "type": "string",
+                "value": "@"
+              }
+            ]
+          }
+        },
+        "Initialize_varCategorySalesPrice": {
+          "runAfter": {
+            "Initialize_varErrorStatus": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7c320a85-1e95-468a-90d4-e3a07da80f66"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varCategorySalesPrice",
+                "type": "array"
+              }
+            ]
+          }
+        },
+        "Initialize_varID": {
+          "runAfter": {
+            "Get_Category_for_Project_Category": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7a0f6aec-039f-4123-936c-27b9f04fc4a1"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varID",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Get_Category_for_Project_Category": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "a430bd6c-090a-46c8-a0f3-fd345d1fec20"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "hso_projectcategories",
+              "recordId": "@triggerOutputs()?['body/_hso_categoryid_value']"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Is_Expenses": {
+          "actions": {
+            "Placeholder": {
+              "actions": {},
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "1161c1c2-5f65-4295-b4ea-9178b58a5d64"
+              },
+              "type": "Scope"
+            },
+            "Processing_Log": {
+              "actions": {
+                "Convert_time_zone": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "1d7e37f7-559a-4f50-bc57-01f763122a7d"
+                  },
+                  "type": "Expression",
+                  "kind": "ConvertTimeZone",
+                  "inputs": {
+                    "baseTime": "@{utcNow()}",
+                    "formatString": "u",
+                    "sourceTimeZone": "UTC",
+                    "destinationTimeZone": "W. Europe Standard Time"
+                  }
+                },
+                "Create_ProcessingLog": {
+                  "runAfter": {
+                    "Convert_time_zone": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "19102256-ab43-4323-b8b2-8c6535b22369"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "CreateRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "hso_processinglogs",
+                      "item/hso_name": "Projektkategorie-Verkaufspreise aktualisieren - @{body('Convert_time_zone')}",
+                      "item/hso_processingtask": 100000016,
+                      "item/hso_flowrunurl": "@concat('https://emea.flow.microsoft.com/manage/environments/', workflow()?['tags']['environmentName'], '/flows/', workflow()?['name'], '/runs/', workflow()?['run']['name'])",
+                      "item/hso_start_datetime": "@utcNow()",
+                      "item/hso_processingstatus": 100000001
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "runAfter": {
+                "Placeholder": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "5b1e070f-3286-483e-afac-12f045718831"
+              },
+              "type": "Scope"
+            },
+            "Fetch_Information": {
+              "actions": {
+                "Price_Origin": {
+                  "runAfter": {},
+                  "cases": {
+                    "Customer-specific_price": {
+                      "case": 100000000,
+                      "actions": {
+                        "List_Customer-specific_price": {
+                          "runAfter": {},
+                          "metadata": {
+                            "operationMetadataId": "858a22aa-04b6-4a91-b76f-47883a1b7c8b"
+                          },
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "host": {
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "ListRecords",
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                            },
+                            "parameters": {
+                              "entityName": "hso_projectcategorysalesprices",
+                              "$filter": "_hso_companyid_value eq '@{triggerOutputs()?['body/_hso_companyid_value']}' and _hso_categoryid_value eq '@{triggerOutputs()?['body/_hso_categoryid_value']}' and hso_priceorigin eq 100000000 and _hso_customerid_value eq '@{triggerOutputs()?['body/_hso_customerid_value']}'"
+                            },
+                            "authentication": "@parameters('$authentication')"
+                          }
+                        },
+                        "Filter_Customer-specific_price": {
+                          "runAfter": {
+                            "List_Customer-specific_price": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "c889ceab-42b9-4b02-bd5e-9784e64575fb"
+                          },
+                          "type": "Query",
+                          "inputs": {
+                            "from": "@outputs('List_Customer-specific_price')?['body/value']",
+                            "where": "@and(\nless(item()['hso_validfrom'], triggerOutputs()?['body/hso_validfrom']),\ngreater(item()['hso_validto'], triggerOutputs()?['body/hso_validfrom'])\n)"
+                          }
+                        },
+                        "Is_not_Null_-_Filter_Customer-specific_price": {
+                          "actions": {
+                            "Append_to_varCategorySalesPrice_[Customer-specific_Price]": {
+                              "runAfter": {},
+                              "metadata": {
+                                "operationMetadataId": "52e4ac50-5153-4e54-b997-71a9dd1fe6ac"
+                              },
+                              "type": "AppendToArrayVariable",
+                              "inputs": {
+                                "name": "varCategorySalesPrice",
+                                "value": {
+                                  "hso_projectcategorysalespriceid": "@body('Filter_Customer-specific_price')[0]['hso_projectcategorysalespriceid']",
+                                  "hso_validfrom": "@body('Filter_Customer-specific_price')[0]['hso_validfrom']",
+                                  "hso_validto": "@subtractFromTime(triggerOutputs()?['body/hso_validfrom'],1,'Day')"
+                                }
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Filter_Customer-specific_price": [
+                              "Succeeded"
+                            ]
+                          },
+                          "expression": {
+                            "not": {
+                              "equals": [
+                                "@length(body('Filter_Customer-specific_price'))",
+                                0
+                              ]
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "31084053-e739-41cd-99e4-9aa00d8d353c"
+                          },
+                          "type": "If"
+                        }
+                      }
+                    },
+                    "Default_price": {
+                      "case": 100000001,
+                      "actions": {
+                        "List_Default_price": {
+                          "runAfter": {},
+                          "metadata": {
+                            "operationMetadataId": "b0b3adba-bd36-4691-b26a-9f04b06f3895"
+                          },
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "host": {
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "ListRecords",
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                            },
+                            "parameters": {
+                              "entityName": "hso_projectcategorysalesprices",
+                              "$filter": "_hso_companyid_value eq '@{triggerOutputs()?['body/_hso_companyid_value']}' and _hso_categoryid_value eq '@{triggerOutputs()?['body/_hso_categoryid_value']}' and hso_priceorigin eq 100000001"
+                            },
+                            "authentication": "@parameters('$authentication')"
+                          }
+                        },
+                        "Filter_Default_price": {
+                          "runAfter": {
+                            "List_Default_price": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "897cd2e4-bba8-44eb-9659-22eebdc91456"
+                          },
+                          "type": "Query",
+                          "inputs": {
+                            "from": "@outputs('List_Default_price')?['body/value']",
+                            "where": "@and(\nless(item()['hso_validfrom'], triggerOutputs()?['body/hso_validfrom']),\ngreater(item()['hso_validto'], triggerOutputs()?['body/hso_validfrom'])\n)"
+                          }
+                        },
+                        "Is_not_Null_-_Filter_Default_price": {
+                          "actions": {
+                            "Append_to_varCategorySalesPrice_[Default_price]": {
+                              "runAfter": {},
+                              "metadata": {
+                                "operationMetadataId": "23ef8950-8d07-4552-b166-8c51150536b0"
+                              },
+                              "type": "AppendToArrayVariable",
+                              "inputs": {
+                                "name": "varCategorySalesPrice",
+                                "value": {
+                                  "hso_projectcategorysalespriceid": "@body('Filter_Default_price')[0]['hso_projectcategorysalespriceid']",
+                                  "hso_validfrom": "@body('Filter_Default_price')[0]['hso_validfrom']",
+                                  "hso_validto": "@subtractFromTime(triggerOutputs()?['body/hso_validfrom'],1,'Day')"
+                                }
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Filter_Default_price": [
+                              "Succeeded"
+                            ]
+                          },
+                          "expression": {
+                            "not": {
+                              "equals": [
+                                "@length(body('Filter_Default_price'))",
+                                0
+                              ]
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "09d0d9ba-5741-4162-8559-0c7665dc8ba4"
+                          },
+                          "type": "If"
+                        }
+                      }
+                    },
+                    "Quote-specific_price": {
+                      "case": 100000002,
+                      "actions": {
+                        "List_Quote-specific_price": {
+                          "runAfter": {},
+                          "metadata": {
+                            "operationMetadataId": "a86ef378-726f-4ba3-ac65-2d786d232efa"
+                          },
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "host": {
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "ListRecords",
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                            },
+                            "parameters": {
+                              "entityName": "hso_projectcategorysalesprices",
+                              "$filter": "_hso_companyid_value eq '@{triggerOutputs()?['body/_hso_companyid_value']}' and _hso_categoryid_value eq '@{triggerOutputs()?['body/_hso_categoryid_value']}' and hso_priceorigin eq 100000002"
+                            },
+                            "authentication": "@parameters('$authentication')"
+                          }
+                        },
+                        "Filter_Quote-specific_price": {
+                          "runAfter": {
+                            "List_Quote-specific_price": [
+                              "Succeeded"
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "b233ab8f-e01e-4012-99e6-83205ddb7df1"
+                          },
+                          "type": "Query",
+                          "inputs": {
+                            "from": "@outputs('List_Quote-specific_price')?['body/value']",
+                            "where": "@and(\nless(item()['hso_validfrom'], triggerOutputs()?['body/hso_validfrom']),\ngreater(item()['hso_validto'], triggerOutputs()?['body/hso_validfrom'])\n)"
+                          }
+                        },
+                        "Is_Not_Null_-_Qoute-specific_price": {
+                          "actions": {
+                            "Append_to_varCategorySalesPrice_[Quote-specific_price]": {
+                              "runAfter": {},
+                              "metadata": {
+                                "operationMetadataId": "e939b332-9a2d-4bbd-b156-1ed835dadc83"
+                              },
+                              "type": "AppendToArrayVariable",
+                              "inputs": {
+                                "name": "varCategorySalesPrice",
+                                "value": {
+                                  "hso_projectcategorysalespriceid": "@body('Filter_Quote-specific_price')[0]['hso_projectcategorysalespriceid']",
+                                  "hso_validfrom": "@body('Filter_Quote-specific_price')[0]['hso_validfrom']",
+                                  "hso_validto": "@subtractFromTime(triggerOutputs()?['body/hso_validfrom'],1,'Day')"
+                                }
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Filter_Quote-specific_price": [
+                              "Succeeded"
+                            ]
+                          },
+                          "expression": {
+                            "not": {
+                              "equals": [
+                                "@length(body('Filter_Quote-specific_price'))",
+                                0
+                              ]
+                            }
+                          },
+                          "metadata": {
+                            "operationMetadataId": "943569fe-fdb4-4c65-8db8-f4514751eb43"
+                          },
+                          "type": "If"
+                        }
+                      }
+                    }
+                  },
+                  "default": {
+                    "actions": {}
+                  },
+                  "expression": "@triggerOutputs()?['body/hso_priceorigin']",
+                  "metadata": {
+                    "operationMetadataId": "6afe7a58-1fd4-4714-8050-3e9c5118c29c"
+                  },
+                  "type": "Switch"
+                }
+              },
+              "runAfter": {
+                "Placeholder": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "602fb5c6-3a27-4b85-885a-486a9427a495"
+              },
+              "type": "Scope"
+            },
+            "Update_Project_Category_Sales_Price": {
+              "actions": {
+                "Apply_to_each_Category_Sales_Price": {
+                  "foreach": "@variables('varCategorySalesPrice')",
+                  "actions": {
+                    "Update_Category_Sales_Price": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "6862b57e-8021-4e56-8fdb-77bff5099006"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "UpdateRecord",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "hso_projectcategorysalesprices",
+                          "recordId": "@items('Apply_to_each_Category_Sales_Price')?['hso_projectcategorysalespriceid']",
+                          "item/hso_validto": "@items('Apply_to_each_Category_Sales_Price')?['hso_validto']",
+                          "item/hso_validfrom": "@items('Apply_to_each_Category_Sales_Price')['hso_validfrom']"
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    }
+                  },
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "9ffe39bc-608d-4ccb-a1ac-aa3f50e3b537"
+                  },
+                  "type": "Foreach"
+                }
+              },
+              "runAfter": {
+                "Fetch_Information": [
+                  "Succeeded"
+                ],
+                "Processing_Log": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "43ba8372-dd0b-43ee-b5ab-b3442fc629fa"
+              },
+              "type": "Scope"
+            },
+            "Create_Project_Category_Sales_Price_-_Error": {
+              "actions": {
+                "Filter_Results_for_failed_actions": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "0ab2afbf-64ea-418d-bd9d-65a6863a7bc8"
+                  },
+                  "type": "Query",
+                  "inputs": {
+                    "from": "@result('Update_Project_Category_Sales_Price')",
+                    "where": "@equals(item()['status'], 'Failed')"
+                  }
+                },
+                "Select_Error_Summary": {
+                  "runAfter": {
+                    "Filter_Results_for_failed_actions": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "2822f992-45ab-4420-9e3d-d0fa0fd973eb"
+                  },
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@body('Filter_Results_for_failed_actions')",
+                    "select": {
+                      "Action": "@item()?['name']",
+                      "Code": "@item()?['code']",
+                      "Status": "@item()?['status']",
+                      "StatusCode": "@item()?['outputs']?['statusCode']",
+                      "Message": "@coalesce(item()?['outputs']?['body']?['error']?['message'], item()?['outputs']?['body']?['message'], item()?['error']?['message'], 'No Message found. Please check Flow-Run.')"
+                    }
+                  }
+                },
+                "Apply_to_each_Error_Summary_[Update_Project_Category_Sales_Price]": {
+                  "foreach": "@body('Select_Error_Summary')",
+                  "actions": {
+                    "Append_Error_Summary": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "3469f5c1-3721-49c6-9282-101e18f85d47"
+                      },
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "varError",
+                        "value": "@items('Apply_to_each_Error_Summary_[Update_Project_Category_Sales_Price]')"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Select_Error_Summary": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "11651d04-deed-4450-9f4d-c1cc2e8adda5"
+                  },
+                  "type": "Foreach"
+                },
+                "Variable_festlegen": {
+                  "runAfter": {
+                    "Apply_to_each_Error_Summary_[Update_Project_Category_Sales_Price]": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "7ddd49c7-93b6-47de-b043-5e1d9de84d0a"
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "varErrorStatus",
+                    "value": true
+                  }
+                }
+              },
+              "runAfter": {
+                "Update_Project_Category_Sales_Price": [
+                  "Failed",
+                  "TimedOut"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "98bd011c-c174-4fa8-87c3-b7edaecadcae"
+              },
+              "type": "Scope"
+            },
+            "Summary": {
+              "actions": {
+                "Parse_JSON": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "b769deed-a8c4-494a-a92f-2be1a1eb92c7"
+                  },
+                  "type": "ParseJson",
+                  "inputs": {
+                    "content": {
+                      "link": {
+                        "actions": [
+                          {
+                            "title": "Projektkategorie Verkaufspreise anzeigen",
+                            "data": {
+                              "url": "?pagetype=entityrecord&etn=hso_projectcategorysalesprice&id=@{triggerOutputs()?['body/hso_projectcategorysalespriceid']}",
+                              "navigationTarget": "inline"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "link": {
+                          "type": "object",
+                          "properties": {
+                            "actions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "data": {
+                                    "type": "object",
+                                    "properties": {
+                                      "url": {
+                                        "type": "string"
+                                      },
+                                      "navigationTarget": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "title",
+                                  "data"
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "All_Project_Category_Sales_Price_created_for_Calculation": {
+                  "actions": {
+                    "Update_Processing_Log_[Success]": {
+                      "runAfter": {},
+                      "metadata": {
+                        "operationMetadataId": "dfa8137d-a012-4ba8-97ee-11968a11a8be"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "UpdateRecord",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "hso_processinglogs",
+                          "recordId": "@outputs('Create_ProcessingLog')?['body/hso_processinglogid']",
+                          "item/hso_end_datetime": "@utcNow()",
+                          "item/hso_processingstatus": 100000002
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    },
+                    "Create_inApp_Notification_[Succes]": {
+                      "runAfter": {
+                        "Update_Processing_Log_[Success]": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "d3c66f90-c2c7-4215-9a89-1c1f6cb872c5"
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "appnotifications",
+                          "item/title": "Projektkategorie-Verkaufspreise wurden aktualisiert.",
+                          "item/ttlinseconds": 200,
+                          "item/data": "@body('Parse_JSON')?['link']",
+                          "item/icontype": 100000001,
+                          "item/priority": 200000000,
+                          "item/body": "Projektkategorie-Verkaufspreise \"@{triggerOutputs()?['body/hso_name']}\" wurden aktualisiert."
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Parse_JSON": [
+                      "Succeeded"
+                    ]
+                  },
+                  "else": {
+                    "actions": {
+                      "Create_inApp_Notification_[Error]": {
+                        "runAfter": {
+                          "Update_Processing_Log_[Error]": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "a019b54a-34ea-48d7-9064-9eb2f842948a"
+                        },
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "host": {
+                            "connectionName": "shared_commondataserviceforapps",
+                            "operationId": "CreateRecord",
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                          },
+                          "parameters": {
+                            "entityName": "appnotifications",
+                            "item/title": "Fehler beim Aktualisieren der Projektkategorie-Verkaufspreise",
+                            "item/ttlinseconds": 200,
+                            "item/data": "@body('Parse_JSON')?['link']",
+                            "item/icontype": 100000002,
+                            "item/priority": 200000000,
+                            "item/body": "Beim Aktualisieren der Projektkategorie-Verkaufspreise \"@{triggerOutputs()?['body/hso_name']}\" ist ein Fehler aufgetreten."
+                          },
+                          "authentication": "@parameters('$authentication')"
+                        }
+                      },
+                      "Apply_to_each_Error_Summary": {
+                        "foreach": "@variables('varError')",
+                        "actions": {
+                          "Append_Error_Message": {
+                            "runAfter": {},
+                            "metadata": {
+                              "operationMetadataId": "a7a17c59-dd66-4433-8461-2e1dca2400c9"
+                            },
+                            "type": "AppendToStringVariable",
+                            "inputs": {
+                              "name": "varErrorMessage",
+                              "value": "[ERROR] - Action '@{items('Apply_to_each_Error_Summary')?['Action']}' failed with error message: @{items('Apply_to_each_Error_Summary')?['Message']} (Status: @{items('Apply_to_each_Error_Summary')?['Status']} / Status Code: @{items('Apply_to_each_Error_Summary')?['StatusCode']})"
+                            }
+                          }
+                        },
+                        "runAfter": {},
+                        "metadata": {
+                          "operationMetadataId": "6a29090f-1834-448f-826f-f33d425b3dcf"
+                        },
+                        "type": "Foreach"
+                      },
+                      "Update_Processing_Log_[Error]": {
+                        "runAfter": {
+                          "Apply_to_each_Error_Summary": [
+                            "Succeeded"
+                          ]
+                        },
+                        "metadata": {
+                          "operationMetadataId": "dfa8137d-a012-4ba8-97ee-11968a11a8be"
+                        },
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "host": {
+                            "connectionName": "shared_commondataserviceforapps",
+                            "operationId": "UpdateRecord",
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                          },
+                          "parameters": {
+                            "entityName": "hso_processinglogs",
+                            "recordId": "@outputs('Create_ProcessingLog')?['body/hso_processinglogid']",
+                            "item/hso_end_datetime": "@utcNow()",
+                            "item/hso_flowerror": "@variables('varErrorMessage')",
+                            "item/hso_processingstatus": 100000003
+                          },
+                          "authentication": "@parameters('$authentication')"
+                        }
+                      }
+                    }
+                  },
+                  "expression": {
+                    "equals": [
+                      "@variables('varErrorStatus')",
+                      false
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "ce0402a1-4829-434a-b967-5d65ac4b45ee"
+                  },
+                  "type": "If"
+                }
+              },
+              "runAfter": {
+                "Create_Project_Category_Sales_Price_-_Error": [
+                  "Succeeded",
+                  "Failed",
+                  "Skipped",
+                  "TimedOut"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "1ab9f814-65ef-443c-872e-fa4dee2572a5"
+              },
+              "type": "Scope"
+            }
+          },
+          "runAfter": {
+            "Initialize_varAt": [
+              "Succeeded"
+            ],
+            "Append_to_varCategorySalesPrice_[Neu]": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "equals": [
+              "@outputs('Get_Category_for_Project_Category')?['body/hso_categorygroup']",
+              "Ausgaben"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1a4e5fc2-73e6-450f-a266-cb1d3c82cfd6"
+          },
+          "type": "If"
+        },
+        "Initialize_varErrorStatus": {
+          "runAfter": {
+            "Initialize_varID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "172db887-b53e-434a-a6ad-36c692ea6814"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varErrorStatus",
+                "type": "boolean",
+                "value": "@false"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

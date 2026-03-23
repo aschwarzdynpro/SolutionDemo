@@ -1,0 +1,311 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps-1": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "hso_CRDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "EnvVar | Name App Reg ClientID (hso_EnvVarNameAppRegClientID)": {
+          "defaultValue": "AppReg-D365-PowerAutomate-Dev-ClientID",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarNameAppRegClientID"
+          }
+        },
+        "EnvVar | Name App Reg ClientSecret (hso_EnvVarNameAppRegClientSecret)": {
+          "defaultValue": "AppReg-D365-PowerAutomate-Dev-ClientSecret",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarNameAppRegClientSecret"
+          }
+        },
+        "EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)": {
+          "defaultValue": "d365-ETO-int-11b9dbaf056743afd3devaos.axcloud.dynamics.com",
+          "type": "String",
+          "metadata": {
+            "schemaName": "hso_EnvVarUnifiedOperationsInstance",
+            "description": "The Unified Operations Instance to connect to within a Flow when using Web API Calls"
+          }
+        }
+      },
+      "triggers": {
+        "When_an_item_request_is_closed": {
+          "metadata": {
+            "operationMetadataId": "548cc7c5-53f7-4544-8418-dde199bc7648"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "hso_productrequirement",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "hso_status",
+              "subscriptionRequest/filterexpression": "hso_status eq 3"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          }
+        }
+      },
+      "actions": {
+        "List_related_trade_agreement_journals": {
+          "runAfter": {
+            "PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "023447fd-f259-4c82-9d01-273dffdc4e98"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "hso_articlerequirement_tajournals",
+              "$select": "_hso_company_id_value, hso_journal",
+              "$filter": "_hso_articlerequirement_id_value eq '@{triggerOutputs()?['body/hso_productrequirementid']}'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps-1"
+            }
+          }
+        },
+        "PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "146e80c6-6737-44cd-80cd-f0d7310de961"
+          },
+          "type": "Workflow",
+          "inputs": {
+            "host": {
+              "workflowReferenceName": "1fe99852-ba66-ee11-9ae7-000d3ab3cbd3"
+            },
+            "body": {
+              "text": "AppReg-TenantId",
+              "text_1": "@parameters('EnvVar | Name App Reg ClientID (hso_EnvVarNameAppRegClientID)')",
+              "text_2": "@parameters('EnvVar | Name App Reg ClientSecret (hso_EnvVarNameAppRegClientSecret)')"
+            }
+          }
+        },
+        "Apply_to_each_related_journal_record": {
+          "foreach": "@outputs('List_related_trade_agreement_journals')?['body/value']",
+          "actions": {
+            "Journal_number_must_be_given": {
+              "actions": {
+                "Post_journal": {
+                  "metadata": {
+                    "operationMetadataId": "198d95fe-a156-4437-a7c3-295a535b5d42"
+                  },
+                  "type": "Http",
+                  "inputs": {
+                    "uri": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/data/SSTTradeAgreementOpenJournalPostings/Microsoft.Dynamics.DataEntities.postJournals",
+                    "method": "POST",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "body": {
+                      "_journalNum": "@{items('Apply_to_each_related_journal_record')?['hso_journal']}",
+                      "_dataAreaId": "@{items('Apply_to_each_related_journal_record')?['_hso_company_id_value@OData.Community.Display.V1.FormattedValue']}"
+                    },
+                    "authentication": {
+                      "type": "ActiveDirectoryOAuth",
+                      "tenant": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['tenantid']",
+                      "audience": "https://@{parameters('EnvVar | Unified Operations Instance (hso_EnvVarUnifiedOperationsInstance)')}/",
+                      "clientId": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['clientid']",
+                      "secret": "@body('PA_|_MANUAL_|_CHILD_|_Articlesearch_|_Fetch_Credentials')?['secret']"
+                    }
+                  }
+                },
+                "Update_status_if_trade_agreement_record_on_failure": {
+                  "runAfter": {
+                    "Post_journal": [
+                      "Failed",
+                      "TimedOut"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "e88c0bf9-cfc1-429d-96c6-593501285f05"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_articlerequirement_tajournals",
+                      "recordId": "@items('Apply_to_each_related_journal_record')?['hso_articlerequirement_tajournalid']",
+                      "item/hso_status_opt": 3
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  }
+                },
+                "Update_status_of_trade_agreement_record_on_success": {
+                  "runAfter": {
+                    "Post_journal": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "4fc45142-4f24-4580-9bd9-b8b192b96d41"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "hso_articlerequirement_tajournals",
+                      "recordId": "@items('Apply_to_each_related_journal_record')?['hso_articlerequirement_tajournalid']",
+                      "item/hso_status_opt": 2
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "UpdateRecord",
+                      "connectionName": "shared_commondataserviceforapps-1"
+                    }
+                  }
+                },
+                "Set_error_to_true": {
+                  "runAfter": {
+                    "Update_status_if_trade_agreement_record_on_failure": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "e019b5c6-0523-468c-a5d3-4e858a9682b3"
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "boolError",
+                    "value": true
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "expression": {
+                "greater": [
+                  "@length(items('Apply_to_each_related_journal_record')?['hso_journal'])",
+                  0
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "01639103-c695-458d-9b6f-4a9f36ea88e4"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Init_boolError": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c6f59d5f-44ed-4bcf-a7c5-171b87c5befc"
+          },
+          "type": "Foreach"
+        },
+        "Init_boolError": {
+          "runAfter": {
+            "List_related_trade_agreement_journals": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "ce8448eb-fb5f-4321-9be7-cabf0f4a4e09"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "boolError",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          }
+        },
+        "Log": {
+          "actions": {
+            "Error_exisiting": {
+              "actions": {
+                "Log_on_Error": {
+                  "metadata": {
+                    "operationMetadataId": "9bf3af68-207b-4ed1-aabb-3e773a5d9318"
+                  },
+                  "type": "Compose",
+                  "inputs": "There was an error. Failed records in trade agreement journal entity will have the status failed. Please check."
+                }
+              },
+              "else": {
+                "actions": {
+                  "Update_requirement_header_journal_posted": {
+                    "metadata": {
+                      "operationMetadataId": "e9dbec36-cfd3-4359-915d-4aae0fd107b4"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "hso_productrequirements",
+                        "recordId": "@triggerOutputs()?['body/hso_productrequirementid']",
+                        "item/hso_tajournalsposted_bool": true
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "operationId": "UpdateRecord",
+                        "connectionName": "shared_commondataserviceforapps-1"
+                      }
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "equals": [
+                  "@variables('boolError')",
+                  true
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "475f4f3f-4886-4b3d-b3d2-e348ed3b5852"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Apply_to_each_related_journal_record": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c4be695a-8ab6-41d9-acf5-da9a1c0ffbfb"
+          },
+          "type": "Scope"
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

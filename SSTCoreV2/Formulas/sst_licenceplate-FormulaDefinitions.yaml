@@ -1,8 +1,0 @@
-sst_auftrag: |-
-    =If(!IsBlank(sst_WorkOrder_id.msdyn_name),
-        sst_WorkOrder_id.msdyn_name,
-        sst_Project_id.sst_projectnumber)
-sst_kunde: |-
-    =If(!IsBlank(sst_WorkOrder_id.msdyn_name),
-        sst_WorkOrder_id.msdyn_serviceaccount.name,
-        sst_Project_id.msdyn_customer.name)

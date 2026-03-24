@@ -1,5 +1,0 @@
-CKEDITOR.config.coreStyles_bold = { element: 'b', overrides: 'strong' };
-CKEDITOR.config.coreStyles_italic = { element: 'i', overrides: 'em' };
-CKEDITOR.config.disallowedContent = '*{font*} h1 h2 h3 strong em';
-CKEDITOR.config.autoGrow_minHeight = 200;
-CKEDITOR.config.autoGrow_maxHeight = 1000;

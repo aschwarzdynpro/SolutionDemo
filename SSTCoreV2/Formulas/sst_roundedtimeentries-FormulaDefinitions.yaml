@@ -1,5 +1,0 @@
-sst_workorder_complete_fx: |-
-    =If(And(!IsBlank(sst_WorkOrder), 
-    !IsBlank(sst_WorkOrder.sst_Projekt_ref),
-    !IsBlank(sst_WorkOrder.sst_Projektaufgabe_ref)),
-    true, false)

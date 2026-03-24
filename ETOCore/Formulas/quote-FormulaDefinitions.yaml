@@ -1,1 +1,0 @@
-hso_profitcontributionmargin_calc: =100 * Decimal(hso_profit_cur) / Decimal(totalamountlessfreight)

@@ -1,1 +1,0 @@
-hso_processingdurationinseconds_fx: =DateDiff(hso_start_datetime, hso_end_datetime, TimeUnit.Seconds)

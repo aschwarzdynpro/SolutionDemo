@@ -1,1 +1,0 @@
-hso_nextoperationnumber: =If(!IsBlank(hso_nextoperationid), hso_nextoperationid.hso_operationnumber, 0)

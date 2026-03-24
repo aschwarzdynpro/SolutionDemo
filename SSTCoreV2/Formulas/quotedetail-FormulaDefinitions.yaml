@@ -1,1 +1,0 @@
-sst_discount_percentage_dec: =Round(100 * (1- Decimal(sst_net_amount_cur)/Decimal(baseamount)), 2)

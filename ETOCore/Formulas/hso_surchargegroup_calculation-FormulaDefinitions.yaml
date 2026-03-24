@@ -1,1 +1,0 @@
-hso_surchargegroup_base_filtercondition: ="<condition attribute=""hso_surchargegroup_baseid"" operator=""eq"" value=""{" & ThisRecord.hso_surchargegroup_base_guid & "}"" />"
